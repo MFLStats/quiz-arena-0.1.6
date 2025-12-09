@@ -6,7 +6,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { Zap, Clock, Trophy, Swords, Calendar, Target } from 'lucide-react';
+import { Zap, Clock, Trophy, Swords, Calendar } from 'lucide-react';
 interface HowToPlayModalProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
@@ -80,12 +80,6 @@ export function HowToPlayModal({ isOpen, onOpenChange }: HowToPlayModalProps) {
                   <Calendar className="w-3 h-3" /> Daily Challenge
                 </strong>
                 <p className="text-gray-400">10 curated questions. Same for everyone, every day. Test your consistency.</p>
-              </div>
-              <div>
-                <strong className="text-white block mb-1 flex items-center gap-2">
-                  <Target className="w-3 h-3" /> Practice Mode
-                </strong>
-                <p className="text-gray-400">Train against an AI bot without risking your Elo rating. Great for learning new categories.</p>
               </div>
             </div>
           </div>

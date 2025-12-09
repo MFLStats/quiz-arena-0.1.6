@@ -8,8 +8,7 @@ import {
   Headphones, Camera, Brush, PenTool, Hammer, Wrench, Construction,
   Mountain, Tent, Binoculars, Ticket, ShoppingCart, Wallet, CreditCard,
   DollarSign, Bitcoin, PieChart, BarChart, LineChart, Activity, HeartPulse,
-  Syringe, Pill, Dna, Fingerprint, Key, Lock, Unlock, Eye, Ear, Hand, Footprints,
-  LayoutTemplate, Box, Gift, Coins, User, Image as ImageIcon
+  Syringe, Pill, Dna, Fingerprint, Key, Lock, Unlock, Eye, Ear, Hand, Footprints
 } from 'lucide-react';
 export const CATEGORY_ICONS: Record<string, React.ElementType> = {
   Atom, Book, Brain, Code, Gamepad2, Globe, History, Music, Palette, Trophy, Tv, Zap, Flag,
@@ -21,7 +20,6 @@ export const CATEGORY_ICONS: Record<string, React.ElementType> = {
   Headphones, Camera, Brush, PenTool, Hammer, Wrench, Construction,
   Mountain, Tent, Binoculars, Ticket, ShoppingCart, Wallet, CreditCard,
   DollarSign, Bitcoin, PieChart, BarChart, LineChart, Activity, HeartPulse,
-  Syringe, Pill, Dna, Fingerprint, Key, Lock, Unlock, Eye, Ear, Hand, Footprints,
-  LayoutTemplate, Box, Gift, Coins, User, Image: ImageIcon
+  Syringe, Pill, Dna, Fingerprint, Key, Lock, Unlock, Eye, Ear, Hand, Footprints
 };
 export const ICON_KEYS = Object.keys(CATEGORY_ICONS).sort();

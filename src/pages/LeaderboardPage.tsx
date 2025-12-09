@@ -12,7 +12,6 @@ import { toast } from 'sonner';
 import { Podium, LeaderboardList } from '@/components/leaderboard/LeaderboardComponents';
 import { getFlagEmoji } from '@/lib/utils';
 import { useCategories } from '@/hooks/use-categories';
-import { Link } from 'react-router-dom';
 export function LeaderboardPage() {
   const currentUser = useAuthStore(s => s.user);
   const { categories } = useCategories();
@@ -138,7 +137,7 @@ export function LeaderboardPage() {
       </div>
     );
   };
-  const countryUsers = useMemo(() => 
+  const countryUsers = useMemo(() =>
     users.filter(u => u.country === currentUser?.country),
     [users, currentUser?.country]
   );
@@ -197,7 +196,7 @@ export function LeaderboardPage() {
               <Globe className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0" /> <span>Global</span>
             </TabsTrigger>
             <TabsTrigger value="country" className="rounded-full flex items-center justify-center gap-1.5 md:gap-2 data-[state=active]:bg-indigo-600 data-[state=active]:text-white text-[10px] sm:text-xs md:text-sm px-1 md:px-3">
-              <Flag className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0" /> 
+              <Flag className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0" />
               <span className="sm:hidden">Country</span>
               <span className="hidden sm:inline">My Country</span>
             </TabsTrigger>

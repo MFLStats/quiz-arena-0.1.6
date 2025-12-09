@@ -1,53 +1,36 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Lock, Check, Star, Crown, Gift, Zap, Coins, Box, User as UserIcon, Image as ImageIcon, Sparkles, LayoutTemplate, Medal, Shield, Loader2, AlertCircle } from 'lucide-react';
+import { Lock, Check, Star, Crown, Gift, Zap, Coins, Box, User as UserIcon, Image as ImageIcon } from 'lucide-react';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { cn, getBackgroundStyle } from '@/lib/utils';
-import type { User, ClaimRewardRequest, ClaimRewardResponse, UpgradeSeasonPassRequest, ShopItem } from '@shared/types';
+import { cn } from '@/lib/utils';
+import type { User, ClaimRewardRequest, UpgradeSeasonPassRequest } from '@shared/types';
+import { SEASON_REWARDS_CONFIG, SEASON_COST, SEASON_LEVELS, SEASON_NAME, SEASON_END_DATE } from '@shared/constants';
 import { api } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/auth-store';
 import { toast } from 'sonner';
-import confetti from 'canvas-confetti';
-import { playSfx } from '@/lib/sound-fx';
-import { useTheme } from '@/hooks/use-theme';
-import { useBattlePass } from '@/hooks/use-battle-pass';
 interface SeasonPassProps {
   user: User | null;
 }
 // Map icon names from config to components
 const ICON_MAP: Record<string, React.ElementType> = {
-  Crown, Box, Coins, Gift, Star, User: UserIcon, Image: ImageIcon,
-  LayoutTemplate, Zap, Medal, Shield
+  Crown, Box, Coins, Gift, Star, User: UserIcon, Image: ImageIcon
 };
 export function SeasonPass({ user }: SeasonPassProps) {
   const updateUser = useAuthStore(s => s.updateUser);
-  const { season, loading: seasonLoading, error: seasonError } = useBattlePass();
   const [isProcessing, setIsProcessing] = useState(false);
   const [timeLeft, setTimeLeft] = useState('');
-  const [rewardResult, setRewardResult] = useState<{ type: 'coins' | 'item', amount?: number, item?: ShopItem } | null>(null);
-  const { reduceMotion } = useTheme();
-  // Use season-specific progress if available, otherwise fallback to defaults
-  // Note: user.seasonPass tracks progress for the *active* season ID.
-  // If the season ID in user profile doesn't match current season, they effectively have 0 progress in this new season
-  // until the backend migrates them (which happens on claim/upgrade/match finish).
-  const seasonId = season?.id;
-  const userSeasonId = user?.seasonPass?.seasonId;
-  // If IDs match, use stored progress. If not, treat as level 1 / 0 XP.
-  const isMatchingSeason = seasonId && userSeasonId === seasonId;
-  const currentLevel = isMatchingSeason ? (user?.seasonPass?.level || 1) : 1;
-  const currentXp = isMatchingSeason ? (user?.seasonPass?.xp || 0) : 0;
-  const isPremium = isMatchingSeason ? (user?.seasonPass?.isPremium || false) : false;
-  const claimedRewards = isMatchingSeason ? (user?.seasonPass?.claimedRewards || []) : [];
-  // Calculate progress within current level (simplified for display: XP % 100)
-  // Assuming 100 XP per level for simplicity in visualization, or derive from level config if variable
+  const currentLevel = user?.level || 1;
+  const currentXp = user?.xp || 0;
+  const isPremium = user?.seasonPass?.isPremium || false;
+  const claimedRewards = user?.seasonPass?.claimedRewards || [];
+  // Calculate progress within current level (simplified for display)
+  // In a real app, we'd use getXpRequiredForNextLevel from progression.ts
   const progressPercent = (currentXp % 100);
   useEffect(() => {
-    if (!season?.endDate) return;
     const calculateTimeLeft = () => {
-      const end = new Date(season.endDate).getTime();
+      const end = new Date(SEASON_END_DATE).getTime();
       const now = new Date().getTime();
       const difference = end - now;
       if (difference > 0) {
@@ -62,7 +45,7 @@ export function SeasonPass({ user }: SeasonPassProps) {
       setTimeLeft(calculateTimeLeft());
     }, 60000); // Update every minute
     return () => clearInterval(timer);
-  }, [season?.endDate]);
+  }, []);
   const handleClaim = async (level: number, track: 'free' | 'premium') => {
     if (!user) return;
     if (track === 'premium' && !isPremium) {
@@ -78,21 +61,12 @@ export function SeasonPass({ user }: SeasonPassProps) {
     setIsProcessing(true);
     try {
       const req: ClaimRewardRequest = { userId: user.id, level, track };
-      const response = await api<ClaimRewardResponse>('/api/shop/season/claim', {
+      const updatedUser = await api<User>('/api/shop/season/claim', {
         method: 'POST',
         body: JSON.stringify(req)
       });
-      updateUser(response.user);
-      setRewardResult(response.reward);
-      playSfx('win');
-      if (!reduceMotion) {
-        confetti({
-          particleCount: 100,
-          spread: 70,
-          origin: { y: 0.6 },
-          colors: ['#fbbf24', '#f59e0b', '#d97706']
-        });
-      }
+      updateUser(updatedUser);
+      toast.success(`Claimed Level ${level} ${track} reward!`);
     } catch (err: any) {
       console.error(err);
       toast.error(err.message || "Failed to claim reward");
@@ -101,8 +75,8 @@ export function SeasonPass({ user }: SeasonPassProps) {
     }
   };
   const handleUpgrade = async () => {
-    if (!user || !season) return;
-    if ((user.currency || 0) < season.coinPrice) {
+    if (!user) return;
+    if ((user.currency || 0) < SEASON_COST) {
       toast.error("Not enough coins!");
       return;
     }
@@ -115,15 +89,6 @@ export function SeasonPass({ user }: SeasonPassProps) {
       });
       updateUser(updatedUser);
       toast.success("Upgraded to Premium Pass! All rewards unlocked.");
-      playSfx('purchase');
-      if (!reduceMotion) {
-        confetti({
-          particleCount: 150,
-          spread: 100,
-          origin: { y: 0.6 },
-          colors: ['#fbbf24', '#f59e0b', '#d97706', '#ef4444']
-        });
-      }
     } catch (err: any) {
       console.error(err);
       toast.error(err.message || "Failed to upgrade");
@@ -131,22 +96,6 @@ export function SeasonPass({ user }: SeasonPassProps) {
       setIsProcessing(false);
     }
   };
-  if (seasonLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 space-y-4">
-        <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
-        <p className="text-muted-foreground text-sm">Loading season data...</p>
-      </div>
-    );
-  }
-  if (seasonError || !season) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 space-y-4 border border-dashed border-white/10 rounded-xl bg-white/5">
-        <AlertCircle className="w-10 h-10 text-muted-foreground opacity-50" />
-        <p className="text-muted-foreground">No active season found.</p>
-      </div>
-    );
-  }
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Season Header */}
@@ -157,9 +106,9 @@ export function SeasonPass({ user }: SeasonPassProps) {
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/20 border border-red-500/30 text-red-300 text-sm font-bold uppercase tracking-wider">
               <Crown className="w-4 h-4 fill-red-300" /> Season Event
             </div>
-            <h2 className="text-4xl md:text-5xl font-display font-bold text-white">{season.name}</h2>
+            <h2 className="text-4xl md:text-5xl font-display font-bold text-white">{SEASON_NAME}</h2>
             <p className="text-indigo-100 max-w-lg">
-              {season.description} <br/>
+              Unlock exclusive festive rewards, holiday avatars, and spread the cheer.
               Ends in {timeLeft}.
             </p>
           </div>
@@ -167,15 +116,15 @@ export function SeasonPass({ user }: SeasonPassProps) {
             <div className="flex flex-col items-center gap-4 bg-black/40 p-6 rounded-2xl border border-white/10 backdrop-blur-sm">
               <div className="text-center">
                 <div className="text-sm text-muted-foreground uppercase tracking-wider font-bold mb-1">Premium Pass</div>
-                <div className="text-3xl font-bold text-white">{season.coinPrice.toLocaleString()} Coins</div>
+                <div className="text-3xl font-bold text-white">{SEASON_COST} Coins</div>
               </div>
-              <Button 
-                size="lg" 
+              <Button
+                size="lg"
                 className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-black font-bold shadow-lg shadow-orange-500/20"
                 onClick={handleUpgrade}
                 disabled={isProcessing}
               >
-                {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Upgrade Now'}
+                Upgrade Now
               </Button>
             </div>
           )}
@@ -195,9 +144,7 @@ export function SeasonPass({ user }: SeasonPassProps) {
         </div>
         <div className="text-right hidden md:block">
           <div className="text-xs text-muted-foreground uppercase tracking-wider">Next Reward</div>
-          <div className="font-bold text-white">
-            {season.levels.find(l => l.level === currentLevel + 1)?.free?.label || 'Max Level'}
-          </div>
+          <div className="font-bold text-white">50 Coins</div>
         </div>
       </div>
       {/* Timeline Track */}
@@ -205,7 +152,7 @@ export function SeasonPass({ user }: SeasonPassProps) {
         <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-zinc-950 to-transparent z-10 pointer-events-none md:hidden" />
         <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-zinc-950 to-transparent z-10 pointer-events-none md:hidden" />
         <ScrollArea className="w-full whitespace-nowrap">
-          <div className="flex px-8 pt-8 pb-14 min-w-max">
+          <div className="flex p-8 min-w-max">
             {/* Labels Column */}
             <div className="flex flex-col gap-8 mr-8 sticky left-0 z-20 bg-zinc-950/95 px-4 py-2 rounded-r-xl border-r border-white/10 shadow-xl">
               <div className="h-24 flex items-center font-bold text-indigo-300 uppercase tracking-wider text-sm">
@@ -217,18 +164,15 @@ export function SeasonPass({ user }: SeasonPassProps) {
             </div>
             {/* Levels */}
             <div className="flex gap-4">
-              {season.levels.map((levelConfig) => {
-                const isUnlocked = currentLevel >= levelConfig.level;
-                const isNext = currentLevel + 1 === levelConfig.level;
-                const freeClaimed = claimedRewards.includes(`${levelConfig.level}:free`);
-                const premiumClaimed = claimedRewards.includes(`${levelConfig.level}:premium`);
-                // Ensure rewards exist (fallback for malformed data)
-                const freeReward = levelConfig.free || { type: 'none', label: '' };
-                const premiumReward = levelConfig.premium || { type: 'none', label: '' };
+              {SEASON_REWARDS_CONFIG.map((reward) => {
+                const isUnlocked = currentLevel >= reward.level;
+                const isNext = currentLevel + 1 === reward.level;
+                const freeClaimed = claimedRewards.includes(`${reward.level}:free`);
+                const premiumClaimed = claimedRewards.includes(`${reward.level}:premium`);
                 return (
-                  <div key={levelConfig.level} className="flex flex-col gap-8 w-32 relative group">
+                  <div key={reward.level} className="flex flex-col gap-8 w-32 relative group">
                     {/* Connector Line */}
-                    {levelConfig.level < season.levels.length && (
+                    {reward.level < SEASON_LEVELS && (
                       <div className={cn(
                         "absolute top-1/2 left-1/2 w-full h-1 -translate-y-1/2 -z-10",
                         isUnlocked ? "bg-indigo-500/50" : "bg-white/5"
@@ -244,19 +188,18 @@ export function SeasonPass({ user }: SeasonPassProps) {
                             ? "bg-zinc-800 border-white/20 text-white animate-pulse"
                             : "bg-zinc-900 border-white/5 text-muted-foreground"
                       )}>
-                        {levelConfig.level}
+                        {reward.level}
                       </div>
                     </div>
                     {/* Free Reward Card */}
                     <div className="h-24 flex items-end justify-center pb-2">
-                      {freeReward.type !== 'none' ? (
+                      {reward.free.type !== 'none' ? (
                         <RewardCard
-                          type={freeReward.type}
-                          label={freeReward.label}
-                          icon={freeReward.icon ? ICON_MAP[freeReward.icon] : undefined}
+                          type={reward.free.type}
+                          label={reward.free.label}
                           unlocked={isUnlocked}
                           claimed={freeClaimed}
-                          onClick={() => handleClaim(levelConfig.level, 'free')}
+                          onClick={() => handleClaim(reward.level, 'free')}
                           disabled={isProcessing}
                         />
                       ) : (
@@ -265,21 +208,17 @@ export function SeasonPass({ user }: SeasonPassProps) {
                     </div>
                     {/* Premium Reward Card */}
                     <div className="h-24 flex items-start justify-center pt-2">
-                      {premiumReward.type !== 'none' ? (
-                        <RewardCard
-                          type="premium" // Visual style override
-                          label={premiumReward.label}
-                          icon={premiumReward.icon ? ICON_MAP[premiumReward.icon] : undefined}
-                          unlocked={isUnlocked}
-                          locked={!isPremium}
-                          claimed={premiumClaimed}
-                          onClick={() => handleClaim(levelConfig.level, 'premium')}
-                          isPremiumTrack
-                          disabled={isProcessing}
-                        />
-                      ) : (
-                        <div className="w-1 h-8 bg-white/5 rounded-full" />
-                      )}
+                      <RewardCard
+                        type="premium"
+                        label={reward.premium.label}
+                        icon={ICON_MAP[reward.premium.iconName || 'Coins']}
+                        unlocked={isUnlocked}
+                        locked={!isPremium}
+                        claimed={premiumClaimed}
+                        onClick={() => handleClaim(reward.level, 'premium')}
+                        isPremiumTrack
+                        disabled={isProcessing}
+                      />
                     </div>
                   </div>
                 );
@@ -289,53 +228,6 @@ export function SeasonPass({ user }: SeasonPassProps) {
           <ScrollBar orientation="horizontal" className="bg-white/5" />
         </ScrollArea>
       </div>
-      {/* Reward Reveal Dialog */}
-      <Dialog open={!!rewardResult} onOpenChange={() => setRewardResult(null)}>
-        <DialogContent className="bg-zinc-950 border-white/10 text-center sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-display text-white">Reward Unlocked!</DialogTitle>
-            <DialogDescription className="sr-only">You have claimed a reward</DialogDescription>
-          </DialogHeader>
-          {rewardResult && (
-            <div className="py-8 flex flex-col items-center animate-in zoom-in duration-500">
-              <div className={cn(
-                "w-32 h-32 rounded-full flex items-center justify-center mb-6 relative",
-                rewardResult.type === 'item' && rewardResult.item?.rarity === 'legendary' ? "bg-yellow-500/20 shadow-[0_0_50px_rgba(234,179,8,0.5)]" :
-                rewardResult.type === 'item' && rewardResult.item?.rarity === 'epic' ? "bg-purple-500/20 shadow-[0_0_50px_rgba(168,85,247,0.5)]" :
-                "bg-blue-500/20"
-              )}>
-                <Sparkles className={cn(
-                  "absolute -top-4 -right-4 w-8 h-8 animate-bounce",
-                  rewardResult.type === 'item' && rewardResult.item?.rarity === 'legendary' ? "text-yellow-400" : "text-white"
-                )} />
-                {rewardResult.type === 'coins' ? (
-                  <Coins className="w-16 h-16 text-yellow-400" />
-                ) : rewardResult.item ? (
-                  rewardResult.item.type === 'avatar' ? (
-                    <img src={rewardResult.item.assetUrl} className="w-24 h-24 rounded-full" />
-                  ) : (
-                    <div className="w-24 h-16 rounded bg-cover bg-center" style={getBackgroundStyle(rewardResult.item.assetUrl)} />
-                  )
-                ) : (
-                  <Gift className="w-16 h-16 text-white" />
-                )}
-              </div>
-              <h3 className={cn(
-                "text-xl font-bold mb-1",
-                rewardResult.type === 'item' && rewardResult.item?.rarity === 'legendary' ? "text-yellow-400" :
-                rewardResult.type === 'item' && rewardResult.item?.rarity === 'epic' ? "text-purple-400" :
-                "text-white"
-              )}>
-                {rewardResult.type === 'coins' ? `${rewardResult.amount} Coins` : rewardResult.item?.name}
-              </h3>
-              {rewardResult.type === 'item' && rewardResult.item && (
-                <p className="text-sm text-muted-foreground uppercase tracking-widest">{rewardResult.item.rarity}</p>
-              )}
-            </div>
-          )}
-          <Button onClick={() => setRewardResult(null)}>Awesome!</Button>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
@@ -360,7 +252,7 @@ function RewardCard({ type, label, icon: Icon, unlocked, locked, claimed, onClic
       disabled={disabled || claimed || (locked && !isPremiumTrack)} // Allow clicking locked premium to trigger upgrade toast
       className={cn(
         "relative w-20 h-20 rounded-xl flex flex-col items-center justify-center gap-1 border-2 transition-all overflow-hidden",
-        unlocked 
+        unlocked
           ? (isPremiumTrack ? "bg-yellow-500/10 border-yellow-500/30 hover:bg-yellow-500/20" : "bg-indigo-500/10 border-indigo-500/30 hover:bg-indigo-500/20")
           : "bg-zinc-900 border-white/5 opacity-60 grayscale",
         locked && "opacity-40",

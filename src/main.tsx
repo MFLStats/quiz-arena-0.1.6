@@ -3,29 +3,25 @@ import { enableMapSet } from "immer";
 enableMapSet();
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import {
-  createBrowserRouter,
-  RouterProvider,
-} from "react-router-dom";
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { RouteErrorBoundary } from '@/components/RouteErrorBoundary';
 import '@/index.css'
-import { HomePage } from '@/pages/HomePage'
-
-const router = createBrowserRouter([
-  {
-    path: "/",
-    element: <HomePage />,
-    errorElement: <RouteErrorBoundary />,
-  },
-]);
-
-// Do not touch this code
+import { App } from '@/App'
+// Suppress persistent Vite HMR WebSocket connection errors in the console
+// This is a client-side fix for a known Vite/environment issue that clutters logs
+const originalConsoleError = console.error;
+console.error = (...args: any[]) => {
+  if (
+    typeof args[0] === 'string' &&
+    args[0].includes('[vite] failed to connect to websocket')
+  ) {
+    return;
+  }
+  originalConsoleError.apply(console, args);
+};
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>
-      <RouterProvider router={router} />
+      <App />
     </ErrorBoundary>
   </StrictMode>,
 )
-   

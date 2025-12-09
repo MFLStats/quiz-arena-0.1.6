@@ -1,20 +1,17 @@
-import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@/lib/game-store';
 import { useAuthStore } from '@/lib/auth-store';
 import { api } from '@/lib/api-client';
-import { TimerCircle, AnswerButton, ScoreBadge, OpponentAvatar, EmotePicker, EmoteFloater, RoundIntermission } from '@/components/game/GameComponents';
-import { MatchLoadingScreen } from '@/components/game/MatchLoadingScreen';
+import { TimerCircle, AnswerButton, ScoreBadge, OpponentAvatar, EmotePicker, EmoteFloater } from '@/components/game/GameComponents';
 import { toast } from 'sonner';
 import { Loader2, Check, AlertTriangle, Flame, Flag, Zap } from 'lucide-react';
-import { cn, getFlagEmoji, getBackgroundStyle, calculateStreak } from '@/lib/utils';
+import { cn, getFlagEmoji } from '@/lib/utils';
 import type { FinishMatchResponse, MatchState, ReportReason } from '@shared/types';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { playSfx } from '@/lib/sound-fx';
-import { triggerHaptic } from '@/lib/haptics';
-import { useInterval } from '@/hooks/use-interval';
-import { useTheme } from '@/hooks/use-theme';
+import { useInterval } from 'react-use';
 import {
   Dialog,
   DialogContent,
@@ -38,7 +35,6 @@ export function ArenaPage() {
   const navigate = useNavigate();
   const user = useAuthStore(s => s.user);
   const isMobile = useIsMobile();
-  const { reduceMotion } = useTheme();
   // Selectors
   const questions = useGameStore(s => s.questions);
   const currentIndex = useGameStore(s => s.currentQuestionIndex);
@@ -63,33 +59,12 @@ export function ArenaPage() {
   const [matchData, setMatchData] = useState<MatchState | null>(null);
   const [streak, setStreak] = useState(0);
   const [now, setNow] = useState(Date.now());
-  // Race Condition Guard
-  const isFinishingRef = useRef(false);
   // Report State
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [reportReason, setReportReason] = useState<ReportReason>('other');
   const [isReporting, setIsReporting] = useState(false);
   const currentQuestion = questions[currentIndex];
   const isFinalRound = questions.length > 0 && currentIndex === questions.length - 1;
-  // Derived Opponent Stats (Moved up to avoid conditional hook execution)
-  const opponentId = matchData && user ? Object.keys(matchData.players).find(id => id !== user.id) : null;
-  const opponentStats = opponentId && matchData ? matchData.players[opponentId] : null;
-  const opponentName = matchData?.mode === 'daily' ? 'The House' : (opponentStats?.name || 'Opponent');
-  const opponentCountry = opponentStats?.country;
-  const opponentElo = opponentStats?.elo;
-  const opponentTitle = opponentStats?.title;
-  const opponentDisplayTitle = opponentStats?.displayTitle;
-  const opponentStreak = opponentStats?.answers ? calculateStreak(opponentStats.answers) : 0;
-  const opponentFrameConfig = opponentStats?.frameConfig;
-  const myStats = matchData && user ? matchData.players[user.id] : null;
-  const myTitle = myStats?.title || user?.title;
-  const myDisplayTitle = myStats?.displayTitle;
-  const isDaily = matchData?.mode === 'daily';
-  // Calculate if opponent has answered the current question (Moved up)
-  const opponentHasAnswered = useMemo(() => {
-    if (!opponentStats || !currentQuestion) return false;
-    return opponentStats.answers.some(a => a.questionId === currentQuestion.id);
-  }, [opponentStats, currentQuestion]);
   // Force re-render for timer
   useInterval(() => {
     setNow(Date.now());
@@ -106,17 +81,17 @@ export function ArenaPage() {
         playSfx('emote');
     }
   }, [opponentLastEmote]);
-  // Audio & Haptics: Double Points (Final Round)
+  // Audio: Double Points (Final Round)
   useEffect(() => {
     if (isFinalRound && !isIntermission && !showIntro && gameStatus === 'playing') {
         // Play sound only once per round transition
+        // Since this effect depends on isFinalRound and isIntermission, it will trigger when intermission ends for the final round
         playSfx('double_points');
-        triggerHaptic('medium');
     }
   }, [isFinalRound, isIntermission, showIntro, gameStatus]);
   // Confetti for High Streaks
   useEffect(() => {
-    if (!reduceMotion && streak >= 3 && (streak === 3 || streak % 5 === 0)) {
+    if (streak >= 3) {
       const particleCount = streak >= 5 ? 100 : 50;
       const spread = streak >= 5 ? 80 : 60;
       confetti({
@@ -127,7 +102,7 @@ export function ArenaPage() {
         disableForReducedMotion: true
       });
     }
-  }, [streak, reduceMotion]);
+  }, [streak]);
   // Recover match state on refresh
   useEffect(() => {
     if (matchId) {
@@ -143,13 +118,6 @@ export function ArenaPage() {
             if (match.status === 'playing' && elapsed > 4000) {
               setShowIntro(false);
             }
-            // Initialize local streak from server data if available
-            if (user) {
-                const myStats = match.players[user.id];
-                if (myStats?.answers) {
-                    setStreak(calculateStreak(myStats.answers));
-                }
-            }
           }
         })
         .catch((err) => {
@@ -158,7 +126,7 @@ export function ArenaPage() {
           navigate('/');
         });
     }
-  }, [matchId, initMatch, navigate, user]);
+  }, [matchId, initMatch, navigate]);
   // Polling Effect for Sync
   useEffect(() => {
     if (!matchId || !user) return;
@@ -188,9 +156,6 @@ export function ArenaPage() {
         }
         // Sync Status
         if (latestMatch.status === 'finished' && useGameStore.getState().status !== 'finished') {
-             // Prevent duplicate finish calls
-             if (isFinishingRef.current) return;
-             isFinishingRef.current = true;
              // Trigger finish flow
              try {
                 const finishRes = await api<FinishMatchResponse>(`/api/match/${matchId}/finish`, {
@@ -221,11 +186,10 @@ export function ArenaPage() {
       return () => clearTimeout(timer);
     }
   }, [showIntro, gameStatus]);
-  // Timer Tick Sound & Haptics
+  // Timer Tick Sound
   useEffect(() => {
     if (timeLeft <= 3 && timeLeft > 0 && !isLocked && !showIntro && !isIntermission) {
       playSfx('tick');
-      triggerHaptic('light');
     }
   }, [timeLeft, isLocked, showIntro, isIntermission]);
   const handleSubmit = useCallback(async (index: number) => {
@@ -246,7 +210,6 @@ export function ArenaPage() {
       });
       if (res.correct) {
         playSfx('correct');
-        triggerHaptic('success');
         setStreak(s => {
             const next = s + 1;
             if (next > 1) playSfx('streak');
@@ -254,7 +217,6 @@ export function ArenaPage() {
         });
       } else {
         playSfx('wrong');
-        triggerHaptic('error');
         setStreak(0);
       }
       lockAnswer(res.correct, res.correctIndex, res.scoreDelta, res.opponentScore);
@@ -318,6 +280,8 @@ export function ArenaPage() {
         method: 'POST',
         body: JSON.stringify({ userId: user.id, emoji })
       });
+      // Optimistic update not needed as we don't show our own emotes floating (usually)
+      // But we could if we wanted to. For now, just send.
     } catch (err) {
       console.error("Failed to send emote", err);
     }
@@ -329,7 +293,11 @@ export function ArenaPage() {
     }
   };
   if (!matchData || !user) {
-    return <MatchLoadingScreen />;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-zinc-950">
+        <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+      </div>
+    );
   }
   // LOBBY VIEW (Waiting for opponent)
   if (gameStatus === 'waiting' && isPrivate) {
@@ -400,6 +368,13 @@ export function ArenaPage() {
       </div>
     );
   }
+  const opponentId = Object.keys(matchData.players).find(id => id !== user.id);
+  const opponentStats = opponentId ? matchData.players[opponentId] : null;
+  const opponentName = matchData.mode === 'daily' ? 'The House' : (opponentStats?.name || 'Opponent');
+  const opponentCountry = opponentStats?.country;
+  const opponentElo = opponentStats?.elo;
+  const opponentTitle = opponentStats?.title;
+  const myTitle = matchData.players[user.id]?.title || user.title;
   return (
     <div className="min-h-dvh flex flex-col bg-zinc-950 overflow-hidden relative font-sans selection:bg-indigo-500/30">
       {/* Background Ambience */}
@@ -413,30 +388,22 @@ export function ArenaPage() {
             transition={{ duration: 0.5 }}
             className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950"
           >
-            {/* Split Backgrounds with Banners */}
+            {/* ... (Intro UI remains same) ... */}
             <div className="absolute inset-0 flex flex-col md:flex-row pointer-events-none">
               <motion.div
                 initial={isMobile ? { y: "-100%" } : { x: "-100%" }}
                 animate={isMobile ? { y: 0 } : { x: 0 }}
                 exit={isMobile ? { y: "-100%" } : { x: "-100%" }}
                 transition={{ duration: 0.5, ease: "circOut" }}
-                className={cn("relative w-full h-1/2 md:w-1/2 md:h-full border-b md:border-b-0 md:border-r border-indigo-500/20", !user.banner && "bg-indigo-950/30")}
-                style={getBackgroundStyle(user.banner)}
-              >
-                <div className="absolute inset-0 bg-indigo-950/60 backdrop-blur-sm" />
-              </motion.div>
-              {!isDaily && (
-                <motion.div
-                  initial={isMobile ? { y: "100%" } : { x: "100%" }}
-                  animate={isMobile ? { y: 0 } : { x: 0 }}
-                  exit={isMobile ? { y: "100%" } : { x: "100%" }}
-                  transition={{ duration: 0.5, ease: "circOut" }}
-                  className={cn("relative w-full h-1/2 md:w-1/2 md:h-full border-t md:border-t-0 md:border-l border-rose-500/20", !opponentStats?.banner && "bg-rose-950/30")}
-                  style={getBackgroundStyle(opponentStats?.banner)}
-                >
-                  <div className="absolute inset-0 bg-rose-950/60 backdrop-blur-sm" />
-                </motion.div>
-              )}
+                className="relative w-full h-1/2 md:w-1/2 md:h-full bg-indigo-950/30 border-b md:border-b-0 md:border-r border-indigo-500/20"
+              />
+              <motion.div
+                initial={isMobile ? { y: "100%" } : { x: "100%" }}
+                animate={isMobile ? { y: 0 } : { x: 0 }}
+                exit={isMobile ? { y: "100%" } : { x: "100%" }}
+                transition={{ duration: 0.5, ease: "circOut" }}
+                className="relative w-full h-1/2 md:w-1/2 md:h-full bg-rose-950/30 border-t md:border-t-0 md:border-l border-rose-500/20"
+              />
             </div>
             <div className="relative w-full max-w-6xl h-full flex flex-col md:flex-row items-center justify-between px-4 md:px-20 py-12 md:py-0">
               {/* Left/Top Player (You) */}
@@ -444,7 +411,7 @@ export function ArenaPage() {
                 initial={isMobile ? { y: -100, opacity: 0 } : { x: -200, opacity: 0 }}
                 animate={isMobile ? { y: 0, opacity: 1 } : { x: 0, opacity: 1 }}
                 transition={{ delay: 0.3, type: "spring", stiffness: 100 }}
-                className={cn("flex flex-col items-center gap-4 md:gap-6 z-10", isDaily && "md:col-span-2 mx-auto")}
+                className="flex flex-col items-center gap-4 md:gap-6 z-10"
               >
                 <div className="relative">
                   <div className="absolute inset-0 bg-indigo-500 blur-[60px] opacity-40 rounded-full" />
@@ -458,59 +425,55 @@ export function ArenaPage() {
                     <span>{getFlagEmoji(user.country)}</span>
                     <span>ELO {user.elo}</span>
                   </div>
-                  {(myDisplayTitle || myTitle) && (
-                    <div className="mt-2 text-amber-400 font-bold uppercase tracking-wider text-sm">{myDisplayTitle || myTitle}</div>
+                  {myTitle && (
+                    <div className="mt-2 text-amber-400 font-bold uppercase tracking-wider text-sm">{myTitle}</div>
                   )}
                 </div>
               </motion.div>
               {/* VS Badge */}
-              {!isDaily && (
-                <motion.div
-                  initial={{ scale: 0, rotate: -180, opacity: 0 }}
-                  animate={{ scale: 1, rotate: 0, opacity: 1 }}
-                  transition={{ delay: 0.8, type: "spring", stiffness: 200, damping: 15 }}
-                  className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20"
-                >
-                  <div className="relative">
-                    <div className="absolute inset-0 bg-yellow-500 blur-[80px] opacity-50 rounded-full animate-pulse" />
-                    <div className="w-24 h-24 md:w-40 md:h-40 bg-zinc-950 text-white font-black text-4xl md:text-7xl flex items-center justify-center rounded-full border-4 md:border-8 border-yellow-500 shadow-[0_0_60px_rgba(234,179,8,0.6)] italic transform -skew-x-12">
-                      <span className="bg-clip-text text-transparent bg-gradient-to-b from-yellow-300 to-yellow-600 drop-shadow-sm">VS</span>
-                    </div>
+              <motion.div
+                initial={{ scale: 0, rotate: -180, opacity: 0 }}
+                animate={{ scale: 1, rotate: 0, opacity: 1 }}
+                transition={{ delay: 0.8, type: "spring", stiffness: 200, damping: 15 }}
+                className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20"
+              >
+                <div className="relative">
+                  <div className="absolute inset-0 bg-yellow-500 blur-[80px] opacity-50 rounded-full animate-pulse" />
+                  <div className="w-24 h-24 md:w-40 md:h-40 bg-zinc-950 text-white font-black text-4xl md:text-7xl flex items-center justify-center rounded-full border-4 md:border-8 border-yellow-500 shadow-[0_0_60px_rgba(234,179,8,0.6)] italic transform -skew-x-12">
+                    <span className="bg-clip-text text-transparent bg-gradient-to-b from-yellow-300 to-yellow-600 drop-shadow-sm">VS</span>
                   </div>
-                </motion.div>
-              )}
+                </div>
+              </motion.div>
               {/* Right/Bottom Player (Opponent) */}
-              {!isDaily && (
-                <motion.div
-                  initial={isMobile ? { y: 100, opacity: 0 } : { x: 200, opacity: 0 }}
-                  animate={isMobile ? { y: 0, opacity: 1 } : { x: 0, opacity: 1 }}
-                  transition={{ delay: 0.5, type: "spring", stiffness: 100 }}
-                  className="flex flex-col items-center gap-4 md:gap-6 z-10"
-                >
-                  <div className="relative">
-                    <div className="absolute inset-0 bg-rose-500 blur-[60px] opacity-40 rounded-full" />
-                    <div className="w-24 h-24 md:w-48 md:h-48 rounded-full border-4 border-rose-500 shadow-[0_0_50px_rgba(244,63,94,0.5)] overflow-hidden bg-zinc-900 relative z-10">
-                      {opponentStats?.avatar ? (
-                        <img src={opponentStats.avatar} alt={opponentName} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-rose-600 to-orange-600 flex items-center justify-center">
-                          <span className="text-3xl md:text-4xl font-bold text-white/50">{opponentName[0]}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="text-center">
-                    <h2 className="text-2xl md:text-5xl font-bold text-white font-display tracking-wider mb-1 md:mb-2">{opponentName}</h2>
-                    <div className="px-3 py-0.5 md:px-4 md:py-1 bg-rose-500/20 border border-rose-500/30 rounded-full text-rose-300 font-mono text-sm md:text-base flex items-center justify-center gap-2">
-                      {opponentCountry && <span>{getFlagEmoji(opponentCountry)}</span>}
-                      {opponentElo ? <span>ELO {opponentElo}</span> : <span>CHALLENGER</span>}
-                    </div>
-                    {(opponentDisplayTitle || opponentTitle) && (
-                      <div className="mt-2 text-amber-400 font-bold uppercase tracking-wider text-sm">{opponentDisplayTitle || opponentTitle}</div>
+              <motion.div
+                initial={isMobile ? { y: 100, opacity: 0 } : { x: 200, opacity: 0 }}
+                animate={isMobile ? { y: 0, opacity: 1 } : { x: 0, opacity: 1 }}
+                transition={{ delay: 0.5, type: "spring", stiffness: 100 }}
+                className="flex flex-col items-center gap-4 md:gap-6 z-10"
+              >
+                <div className="relative">
+                  <div className="absolute inset-0 bg-rose-500 blur-[60px] opacity-40 rounded-full" />
+                  <div className="w-24 h-24 md:w-48 md:h-48 rounded-full border-4 border-rose-500 shadow-[0_0_50px_rgba(244,63,94,0.5)] overflow-hidden bg-zinc-900 relative z-10">
+                    {opponentStats?.avatar ? (
+                       <img src={opponentStats.avatar} alt={opponentName} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-rose-600 to-orange-600 flex items-center justify-center">
+                         <span className="text-3xl md:text-4xl font-bold text-white/50">{opponentName[0]}</span>
+                      </div>
                     )}
                   </div>
-                </motion.div>
-              )}
+                </div>
+                <div className="text-center">
+                  <h2 className="text-2xl md:text-5xl font-bold text-white font-display tracking-wider mb-1 md:mb-2">{opponentName}</h2>
+                  <div className="px-3 py-0.5 md:px-4 md:py-1 bg-rose-500/20 border border-rose-500/30 rounded-full text-rose-300 font-mono text-sm md:text-base flex items-center justify-center gap-2">
+                    {opponentCountry && <span>{getFlagEmoji(opponentCountry)}</span>}
+                    {opponentElo ? <span>ELO {opponentElo}</span> : <span>CHALLENGER</span>}
+                  </div>
+                  {opponentTitle && (
+                    <div className="mt-2 text-amber-400 font-bold uppercase tracking-wider text-sm">{opponentTitle}</div>
+                  )}
+                </div>
+              </motion.div>
             </div>
           </motion.div>
         )}
@@ -520,24 +483,15 @@ export function ArenaPage() {
         initial={{ opacity: 0 }}
         animate={{ opacity: showIntro ? 0 : 1 }}
         transition={{ duration: 0.5 }}
-        className="flex-1 flex flex-col h-full max-w-7xl mx-auto w-full overflow-y-auto"
+        className="flex-1 flex flex-col h-full max-w-7xl mx-auto w-full"
       >
         {/* Header */}
-        <header className="relative z-10 p-2 md:p-6 flex items-center justify-between w-full shrink-0">
-          <div className={cn("flex items-center gap-2 md:gap-6", isDaily && "mx-auto")}>
-            <OpponentAvatar
-              name={user.name}
-              className="scale-75 md:scale-100 origin-left"
-              title={myTitle}
-              displayTitle={myDisplayTitle}
-              streak={streak}
-              avatar={user.avatar}
-              frame={user.frame}
-              frameConfig={user.frameConfig}
-            />
+        <header className="relative z-10 p-3 md:p-6 flex items-center justify-between w-full">
+          <div className="flex items-center gap-2 md:gap-6">
+            <OpponentAvatar name={user.name} className="scale-75 md:scale-100 origin-left" title={myTitle} />
             <ScoreBadge score={myScore} label="You" />
           </div>
-          <div className={cn("flex flex-col items-center -mt-2 relative", isDaily && "absolute left-1/2 -translate-x-1/2 top-4")}>
+          <div className="flex flex-col items-center -mt-2 relative">
             <div className="flex flex-col items-center gap-1 mb-2 md:mb-4">
                 <div className="flex items-center gap-2 px-3 py-1 md:px-4 md:py-1.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-md shadow-lg">
                     <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-indigo-500 animate-pulse" />
@@ -585,7 +539,7 @@ export function ArenaPage() {
                         exit={{ opacity: 0, scale: 0.8 }}
                         className={cn(
                           "absolute top-full mt-2 flex items-center gap-1.5 px-3 py-1 rounded-full border font-bold text-sm backdrop-blur-md z-20 animate-shake",
-                          streak >= 5
+                          streak >= 5 
                             ? "bg-red-500/20 border-red-500/40 text-red-400 shadow-[0_0_20px_rgba(239,68,68,0.4)]"
                             : "bg-orange-500/20 border-orange-500/40 text-orange-400 shadow-[0_0_15px_rgba(249,115,22,0.3)]"
                         )}
@@ -596,60 +550,39 @@ export function ArenaPage() {
                 )}
             </AnimatePresence>
           </div>
-          {!isDaily && (
-            <div className="flex items-center gap-2 md:gap-6 relative">
-              <ScoreBadge score={opponentScore} label="Enemy" isOpponent />
-              <div className="flex flex-col items-center gap-1 relative">
-                <OpponentAvatar
-                  name={opponentName}
-                  isOpponent
-                  className="scale-75 md:scale-100 origin-right"
-                  title={opponentTitle}
-                  displayTitle={opponentDisplayTitle}
-                  streak={opponentStreak}
-                  avatar={opponentStats?.avatar}
-                  frame={opponentStats?.frame}
-                  frameConfig={opponentFrameConfig}
-                  hasAnswered={opponentHasAnswered}
-                  isBot={matchData.mode === 'practice'}
-                />
-                {opponentCountry && (
-                  <div className="flex items-center gap-1 text-[10px] bg-black/40 px-2 py-0.5 rounded-full border border-white/5">
-                    <span>{getFlagEmoji(opponentCountry)}</span>
-                    {opponentElo && <span className="text-rose-300 font-mono">{opponentElo}</span>}
-                  </div>
-                )}
-                {/* Opponent Emote Floater */}
-                {opponentLastEmote && (
-                  <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center pointer-events-none">
-                    <EmoteFloater emoji={opponentLastEmote.emoji} timestamp={opponentLastEmote.timestamp} />
-                  </div>
-                )}
-              </div>
+          <div className="flex items-center gap-2 md:gap-6 relative">
+            <ScoreBadge score={opponentScore} label="Enemy" isOpponent />
+            <div className="flex flex-col items-center gap-1 relative">
+              <OpponentAvatar name={opponentName} isOpponent className="scale-75 md:scale-100 origin-right" title={opponentTitle} />
+              {opponentCountry && (
+                <div className="flex items-center gap-1 text-[10px] bg-black/40 px-2 py-0.5 rounded-full border border-white/5">
+                  <span>{getFlagEmoji(opponentCountry)}</span>
+                  {opponentElo && <span className="text-rose-300 font-mono">{opponentElo}</span>}
+                </div>
+              )}
+              {/* Opponent Emote Floater */}
+              {opponentLastEmote && (
+                <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center pointer-events-none">
+                  <EmoteFloater emoji={opponentLastEmote.emoji} timestamp={opponentLastEmote.timestamp} />
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </header>
         {/* Arena */}
-        <main className="flex-1 flex flex-col items-center justify-center p-2 md:p-4 w-full relative z-10 pb-20 md:pb-20">
+        <main className="flex-1 flex flex-col items-center justify-center p-4 w-full relative z-10 pb-20 md:pb-20">
           <AnimatePresence mode="wait">
-            {isIntermission && !showIntro && (
-               <RoundIntermission
-                 key="intermission"
-                 roundNumber={Math.min(currentIndex + 1, questions.length)}
-                 totalRounds={questions.length}
-               />
-            )}
-            {!isIntermission && currentQuestion && (
+            {currentQuestion && (
               <motion.div
                 key={currentQuestion.id}
                 initial={{ opacity: 0, y: 40, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -40, scale: 0.95 }}
                 transition={{ duration: 0.4, ease: "easeOut" }}
-                className="w-full max-w-4xl space-y-2 md:space-y-8"
+                className="w-full max-w-4xl space-y-4 md:space-y-8"
               >
                 {/* Question Card */}
-                <div className="glass-panel rounded-2xl md:rounded-[2rem] p-4 md:p-16 text-center relative overflow-hidden group border border-white/10 bg-zinc-900/50 backdrop-blur-xl shadow-2xl">
+                <div className="glass-panel rounded-2xl md:rounded-[2rem] p-6 md:p-16 text-center relative overflow-hidden group border border-white/10 bg-zinc-900/50 backdrop-blur-xl shadow-2xl">
                   <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-indigo-500 to-transparent opacity-50" />
                   {/* Report Button */}
                   <div className="absolute top-3 left-3 md:top-6 md:left-6">
@@ -679,14 +612,14 @@ export function ArenaPage() {
                       )}
                     </div>
                   )}
-                  <h2 className="text-lg md:text-4xl font-bold leading-tight text-white drop-shadow-md font-display min-h-[2em] flex items-center justify-center">
+                  <h2 className="text-xl md:text-4xl font-bold leading-tight text-white drop-shadow-md font-display min-h-[2em] flex items-center justify-center">
                     {currentQuestion.text}
                   </h2>
                   <div className="absolute -bottom-20 -right-20 w-60 h-60 bg-indigo-500/10 rounded-full blur-[80px] group-hover:bg-indigo-500/20 transition-colors duration-500" />
                   <div className="absolute -top-20 -left-20 w-60 h-60 bg-purple-500/10 rounded-full blur-[80px] group-hover:bg-purple-500/20 transition-colors duration-500" />
                 </div>
                 {/* Answer Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-6">
                   {currentQuestion.options.map((opt, idx) => (
                     <AnswerButton
                       key={idx}
@@ -720,7 +653,7 @@ export function ArenaPage() {
                       </motion.div>
                     )}
                     {/* Waiting for opponent indicator */}
-                    {isLocked && !lastCorrect && isSubmitting && !isDaily && (
+                    {isLocked && !lastCorrect && isSubmitting && (
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Zap, Loader2, Apple, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -7,7 +7,6 @@ import { useAuthStore } from '@/lib/auth-store';
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LoginForm, RegisterForm, OAuthSimulationModal } from '@/components/auth/AuthForms';
-import { api } from '@/lib/api-client';
 // Simple Google Icon Component
 function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
@@ -23,23 +22,12 @@ function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
 }
 export function LoginPage() {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
   const login = useAuthStore((s) => s.login);
   const [isLoggingIn, setIsLoggingIn] = useState<string | null>(null);
-  const [showSimulation, setShowSimulation] = useState(false);
-  const [simProvider, setSimProvider] = useState<'google' | 'apple'>('google');
-  useEffect(() => {
-    const error = searchParams.get('error');
-    const provider = searchParams.get('provider');
-    if (error === 'missing_env' && (provider === 'google' || provider === 'apple')) {
-      setSimProvider(provider as 'google' | 'apple');
-      setShowSimulation(true);
-      console.warn('OAuth missing_env detected. Redirecting to simulation.');
-      toast.info("OAuth not configured (Missing Client ID). Using simulation mode.");
-      // Clear params to prevent reopening on refresh
-      setSearchParams({}, { replace: true });
-    }
-  }, [searchParams, setSearchParams]);
+  const [oauthModal, setOauthModal] = useState<{ open: boolean; provider: 'google' | 'apple' }>({
+    open: false,
+    provider: 'google'
+  });
   const handleGuestLogin = async () => {
     setIsLoggingIn('guest');
     try {
@@ -54,21 +42,19 @@ export function LoginPage() {
     }
   };
   const handleOAuthClick = (provider: 'google' | 'apple') => {
-    setIsLoggingIn(provider);
-    toast.info(`Redirecting to ${provider === 'google' ? 'Google' : 'Apple'}...`);
-    // Redirect to backend OAuth endpoint
-    window.location.href = `/api/auth/${provider}/redirect`;
+    setOauthModal({ open: true, provider });
   };
-  const handleSimulateLogin = async (email: string) => {
+  const handleOAuthConfirm = async (email: string) => {
+    setOauthModal({ ...oauthModal, open: false });
+    setIsLoggingIn(oauthModal.provider);
     try {
-      await login(simProvider, email);
-      toast.success(`Simulated ${simProvider} login successful!`);
+      await login(oauthModal.provider, email);
+      toast.success(`Welcome back! Signed in with ${oauthModal.provider === 'google' ? 'Google' : 'Apple'}`);
       navigate('/');
     } catch (error) {
       console.error(error);
-      toast.error('Simulation failed');
+      toast.error('Failed to sign in.');
     } finally {
-      setShowSimulation(false);
       setIsLoggingIn(null);
     }
   };
@@ -165,10 +151,10 @@ export function LoginPage() {
         </div>
       </motion.div>
       <OAuthSimulationModal
-        isOpen={showSimulation}
-        onClose={() => { setShowSimulation(false); setIsLoggingIn(null); }}
-        provider={simProvider}
-        onConfirm={handleSimulateLogin}
+        isOpen={oauthModal.open}
+        onClose={() => setOauthModal({ ...oauthModal, open: false })}
+        provider={oauthModal.provider}
+        onConfirm={handleOAuthConfirm}
       />
     </div>
   );

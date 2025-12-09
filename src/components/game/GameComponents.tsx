@@ -1,11 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { Check, X, User as UserIcon, Loader2, Crown, Smile, Swords, Medal, Flame, Bot } from 'lucide-react';
+import { Check, X, User as UserIcon, Loader2, Crown, Smile } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { AvatarWithFrame } from '@/components/ui/avatar-with-frame';
-import type { FrameConfig } from '@shared/types';
 // --- Timer Circle ---
 interface TimerCircleProps {
   duration: number; // seconds
@@ -111,13 +109,13 @@ export function AnswerButton({ text, index, selected, locked, correct, isLoading
       onClick={!locked && !isLoading ? onClick : undefined}
       disabled={locked || isLoading}
       className={cn(
-        "relative w-full p-3 md:p-6 text-left rounded-2xl border-2 transition-all duration-200 flex items-center justify-between group backdrop-blur-sm",
+        "relative w-full p-5 md:p-6 text-left rounded-2xl border-2 transition-all duration-200 flex items-center justify-between group backdrop-blur-sm",
         variantClass
       )}
     >
-      <div className="flex items-center gap-3 md:gap-4">
+      <div className="flex items-center gap-4">
         <span className={cn(
-          "flex items-center justify-center w-6 h-6 md:w-8 md:h-8 rounded-lg text-xs md:text-sm font-bold transition-colors relative",
+          "flex items-center justify-center w-8 h-8 rounded-lg text-sm font-bold transition-colors relative",
           selected || (locked && correct) || isLoading ? "bg-white/20 text-white" : "bg-white/10 text-white/60"
         )}>
           {String.fromCharCode(65 + index)}
@@ -126,7 +124,7 @@ export function AnswerButton({ text, index, selected, locked, correct, isLoading
             {shortcutKey}
           </span>
         </span>
-        <span className="text-base md:text-xl font-medium leading-tight">{text}</span>
+        <span className="text-lg md:text-xl font-medium leading-tight">{text}</span>
       </div>
       {icon}
     </motion.button>
@@ -161,111 +159,27 @@ export function ScoreBadge({ score, label, isOpponent }: ScoreBadgeProps) {
   );
 }
 // --- Opponent Avatar ---
-export function OpponentAvatar({
-  name,
-  className,
-  isOpponent,
-  title,
-  displayTitle,
-  streak,
-  avatar,
-  frame,
-  frameConfig,
-  hasAnswered,
-  isBot
-}: {
-  name: string,
-  className?: string,
-  isOpponent?: boolean,
-  title?: string,
-  displayTitle?: string,
-  streak?: number,
-  avatar?: string,
-  frame?: string,
-  frameConfig?: FrameConfig,
-  hasAnswered?: boolean,
-  isBot?: boolean
-}) {
-  // Determine title styling based on content
-  let titleClass = "text-amber-400 border-amber-500/20 bg-amber-500/10";
-  let titleIcon = <Crown className="w-3 h-3 fill-amber-400" />;
-  if (displayTitle) {
-    if (displayTitle === 'Gold' || displayTitle.includes('1st Daily')) {
-      titleClass = "text-yellow-400 border-yellow-500/30 bg-yellow-500/10";
-      titleIcon = <Crown className="w-3 h-3 fill-yellow-400" />;
-    } else if (displayTitle === 'Silver' || displayTitle.includes('2nd Daily')) {
-      titleClass = "text-slate-300 border-slate-400/30 bg-slate-400/10";
-      titleIcon = <Medal className="w-3 h-3 text-slate-300" />;
-    } else if (displayTitle === 'Bronze' || displayTitle.includes('3rd Daily')) {
-      titleClass = "text-amber-600 border-amber-700/30 bg-amber-700/10";
-      titleIcon = <Medal className="w-3 h-3 text-amber-600" />;
-    } else if (displayTitle.includes('in ')) {
-      // Category Rank
-      titleClass = "text-indigo-300 border-indigo-500/30 bg-indigo-500/10";
-      titleIcon = <Medal className="w-3 h-3 text-indigo-300" />;
-    }
-  }
-  const finalTitle = displayTitle || title;
+export function OpponentAvatar({ name, className, isOpponent, title }: { name: string, className?: string, isOpponent?: boolean, title?: string }) {
   return (
-    <div className={cn("flex flex-col items-center gap-2 relative", className)}>
-      {/* Streak Badge */}
-      <AnimatePresence>
-        {streak && streak >= 3 && (
-          <motion.div
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0, opacity: 0 }}
-            className="absolute -top-2 -right-2 z-20 flex items-center justify-center w-6 h-6 bg-orange-500 rounded-full border-2 border-zinc-900 shadow-lg shadow-orange-500/50"
-          >
-            <Flame className="w-3.5 h-3.5 text-white fill-white animate-pulse" />
-          </motion.div>
-        )}
-      </AnimatePresence>
+    <div className={cn("flex flex-col items-center gap-2", className)}>
       <div className={cn(
-        "relative w-14 h-14 rounded-full p-[3px] shadow-xl transition-shadow duration-300",
+        "relative w-14 h-14 rounded-full p-[3px] shadow-xl",
         isOpponent
-          ? "bg-gradient-to-br from-rose-500 to-orange-600 ring-2 ring-rose-500/30"
-          : "bg-gradient-to-br from-indigo-500 to-cyan-500 ring-2 ring-indigo-500/30",
-        streak && streak >= 3 && "shadow-[0_0_20px_rgba(249,115,22,0.6)]"
+          ? "bg-gradient-to-br from-rose-500 to-orange-600"
+          : "bg-gradient-to-br from-indigo-500 to-cyan-500"
       )}>
-        <AvatarWithFrame
-          src={avatar}
-          fallback={name}
-          frameSrc={frame}
-          frameConfig={frameConfig}
-          className="w-full h-full"
-          isOpponent={isOpponent}
-        />
-        {/* Bot Badge */}
-        {isBot && (
-          <div className="absolute -top-1 -left-1 z-20 flex items-center justify-center w-6 h-6 bg-indigo-500 rounded-full border-2 border-zinc-900 shadow-lg" title="AI Opponent">
-            <Bot className="w-3.5 h-3.5 text-white" />
-          </div>
-        )}
-        {/* Has Answered Indicator */}
-        <AnimatePresence>
-          {hasAnswered && (
-            <motion.div
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0, opacity: 0 }}
-              className="absolute -bottom-1 -right-1 z-20 flex items-center justify-center w-6 h-6 bg-emerald-500 rounded-full border-2 border-zinc-900 shadow-lg"
-            >
-              <Check className="w-3.5 h-3.5 text-white stroke-[3]" />
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <div className="absolute inset-0 rounded-full animate-pulse opacity-50 bg-white blur-md" />
+        <div className="relative w-full h-full rounded-full bg-zinc-900 flex items-center justify-center overflow-hidden">
+          <UserIcon className="w-7 h-7 text-white/80" />
+        </div>
       </div>
       <div className="flex flex-col items-center">
         <span className="text-xs font-bold text-white/90 tracking-wide bg-black/40 px-2 py-0.5 rounded-full backdrop-blur-sm border border-white/5">
           {name}
         </span>
-        {finalTitle && (
-          <span className={cn(
-            "mt-1 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 px-1.5 py-0.5 rounded border max-w-[120px] truncate",
-            titleClass
-          )}>
-            {titleIcon} {finalTitle}
+        {title && (
+          <span className="mt-1 text-[10px] font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
+            <Crown className="w-3 h-3 fill-amber-400" /> {title}
           </span>
         )}
       </div>
@@ -277,7 +191,7 @@ interface EmotePickerProps {
   onSelect: (emoji: string) => void;
   disabled?: boolean;
 }
-const EMOJIS = ['😂', '👏', '🤔', '😱', '😎', '😭', '🤯', '🔥'];
+const EMOJIS = ['😂', '👏', '🤔', '😱', '😎', '��', '🤯', '🔥'];
 export function EmotePicker({ onSelect, disabled }: EmotePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isCooldown, setIsCooldown] = useState(false);
@@ -342,43 +256,5 @@ export function EmoteFloater({ emoji, timestamp }: EmoteFloaterProps) {
         {emoji}
       </motion.div>
     </AnimatePresence>
-  );
-}
-// --- Round Intermission ---
-interface RoundIntermissionProps {
-  roundNumber: number;
-  totalRounds: number;
-}
-export function RoundIntermission({ roundNumber, totalRounds }: RoundIntermissionProps) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 1.1 }}
-      className="absolute inset-0 z-20 flex items-center justify-center bg-black/60 backdrop-blur-sm rounded-[2rem]"
-    >
-      <div className="flex flex-col items-center gap-4 p-8 rounded-3xl bg-zinc-900/90 border border-white/10 shadow-2xl text-center">
-        <div className="p-4 rounded-full bg-indigo-500/20 border border-indigo-500/30 mb-2">
-          <Swords className="w-8 h-8 text-indigo-400" />
-        </div>
-        <div>
-          <h3 className="text-3xl font-display font-bold text-white mb-1">
-            Round {roundNumber}
-          </h3>
-          <p className="text-indigo-200/70 font-medium uppercase tracking-widest text-xs">
-            of {totalRounds}
-          </p>
-        </div>
-        <div className="h-1 w-24 bg-white/10 rounded-full overflow-hidden mt-2">
-          <motion.div
-            initial={{ width: "0%" }}
-            animate={{ width: "100%" }}
-            transition={{ duration: 1.5, ease: "easeInOut" }}
-            className="h-full bg-indigo-500"
-          />
-        </div>
-        <p className="text-sm text-muted-foreground animate-pulse">Get Ready...</p>
-      </div>
-    </motion.div>
   );
 }

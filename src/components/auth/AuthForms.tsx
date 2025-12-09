@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Loader2, Mail, Lock, User, ArrowRight, Wand2, Globe } from 'lucide-react';
+import { Loader2, Mail, Lock, User, ArrowRight, Wand2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,18 +15,10 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useAuthStore } from '@/lib/auth-store';
 import { toast } from 'sonner';
 import { AvatarCreator } from '../profile/AvatarCreator';
-import { COUNTRIES } from '@shared/constants';
 // --- Schemas ---
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -36,7 +28,6 @@ const registerSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
-  country: z.string().optional(),
 });
 type LoginFormData = z.infer<typeof loginSchema>;
 type RegisterFormData = z.infer<typeof registerSchema>;
@@ -115,11 +106,8 @@ export function RegisterForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [customAvatar, setCustomAvatar] = useState<string | null>(null);
   const [showAvatarCreator, setShowAvatarCreator] = useState(false);
-  const { register, handleSubmit, setValue, formState: { errors } } = useForm<RegisterFormData>({
+  const { register, handleSubmit, formState: { errors } } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
-    defaultValues: {
-      country: 'US'
-    }
   });
   const onSubmit = async (data: RegisterFormData) => {
     setIsLoading(true);
@@ -131,6 +119,8 @@ export function RegisterForm() {
       toast.success('Account created successfully!');
       navigate('/');
     } catch (err: unknown) {
+      // Enhanced Error Logging
+      console.error('Registration Error Details:', JSON.stringify(err, Object.getOwnPropertyNames(err)));
       let message = 'Registration failed';
       if (err instanceof Error) {
         message = err.message;
@@ -141,10 +131,6 @@ export function RegisterForm() {
       }
       if (message === '[object Object]' || !message) {
         message = 'An unexpected error occurred. Please try again.';
-      }
-      // Only log unexpected errors to console to prevent noise
-      if (!message.toLowerCase().includes('user already exists') && !message.toLowerCase().includes('email')) {
-         console.error('Registration Error Details:', JSON.stringify(err, Object.getOwnPropertyNames(err)));
       }
       toast.error(message);
     } finally {
@@ -214,24 +200,6 @@ export function RegisterForm() {
             />
           </div>
           {errors.password && <p className="text-xs text-red-400">{errors.password.message}</p>}
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="reg-country">Country</Label>
-          <div className="relative">
-            <Globe className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground z-10" />
-            <Select onValueChange={(val) => setValue('country', val)} defaultValue="US">
-              <SelectTrigger className="pl-9 bg-black/20 border-white/10">
-                <SelectValue placeholder="Select Country" />
-              </SelectTrigger>
-              <SelectContent className="bg-zinc-900 border-white/10 max-h-[200px]">
-                {COUNTRIES.map((c) => (
-                  <SelectItem key={c.code} value={c.code}>
-                    <span className="mr-2 text-lg">{c.flag}</span> {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
         </div>
         <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Create Account'}

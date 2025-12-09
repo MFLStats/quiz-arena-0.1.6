@@ -28,9 +28,7 @@ import {
   User as UserIcon,
   Wand2,
   Share2,
-  Activity,
-  Search,
-  LogOut
+  Activity
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -62,18 +60,15 @@ import {
 } from "@/components/ui/tooltip";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { cn, getFlagEmoji, isImageUrl, getBackgroundStyle, shareContent } from '@/lib/utils';
-import type { User, Category, MatchHistoryItem, UpdateUserRequest, UserAchievement, ShopItem, FrameConfig } from '@shared/types';
+import { cn, getFlagEmoji } from '@/lib/utils';
+import type { User, Category, MatchHistoryItem, UpdateUserRequest, UserAchievement } from '@shared/types';
 import { getLevelFromXp } from '@shared/progression';
 import { ACHIEVEMENTS } from '@shared/achievements';
 import { COUNTRIES } from '@shared/constants';
+import { MOCK_SHOP_ITEMS } from '@shared/mock-data';
 import { AvatarCreator } from './AvatarCreator';
 import { toast } from 'sonner';
 import { eachDayOfInterval, subDays, format, isSameDay, startOfWeek, endOfWeek } from 'date-fns';
-import { api } from '@/lib/api-client';
-import { ChallengeModal } from '@/components/game/ChallengeModal';
-import { AvatarWithFrame } from '@/components/ui/avatar-with-frame';
-import { CATEGORY_ICONS } from '@/lib/icons';
 // --- Icon Map ---
 const ICON_MAP: Record<string, React.ElementType> = {
   Swords, Zap, Target, Shield, Coins, Flame, Users, Calendar
@@ -83,18 +78,12 @@ interface ProfileBannerProps {
   user: User;
   isOwnProfile: boolean;
   onUpdate: (data: UpdateUserRequest) => Promise<void>;
-  onAddFriend?: () => Promise<void>;
-  isFriend?: boolean;
-  shopItems: ShopItem[];
-  onLogout?: () => void;
-  dynamicTitle?: string;
 }
-export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFriend, shopItems, onLogout }: ProfileBannerProps) {
+export function ProfileBanner({ user, isOwnProfile, onUpdate }: ProfileBannerProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showCreator, setShowCreator] = useState(false);
   const [showAvatarDialog, setShowAvatarDialog] = useState(false);
-  const [isAddingFriend, setIsAddingFriend] = useState(false);
   // Form State
   const [name, setName] = useState(user.name);
   const [country, setCountry] = useState(user.country || 'US');
@@ -102,8 +91,6 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
   const [frame, setFrame] = useState(user.frame);
   const [banner, setBanner] = useState(user.banner);
   const [title, setTitle] = useState(user.title);
-  // Default frame config updated to x: -8, y: 0, scale: 1.35
-  const [frameConfig, setFrameConfig] = useState<FrameConfig>({ x: -8, y: 0, scale: 1.35 });
   // Reset state when dialog opens
   useEffect(() => {
     if (isEditing) {
@@ -113,7 +100,6 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
       setFrame(user.frame);
       setBanner(user.banner);
       setTitle(user.title);
-      setFrameConfig(user.frameConfig || { x: -8, y: 0, scale: 1.35 });
       setShowCreator(false);
     }
   }, [isEditing, user]);
@@ -126,8 +112,7 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
         avatar,
         frame,
         banner,
-        title,
-        frameConfig
+        title
       });
       setIsEditing(false);
     } finally {
@@ -144,31 +129,18 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
     }
   };
   const handleShare = () => {
-    shareContent({
-      title: `Quiz Arena Profile: ${user.name}`,
-      text: `Check out ${user.name}'s profile on Quiz Arena! Level ${getLevelFromXp(user.xp || 0).level} with ${user.elo} Elo.`,
-      url: window.location.href
-    });
-  };
-  const handleFriendAction = async () => {
-    if (!onAddFriend) return;
-    setIsAddingFriend(true);
-    try {
-      await onAddFriend();
-    } finally {
-      setIsAddingFriend(false);
-    }
+    const url = window.location.href;
+    navigator.clipboard.writeText(url);
+    toast.success("Profile link copied!");
   };
   // Filter owned items
-  const ownedItems = shopItems.filter(item => user.inventory?.includes(item.id));
+  const ownedItems = MOCK_SHOP_ITEMS.filter(item => user.inventory?.includes(item.id));
   const ownedAvatars = ownedItems.filter(i => i.type === 'avatar');
   const ownedFrames = ownedItems.filter(i => i.type === 'frame');
   const ownedBanners = ownedItems.filter(i => i.type === 'banner');
   const ownedTitles = ownedItems.filter(i => i.type === 'title');
   // Use shared progression logic
   const { level, currentLevelXp, nextLevelXp, progressPercent } = getLevelFromXp(user.xp || 0);
-  // Check for dynamic title on user object (injected by backend)
-  const dynamicTitle = (user as any).dynamicTitle;
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -176,35 +148,39 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
       className="relative overflow-hidden rounded-[2rem] bg-zinc-900 border border-white/10 shadow-2xl group"
     >
       {/* Banner Background */}
-      <div className="absolute inset-0 h-56 md:h-80 overflow-hidden">
+      <div className="absolute inset-0 h-48 md:h-64 overflow-hidden">
         <div
           className="absolute inset-0 bg-cover bg-center opacity-60 transition-transform duration-1000 group-hover:scale-105"
-          style={getBackgroundStyle(user.banner)}
+          style={{
+            backgroundImage: user.banner ? `url(${user.banner})` : undefined,
+            background: user.banner && user.banner.startsWith('linear') ? user.banner : undefined
+          }}
         />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-zinc-900/80 to-zinc-900" />
       </div>
-      <div className="relative z-10 pt-40 md:pt-56 px-6 pb-12 md:px-10 md:pb-20 flex flex-col md:flex-row items-center md:items-end gap-6 md:gap-8">
+      <div className="relative z-10 pt-32 px-6 pb-6 md:px-10 md:pb-10 flex flex-col md:flex-row items-center md:items-end gap-6 md:gap-8">
         {/* Avatar Group */}
-        <div className="relative shrink-0 z-20 mb-12 md:mb-0">
+        <div className="relative shrink-0">
           <div className="absolute -inset-2 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full blur-lg opacity-50 group-hover:opacity-75 transition duration-500" />
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="relative w-32 h-32 md:w-40 md:h-40 rounded-full p-1.5 bg-zinc-900 ring-4 ring-zinc-900/50 cursor-help">
-                  <AvatarWithFrame
-                    src={user.avatar}
-                    fallback={user.name}
-                    frameSrc={user.frame}
-                    frameConfig={user.frameConfig}
-                    className="w-full h-full"
-                  />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent className="bg-zinc-900 border-white/10 text-xs font-medium">
-                Vector SVG • 1:1 Aspect Ratio
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <div className={cn(
+            "relative w-32 h-32 md:w-40 md:h-40 rounded-full p-1.5 bg-zinc-900 ring-4 ring-zinc-900/50",
+            user.frame // Apply frame styles if present
+          )}>
+            <Avatar className="w-full h-full border-2 border-white/10">
+              <AvatarImage src={user.avatar} className="object-cover" />
+              <AvatarFallback className="text-4xl font-bold bg-zinc-800 text-white">
+                {user.name.substring(0, 2).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            {/* Frame Overlay (if it were an image) */}
+            {user.frame && user.frame.startsWith('http') && (
+               <img src={user.frame} className="absolute inset-0 w-full h-full pointer-events-none" />
+            )}
+            {/* CSS Frame Fallback */}
+            {user.frame && !user.frame.startsWith('http') && (
+               <div className={cn("absolute inset-0 rounded-full border-4 pointer-events-none", user.frame)} />
+            )}
+          </div>
           {/* Quick Edit Button */}
           {isOwnProfile && (
             <div className="absolute bottom-0 right-0 z-20 translate-x-1/4 translate-y-1/4">
@@ -218,8 +194,7 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
               </Button>
             </div>
           )}
-          {/* Level Badge - Lowered position to avoid frame overlap */}
-          <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 bg-zinc-900 text-white font-bold px-4 py-1 rounded-full text-sm shadow-xl border border-white/10 flex items-center gap-1.5 whitespace-nowrap z-30">
+          <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-zinc-900 text-white font-bold px-4 py-1 rounded-full text-sm shadow-xl border border-white/10 flex items-center gap-1.5 whitespace-nowrap z-10">
             <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
             LVL {level}
           </div>
@@ -230,297 +205,221 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
             <h1 className="text-3xl md:text-5xl font-display font-bold text-white tracking-tight drop-shadow-lg">
               {user.name}
             </h1>
-            {/* Actions */}
-            <div className="flex items-center gap-2">
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-9 w-9 rounded-full bg-white/5 hover:bg-white/10 text-white/70 hover:text-white backdrop-blur-sm border border-white/5"
-                onClick={handleShare}
-                title="Share Profile"
-              >
-                <Share2 className="w-4 h-4" />
-              </Button>
-              {isOwnProfile ? (
-                <>
-                  <Dialog open={isEditing} onOpenChange={setIsEditing}>
-                    <DialogTrigger asChild>
-                      <Button size="icon" variant="ghost" className="h-9 w-9 rounded-full bg-white/5 hover:bg-white/10 text-white/70 hover:text-white backdrop-blur-sm border border-white/5">
-                        <Edit2 className="w-4 h-4" />
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="bg-zinc-950 border-white/10 max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-                      <DialogHeader>
-                        <DialogTitle>Edit Profile</DialogTitle>
-                        <DialogDescription>Customize your identity and appearance.</DialogDescription>
-                      </DialogHeader>
-                      <Tabs defaultValue="identity" className="flex-1 overflow-hidden flex flex-col mt-4">
-                        <TabsList className="grid w-full grid-cols-2 bg-white/5">
-                          <TabsTrigger value="identity">Identity</TabsTrigger>
-                          <TabsTrigger value="appearance">Appearance</TabsTrigger>
-                        </TabsList>
-                        {/* IDENTITY TAB */}
-                        <TabsContent value="identity" className="flex-1 space-y-6 py-4">
-                          <div className="space-y-4">
-                            <div className="space-y-2">
-                              <Label>Display Name</Label>
-                              <Input
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                className="bg-black/20 border-white/10"
-                                placeholder="Enter your name"
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Country</Label>
-                              <Select value={country} onValueChange={setCountry}>
-                                <SelectTrigger className="bg-black/20 border-white/10">
-                                  <SelectValue placeholder="Select a country" />
-                                </SelectTrigger>
-                                <SelectContent className="bg-zinc-900 border-white/10 max-h-[300px]">
-                                  {COUNTRIES.map((c) => (
-                                    <SelectItem key={c.code} value={c.code}>
-                                      <span className="mr-2 text-lg">{c.flag}</span> {c.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Title</Label>
-                              <Select value={title || "none"} onValueChange={(val) => setTitle(val === "none" ? "" : val)}>
-                                <SelectTrigger className="bg-black/20 border-white/10">
-                                  <SelectValue placeholder="Select a title" />
-                                </SelectTrigger>
-                                <SelectContent className="bg-zinc-900 border-white/10">
-                                  <SelectItem value="none">None</SelectItem>
-                                  {ownedTitles.map((t) => (
-                                    <SelectItem key={t.id} value={t.name}>
-                                      {t.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </div>
-                        </TabsContent>
-                        {/* APPEARANCE TAB */}
-                        <TabsContent value="appearance" className="flex-1 overflow-hidden flex flex-col py-4">
-                          {showCreator ? (
-                            <AvatarCreator
-                              initialUrl={avatar}
-                              onSave={(url) => {
-                                setAvatar(url);
-                                setShowCreator(false);
-                              }}
-                              onCancel={() => setShowCreator(false)}
+            {isOwnProfile && (
+              <div className="flex items-center gap-2">
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-9 w-9 rounded-full bg-white/5 hover:bg-white/10 text-white/70 hover:text-white backdrop-blur-sm border border-white/5"
+                  onClick={handleShare}
+                  title="Share Profile"
+                >
+                  <Share2 className="w-4 h-4" />
+                </Button>
+                <Dialog open={isEditing} onOpenChange={setIsEditing}>
+                  <DialogTrigger asChild>
+                    <Button size="icon" variant="ghost" className="h-9 w-9 rounded-full bg-white/5 hover:bg-white/10 text-white/70 hover:text-white backdrop-blur-sm border border-white/5">
+                      <Edit2 className="w-4 h-4" />
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="bg-zinc-950 border-white/10 max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+                    <DialogHeader>
+                      <DialogTitle>Edit Profile</DialogTitle>
+                      <DialogDescription>Customize your identity and appearance.</DialogDescription>
+                    </DialogHeader>
+                    <Tabs defaultValue="identity" className="flex-1 overflow-hidden flex flex-col mt-4">
+                      <TabsList className="grid w-full grid-cols-2 bg-white/5">
+                        <TabsTrigger value="identity">Identity</TabsTrigger>
+                        <TabsTrigger value="appearance">Appearance</TabsTrigger>
+                      </TabsList>
+                      {/* IDENTITY TAB */}
+                      <TabsContent value="identity" className="flex-1 space-y-6 py-4">
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label>Display Name</Label>
+                            <Input
+                              value={name}
+                              onChange={(e) => setName(e.target.value)}
+                              className="bg-black/20 border-white/10"
+                              placeholder="Enter your name"
                             />
-                          ) : (
-                            <ScrollArea className="flex-1 pr-4">
-                              <div className="space-y-8">
-                                {/* Preview Section */}
-                                <div className="flex flex-col items-center gap-4 p-4 bg-white/5 rounded-xl border border-white/10">
-                                  <Label className="text-muted-foreground">Preview</Label>
-                                  <div className="w-32 h-32 rounded-full bg-zinc-900 border-4 border-indigo-500/30 relative">
-                                    <AvatarWithFrame
-                                      src={avatar}
-                                      fallback={name}
-                                      frameSrc={frame}
-                                      frameConfig={frameConfig}
-                                      className="w-full h-full"
-                                    />
-                                  </div>
-                                  {/* Frame Adjustment Controls Removed as per client request */}
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Country</Label>
+                            <Select value={country} onValueChange={setCountry}>
+                              <SelectTrigger className="bg-black/20 border-white/10">
+                                <SelectValue placeholder="Select a country" />
+                              </SelectTrigger>
+                              <SelectContent className="bg-zinc-900 border-white/10 max-h-[300px]">
+                                {COUNTRIES.map((c) => (
+                                  <SelectItem key={c.code} value={c.code}>
+                                    <span className="mr-2 text-lg">{c.flag}</span> {c.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Title</Label>
+                            <Select value={title || "none"} onValueChange={(val) => setTitle(val === "none" ? undefined : val)}>
+                              <SelectTrigger className="bg-black/20 border-white/10">
+                                <SelectValue placeholder="Select a title" />
+                              </SelectTrigger>
+                              <SelectContent className="bg-zinc-900 border-white/10">
+                                <SelectItem value="none">None</SelectItem>
+                                {ownedTitles.map((t) => (
+                                  <SelectItem key={t.id} value={t.name}>
+                                    {t.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      </TabsContent>
+                      {/* APPEARANCE TAB */}
+                      <TabsContent value="appearance" className="flex-1 overflow-hidden flex flex-col py-4">
+                        {showCreator ? (
+                          <AvatarCreator
+                            initialUrl={avatar}
+                            onSave={(url) => {
+                              setAvatar(url);
+                              setShowCreator(false);
+                            }}
+                            onCancel={() => setShowCreator(false)}
+                          />
+                        ) : (
+                          <ScrollArea className="flex-1 pr-4">
+                            <div className="space-y-8">
+                              {/* Avatars */}
+                              <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                  <Label className="flex items-center gap-2"><UserIcon className="w-4 h-4" /> Avatars</Label>
+                                  <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => setShowCreator(true)}>
+                                    <Wand2 className="w-3 h-3" /> Create New
+                                  </Button>
                                 </div>
-                                {/* Avatars */}
-                                <div className="space-y-3">
-                                  <div className="flex items-center justify-between">
-                                    <Label className="flex items-center gap-2"><UserIcon className="w-4 h-4" /> Avatars</Label>
-                                    <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => setShowCreator(true)}>
-                                      <Wand2 className="w-3 h-3" /> Create New
-                                    </Button>
-                                  </div>
-                                  <div className="grid grid-cols-4 sm:grid-cols-5 gap-3">
-                                    {/* Current/Default Option if not in owned list */}
+                                <div className="grid grid-cols-4 sm:grid-cols-5 gap-3">
+                                  {/* Current/Default Option if not in owned list */}
+                                  <button
+                                    onClick={() => setAvatar(user.avatar)}
+                                    className={cn(
+                                      "aspect-square rounded-xl overflow-hidden border-2 transition-all",
+                                      avatar === user.avatar && !ownedAvatars.find(a => a.assetUrl === user.avatar)
+                                        ? "border-indigo-500 ring-2 ring-indigo-500/30"
+                                        : "border-white/10 hover:border-white/30"
+                                    )}
+                                  >
+                                    <img src={user.avatar} className="w-full h-full object-cover" alt="Current" />
+                                  </button>
+                                  {ownedAvatars.map((item) => (
                                     <button
-                                      onClick={() => setAvatar(user.avatar)}
+                                      key={item.id}
+                                      onClick={() => setAvatar(item.assetUrl)}
                                       className={cn(
-                                        "aspect-square rounded-xl overflow-hidden border-2 transition-all",
-                                        avatar === user.avatar && !ownedAvatars.find(a => a.assetUrl === user.avatar)
-                                          ? "border-indigo-500 ring-2 ring-indigo-500/30"
-                                          : "border-white/10 hover:border-white/30"
+                                        "aspect-square rounded-xl overflow-hidden border-2 transition-all relative",
+                                        avatar === item.assetUrl ? "border-indigo-500 ring-2 ring-indigo-500/30" : "border-white/10 hover:border-white/30"
                                       )}
                                     >
-                                      <img src={user.avatar} className="w-full h-full object-cover" alt="Current" />
-                                    </button>
-                                    {ownedAvatars.map((item) => (
-                                      <button
-                                        key={item.id}
-                                        onClick={() => setAvatar(item.assetUrl)}
-                                        className={cn(
-                                          "aspect-square rounded-xl overflow-hidden border-2 transition-all relative",
-                                          avatar === item.assetUrl ? "border-indigo-500 ring-2 ring-indigo-500/30" : "border-white/10 hover:border-white/30"
-                                        )}
-                                      >
-                                        <img src={item.assetUrl} className="w-full h-full object-cover" alt={item.name} />
-                                        {avatar === item.assetUrl && (
-                                          <div className="absolute inset-0 bg-indigo-500/20 flex items-center justify-center">
-                                            <Check className="w-6 h-6 text-white drop-shadow-md" />
-                                          </div>
-                                        )}
-                                      </button>
-                                    ))}
-                                  </div>
-                                </div>
-                                {/* Frames */}
-                                <div className="space-y-3">
-                                  <Label className="flex items-center gap-2"><LayoutTemplate className="w-4 h-4" /> Frames</Label>
-                                  <div className="grid grid-cols-4 sm:grid-cols-5 gap-3">
-                                    <button
-                                      onClick={() => setFrame("")}
-                                      className={cn(
-                                        "aspect-square rounded-xl border-2 transition-all flex items-center justify-center bg-white/5",
-                                        !frame ? "border-indigo-500 ring-2 ring-indigo-500/30" : "border-white/10 hover:border-white/30"
+                                      <img src={item.assetUrl} className="w-full h-full object-cover" alt={item.name} />
+                                      {avatar === item.assetUrl && (
+                                        <div className="absolute inset-0 bg-indigo-500/20 flex items-center justify-center">
+                                          <Check className="w-6 h-6 text-white drop-shadow-md" />
+                                        </div>
                                       )}
-                                    >
-                                      <span className="text-xs text-muted-foreground">None</span>
                                     </button>
-                                    {ownedFrames.map((item) => (
-                                      <button
-                                        key={item.id}
-                                        onClick={() => setFrame(item.assetUrl)}
-                                        className={cn(
-                                          "aspect-square rounded-xl border-2 transition-all relative flex items-center justify-center bg-zinc-900",
-                                          frame === item.assetUrl ? "border-indigo-500 ring-2 ring-indigo-500/30" : "border-white/10 hover:border-white/30"
-                                        )}
-                                      >
-                                        {isImageUrl(item.assetUrl) ? (
-                                          <img src={item.assetUrl} className="w-full h-full object-contain scale-90" alt={item.name} />
-                                        ) : (
-                                          <div className={cn("w-12 h-12 rounded-full", item.assetUrl)} />
-                                        )}
-                                        {frame === item.assetUrl && (
-                                          <div className="absolute inset-0 bg-indigo-500/20 flex items-center justify-center rounded-xl">
-                                            <Check className="w-6 h-6 text-white drop-shadow-md" />
-                                          </div>
-                                        )}
-                                      </button>
-                                    ))}
-                                  </div>
-                                </div>
-                                {/* Banners */}
-                                <div className="space-y-3">
-                                  <Label className="flex items-center gap-2"><Palette className="w-4 h-4" /> Banners</Label>
-                                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                                    {ownedBanners.map((item) => (
-                                      <button
-                                        key={item.id}
-                                        onClick={() => setBanner(item.assetUrl)}
-                                        className={cn(
-                                          "h-20 rounded-xl border-2 transition-all relative overflow-hidden",
-                                          banner === item.assetUrl ? "border-indigo-500 ring-2 ring-indigo-500/30" : "border-white/10 hover:border-white/30"
-                                        )}
-                                      >
-                                        <div
-                                          className="absolute inset-0"
-                                          style={getBackgroundStyle(item.assetUrl)}
-                                        />
-                                        {banner === item.assetUrl && (
-                                          <div className="absolute inset-0 bg-indigo-500/20 flex items-center justify-center">
-                                            <Check className="w-6 h-6 text-white drop-shadow-md" />
-                                          </div>
-                                        )}
-                                      </button>
-                                    ))}
-                                  </div>
+                                  ))}
                                 </div>
                               </div>
-                            </ScrollArea>
-                          )}
-                        </TabsContent>
-                      </Tabs>
-                      <DialogFooter className="mt-4">
-                        {!showCreator && (
-                          <>
-                            <Button variant="ghost" onClick={() => setIsEditing(false)}>Cancel</Button>
-                            <Button onClick={handleSave} disabled={isSaving}>
-                              {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Changes'}
-                            </Button>
-                          </>
+                              {/* Frames */}
+                              <div className="space-y-3">
+                                <Label className="flex items-center gap-2"><LayoutTemplate className="w-4 h-4" /> Frames</Label>
+                                <div className="grid grid-cols-4 sm:grid-cols-5 gap-3">
+                                  <button
+                                    onClick={() => setFrame(undefined)}
+                                    className={cn(
+                                      "aspect-square rounded-xl border-2 transition-all flex items-center justify-center bg-white/5",
+                                      !frame ? "border-indigo-500 ring-2 ring-indigo-500/30" : "border-white/10 hover:border-white/30"
+                                    )}
+                                  >
+                                    <span className="text-xs text-muted-foreground">None</span>
+                                  </button>
+                                  {ownedFrames.map((item) => (
+                                    <button
+                                      key={item.id}
+                                      onClick={() => setFrame(item.assetUrl)}
+                                      className={cn(
+                                        "aspect-square rounded-xl border-2 transition-all relative flex items-center justify-center bg-zinc-900",
+                                        frame === item.assetUrl ? "border-indigo-500 ring-2 ring-indigo-500/30" : "border-white/10 hover:border-white/30"
+                                      )}
+                                    >
+                                      <div className={cn("w-12 h-12 rounded-full border-2", item.assetUrl)} />
+                                      {frame === item.assetUrl && (
+                                        <div className="absolute inset-0 bg-indigo-500/20 flex items-center justify-center rounded-xl">
+                                          <Check className="w-6 h-6 text-white drop-shadow-md" />
+                                        </div>
+                                      )}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                              {/* Banners */}
+                              <div className="space-y-3">
+                                <Label className="flex items-center gap-2"><Palette className="w-4 h-4" /> Banners</Label>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                  {ownedBanners.map((item) => (
+                                    <button
+                                      key={item.id}
+                                      onClick={() => setBanner(item.assetUrl)}
+                                      className={cn(
+                                        "h-20 rounded-xl border-2 transition-all relative overflow-hidden",
+                                        banner === item.assetUrl ? "border-indigo-500 ring-2 ring-indigo-500/30" : "border-white/10 hover:border-white/30"
+                                      )}
+                                    >
+                                      <div
+                                        className="absolute inset-0"
+                                        style={{ background: item.assetUrl }}
+                                      />
+                                      {banner === item.assetUrl && (
+                                        <div className="absolute inset-0 bg-indigo-500/20 flex items-center justify-center">
+                                          <Check className="w-6 h-6 text-white drop-shadow-md" />
+                                        </div>
+                                      )}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          </ScrollArea>
                         )}
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-                  {onLogout && (
-                    <Button
-                      variant="destructive"
-                      className="gap-2 border border-red-500/20 bg-red-500/10 text-red-400 hover:bg-red-500/20"
-                      onClick={onLogout}
-                      title="Sign Out"
-                    >
-                      <LogOut className="w-4 h-4" />
-                      <span className="hidden sm:inline">Sign Out</span>
-                    </Button>
-                  )}
-                </>
-              ) : (
-                // Public Profile Actions
-                <>
-                  {!isFriend ? (
-                    <Button
-                      size="sm"
-                      className="bg-indigo-600 hover:bg-indigo-500 text-white gap-2"
-                      onClick={handleFriendAction}
-                      disabled={isAddingFriend}
-                    >
-                      {isAddingFriend ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
-                      Add Friend
-                    </Button>
-                  ) : (
-                    <Link to="/categories?mode=private">
-                      <Button size="sm" className="bg-emerald-600 hover:bg-emerald-500 text-white gap-2">
-                        <Swords className="w-4 h-4" />
-                        Challenge
-                      </Button>
-                    </Link>
-                  )}
-                </>
-              )}
-            </div>
+                      </TabsContent>
+                    </Tabs>
+                    <DialogFooter className="mt-4">
+                      {!showCreator && (
+                        <>
+                          <Button variant="ghost" onClick={() => setIsEditing(false)}>Cancel</Button>
+                          <Button onClick={handleSave} disabled={isSaving}>
+                            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Changes'}
+                          </Button>
+                        </>
+                      )}
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            )}
           </div>
           <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 text-sm font-medium text-white/70">
-            {dynamicTitle && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-yellow-500/20 to-orange-500/20 text-yellow-400 border border-yellow-500/30 shadow-[0_0_15px_rgba(234,179,8,0.2)] animate-pulse-fast">
-                <Crown className="w-3.5 h-3.5 fill-yellow-400" />
-                {dynamicTitle}
-              </span>
-            )}
             {user.title && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 shadow-[0_0_10px_rgba(245,158,11,0.1)]">
                 <Crown className="w-3.5 h-3.5 fill-amber-400" />
                 {user.title}
               </span>
             )}
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(user.id);
-                      toast.success("User ID copied to clipboard!");
-                    }}
-                    className="flex items-center gap-1.5 bg-white/5 px-3 py-1 rounded-full border border-white/5 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
-                    title="Click to copy full ID"
-                  >
-                    <Shield className="w-3.5 h-3.5 text-indigo-400" />
-                    <span className="font-mono">ID: {user.id.substring(0, 8)}</span>
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent className="bg-zinc-900 border-white/10 text-xs">
-                  Click to copy full ID
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <span className="flex items-center gap-1.5 bg-white/5 px-3 py-1 rounded-full border border-white/5">
+              <Shield className="w-3.5 h-3.5 text-indigo-400" />
+              ID: {user.id.substring(0, 8)}
+            </span>
             <span className="flex items-center gap-1.5 bg-white/5 px-3 py-1 rounded-full border border-white/5">
               <MapPin className="w-3.5 h-3.5 text-emerald-400" />
               {getFlagEmoji(user.country)} {user.country || 'Global'}
@@ -726,8 +625,6 @@ export function TopicMastery({ categories, categoryElo = {} }: TopicMasteryProps
           const adjustedElo = Math.max(1200, elo);
           const level = Math.floor((adjustedElo - 1200) / 100) + 1;
           const progress = (adjustedElo - 1200) % 100; // 0-99 progress to next level
-          // Get Icon
-          const Icon = CATEGORY_ICONS[cat.icon] || Zap;
           return (
             <motion.div
               key={cat.id}
@@ -738,7 +635,7 @@ export function TopicMastery({ categories, categoryElo = {} }: TopicMasteryProps
             >
               <div className={`absolute top-0 right-0 w-24 h-24 bg-gradient-to-br ${cat.color} opacity-[0.05] rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:opacity-10 transition-opacity`} />
               <div className="flex items-center gap-4 relative z-10">
-                {/* Circular Progress with Icon */}
+                {/* Circular Progress */}
                 <div className="relative w-14 h-14 flex items-center justify-center">
                   <svg className="w-full h-full transform -rotate-90">
                     <circle
@@ -763,8 +660,8 @@ export function TopicMastery({ categories, categoryElo = {} }: TopicMasteryProps
                       className="text-indigo-500 transition-all duration-1000 ease-out"
                     />
                   </svg>
-                  <div className="absolute inset-0 flex items-center justify-center text-white">
-                    <Icon className="w-6 h-6" />
+                  <div className="absolute inset-0 flex items-center justify-center font-bold text-sm text-white">
+                    {level}
                   </div>
                 </div>
                 <div className="flex-1 min-w-0">
@@ -774,9 +671,8 @@ export function TopicMastery({ categories, categoryElo = {} }: TopicMasteryProps
                       {elo}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span className="font-bold text-white/70">Lvl {level}</span>
-                    <span className="truncate ml-2">{progress}% to next</span>
+                  <div className="text-xs text-muted-foreground truncate">
+                    {progress}% to Level {level + 1}
                   </div>
                 </div>
               </div>
@@ -923,46 +819,21 @@ interface FriendsListProps {
   onAddFriend: (id: string) => Promise<void>;
 }
 export function FriendsList({ friends, onAddFriend }: FriendsListProps) {
+  const [friendId, setFriendId] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<Partial<User>[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [challengeFriend, setChallengeFriend] = useState<{id: string, name: string} | null>(null);
   // CRITICAL FIX: Deduplicate friends list to prevent key collisions
   const uniqueFriends = useMemo(() => {
     const map = new Map();
     friends.forEach(f => map.set(f.id, f));
     return Array.from(map.values());
   }, [friends]);
-  // Debounced search effect
-  useEffect(() => {
-    const timer = setTimeout(async () => {
-      if (searchQuery.length >= 2) {
-        setIsSearching(true);
-        try {
-          const results = await api<Partial<User>[]>(`/api/users/search?query=${encodeURIComponent(searchQuery)}`);
-          // Filter out existing friends and self (handled by backend usually but good to double check if we had current user ID)
-          const friendIds = new Set(friends.map(f => f.id));
-          setSearchResults(results.filter(u => u.id && !friendIds.has(u.id)));
-        } catch (e) {
-          console.error("Search failed", e);
-        } finally {
-          setIsSearching(false);
-        }
-      } else {
-        setSearchResults([]);
-      }
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [searchQuery, friends]);
-  const handleAdd = async (friendId: string) => {
-    if (!friendId) return;
+  const handleAdd = async () => {
+    if (!friendId.trim()) return;
     setIsAdding(true);
     try {
       await onAddFriend(friendId);
-      setSearchQuery('');
-      setSearchResults([]);
+      setFriendId('');
       setIsOpen(false);
     } finally {
       setIsAdding(false);
@@ -984,55 +855,23 @@ export function FriendsList({ friends, onAddFriend }: FriendsListProps) {
           <DialogContent className="bg-zinc-950 border-white/10">
             <DialogHeader>
               <DialogTitle>Add Friend</DialogTitle>
-              <DialogDescription>Search for players by name to connect.</DialogDescription>
+              <DialogDescription>Enter their User ID to connect.</DialogDescription>
             </DialogHeader>
-            <div className="py-4 space-y-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search users..."
-                  className="pl-9 bg-black/20 border-white/10"
-                />
-              </div>
-              <ScrollArea className="h-[200px] rounded-md border border-white/5 bg-black/20 p-2">
-                {isSearching ? (
-                  <div className="flex justify-center py-4">
-                    <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
-                  </div>
-                ) : searchResults.length > 0 ? (
-                  <div className="space-y-2">
-                    {searchResults.map(user => (
-                      <div key={user.id} className="flex items-center justify-between p-2 rounded hover:bg-white/5 transition-colors">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="w-8 h-8 border border-white/10">
-                            <AvatarImage src={user.avatar} />
-                            <AvatarFallback>{user.name?.substring(0, 2).toUpperCase()}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <div className="text-sm font-medium text-white">{user.name}</div>
-                            <div className="text-xs text-muted-foreground">Lvl {user.level} • {getFlagEmoji(user.country)}</div>
-                          </div>
-                        </div>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => user.id && handleAdd(user.id)}
-                          disabled={isAdding}
-                        >
-                          <UserPlus className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                ) : searchQuery.length >= 2 ? (
-                  <div className="text-center py-4 text-muted-foreground text-sm">No users found.</div>
-                ) : (
-                  <div className="text-center py-4 text-muted-foreground text-sm">Type to search...</div>
-                )}
-              </ScrollArea>
+            <div className="py-4">
+              <Label>User ID</Label>
+              <Input
+                value={friendId}
+                onChange={(e) => setFriendId(e.target.value)}
+                placeholder="e.g. u_123456"
+                className="bg-black/20 border-white/10 mt-2"
+              />
             </div>
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setIsOpen(false)}>Cancel</Button>
+              <Button onClick={handleAdd} disabled={isAdding}>
+                {isAdding ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Add Friend'}
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </CardHeader>
@@ -1040,7 +879,7 @@ export function FriendsList({ friends, onAddFriend }: FriendsListProps) {
         {uniqueFriends.length > 0 ? (
           uniqueFriends.map(friend => (
             <div key={friend.id} className="flex items-center justify-between p-3 rounded-xl bg-black/20 border border-white/5 hover:bg-white/5 transition-colors group">
-              <Link to={`/profile/${friend.id}`} className="flex items-center gap-3 flex-1">
+              <div className="flex items-center gap-3">
                 <div className="relative">
                   <Avatar className="w-9 h-9 border border-white/10">
                     <AvatarImage src={friend.avatar} />
@@ -1054,16 +893,12 @@ export function FriendsList({ friends, onAddFriend }: FriendsListProps) {
                     {getFlagEmoji(friend.country)} {friend.elo} Elo
                   </div>
                 </div>
+              </div>
+              <Link to="/categories?mode=private">
+                <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-indigo-500/20 hover:text-indigo-400" title="Challenge Friend">
+                  <Swords className="w-3.5 h-3.5" />
+                </Button>
               </Link>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-indigo-500/20 hover:text-indigo-400"
-                title="Challenge Friend"
-                onClick={() => setChallengeFriend({ id: friend.id, name: friend.name })}
-              >
-                <Swords className="w-3.5 h-3.5" />
-              </Button>
             </div>
           ))
         ) : (
@@ -1072,14 +907,6 @@ export function FriendsList({ friends, onAddFriend }: FriendsListProps) {
           </div>
         )}
       </CardContent>
-      {challengeFriend && (
-        <ChallengeModal
-          isOpen={!!challengeFriend}
-          onClose={() => setChallengeFriend(null)}
-          friendId={challengeFriend.id}
-          friendName={challengeFriend.name}
-        />
-      )}
     </Card>
   );
 }

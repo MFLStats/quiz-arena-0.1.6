@@ -25,7 +25,7 @@ import {
 import { useAudioStore } from '@/lib/audio-store';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuthStore } from '@/lib/auth-store';
-import { Volume2, Monitor, User, LogOut, VolumeX, Trash2, Loader2, RefreshCw, ZapOff } from 'lucide-react';
+import { Volume2, Monitor, User, LogOut, VolumeX, Trash2, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api-client';
 import { toast } from 'sonner';
@@ -35,7 +35,7 @@ interface SettingsDialogProps {
 }
 export function SettingsDialog({ isOpen, onOpenChange }: SettingsDialogProps) {
   const { masterVolume, sfxVolume, setMasterVolume, setSfxVolume } = useAudioStore();
-  const { isDark, toggleTheme, reduceMotion, toggleReduceMotion } = useTheme();
+  const { isDark, toggleTheme } = useTheme();
   const user = useAuthStore(s => s.user);
   const logout = useAuthStore(s => s.logout);
   const navigate = useNavigate();
@@ -58,13 +58,6 @@ export function SettingsDialog({ isOpen, onOpenChange }: SettingsDialogProps) {
       console.error(err);
       toast.error("Failed to delete account");
       setIsDeleting(false);
-    }
-  };
-  const handleResetApp = () => {
-    if (confirm("This will clear all local data and reload the application. You will need to sign in again. Continue?")) {
-      localStorage.clear();
-      sessionStorage.clear();
-      window.location.reload();
     }
   };
   return (
@@ -133,21 +126,6 @@ export function SettingsDialog({ isOpen, onOpenChange }: SettingsDialogProps) {
                 className="data-[state=checked]:bg-indigo-500"
               />
             </div>
-            <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
-              <div className="space-y-1">
-                <Label className="text-base text-white flex items-center gap-2">
-                  <ZapOff className="w-4 h-4" /> Reduce Motion
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  Disable confetti and heavy animations.
-                </p>
-              </div>
-              <Switch
-                checked={reduceMotion}
-                onCheckedChange={toggleReduceMotion}
-                className="data-[state=checked]:bg-indigo-500"
-              />
-            </div>
           </TabsContent>
           {/* Account Settings */}
           <TabsContent value="account" className="space-y-6 py-4">
@@ -176,15 +154,8 @@ export function SettingsDialog({ isOpen, onOpenChange }: SettingsDialogProps) {
                   <LogOut className="w-4 h-4" /> Sign Out
                 </Button>
                 {/* Danger Zone */}
-                <div className="pt-4 border-t border-white/10 space-y-3">
+                <div className="pt-4 border-t border-white/10">
                   <h4 className="text-sm font-bold text-red-400 mb-2">Danger Zone</h4>
-                  <Button
-                    variant="outline"
-                    className="w-full border-red-500/20 text-red-400 hover:bg-red-500/10 hover:text-red-300"
-                    onClick={handleResetApp}
-                  >
-                    <RefreshCw className="w-4 h-4 mr-2" /> Reset Application
-                  </Button>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button variant="destructive" className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20">

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Globe, Check, Swords } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,6 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
-import { triggerHaptic } from '@/lib/haptics';
 interface QueueModalProps {
   isOpen: boolean;
   onCancel: () => void;
@@ -18,14 +17,9 @@ interface QueueModalProps {
   matchFound?: boolean;
 }
 export function QueueModal({ isOpen, onCancel, categoryName, matchFound = false }: QueueModalProps) {
-  useEffect(() => {
-    if (matchFound) {
-      triggerHaptic('success');
-    }
-  }, [matchFound]);
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && !matchFound && onCancel()}>
-      <DialogContent 
+      <DialogContent
         className="bg-zinc-950/90 border-white/10 backdrop-blur-xl sm:max-w-md overflow-hidden p-0 gap-0"
         onInteractOutside={(e) => e.preventDefault()} // Prevent closing by clicking outside
       >
@@ -73,8 +67,8 @@ export function QueueModal({ isOpen, onCancel, categoryName, matchFound = false 
                   </DialogDescription>
                 </DialogHeader>
                 <div className="relative z-10 mt-8 w-full max-w-xs">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     className="w-full h-12 border-white/10 bg-white/5 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/50 transition-all duration-300 group"
                     onClick={onCancel}
                   >

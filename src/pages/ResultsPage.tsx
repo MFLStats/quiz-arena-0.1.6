@@ -19,120 +19,61 @@ import {
   Tooltip,
   CartesianGrid
 } from 'recharts';
-import { MatchReview } from '@/components/game/MatchReview';
-import { shareContent } from '@/lib/utils';
-import { XPProgress } from '@/components/game/XPProgress';
-import { AchievementUnlock } from '@/components/game/AchievementUnlock';
-import { useTheme } from '@/hooks/use-theme';
 export function ResultsPage() {
   const { matchId } = useParams();
   const user = useAuthStore(s => s.user);
-  const updateUser = useAuthStore(s => s.updateUser);
   const storeResult = useGameStore(s => s.gameResult);
-  const storeQuestions = useGameStore(s => s.questions);
   const [result, setResult] = useState<GameResult | null>(null);
   const [loading, setLoading] = useState(true);
-  const { reduceMotion } = useTheme();
-  // Sync User Data Effect
-  useEffect(() => {
-    const syncUserData = async () => {
-      if (!user) return;
-      try {
-        // Fetch latest user data to get updated XP/Coins/Level
-        const updatedUser = await api<User>(`/api/users/${user.id}`);
-        updateUser(updatedUser);
-      } catch (err) {
-        console.error("Failed to sync user data:", err);
-      }
-    };
-    // Only sync if we have a fresh result from the store (immediate post-game)
-    if (storeResult && storeResult.matchId === matchId) {
-      syncUserData();
-    }
-  }, [matchId, storeResult, user?.id, updateUser, user]);
   useEffect(() => {
     const loadData = async () => {
       // 1. Use store result if available and matches current ID (immediate post-game)
       if (storeResult && storeResult.matchId === matchId) {
-        // Ensure questions are available for review
-        const resultWithQuestions = {
-            ...storeResult,
-            questions: storeResult.questions || storeQuestions
-        };
-        setResult(resultWithQuestions);
+        setResult(storeResult);
         setLoading(false);
         if (storeResult.won) {
             playSfx('win');
-            if (!reduceMotion) triggerConfetti();
+            triggerConfetti();
         } else {
             playSfx('lose');
         }
         if (storeResult.levelUp) {
-            if (!reduceMotion) setTimeout(() => triggerLevelUpConfetti(), 1000);
+            setTimeout(() => triggerLevelUpConfetti(), 1000);
         }
         return;
       }
       // 2. Otherwise fetch from API (archive view)
       if (!user || !matchId) return;
       try {
-        // Fetch user data first as it's more likely to succeed/be needed for fallback
-        const userData = await api<User>(`/api/users/${user.id}`);
-        let match: MatchState | null = null;
-        try {
-            match = await api<MatchState>(`/api/match/${matchId}`);
-        } catch (e) {
-            console.warn("Match entity not found, falling back to history", e);
-        }
-        if (match) {
-            const myStats = match.players[user.id];
-            if (!myStats) throw new Error("You were not in this match");
-            const opponentId = Object.keys(match.players).find(id => id !== user.id);
-            const opponentStats = opponentId ? match.players[opponentId] : null;
-            const historyItem = userData.history?.find(h => h.matchId === matchId);
-            // Reconstruct result for archive view
-            const reconstructed: GameResult = {
-              matchId: match.id,
-              won: historyItem ? historyItem.result === 'win' : myStats.score > (opponentStats?.score || 0),
-              score: myStats.score,
-              opponentScore: opponentStats?.score || 0,
-              eloChange: historyItem?.eloChange || 0,
-              newElo: userData.elo,
-              reactionTimes: myStats.answers.map((a, i) => ({
-                question: i + 1,
-                time: a.timeMs
-              })),
-              xpEarned: 0, // Not stored in history currently
-              coinsEarned: 0,
-              xpBreakdown: [],
-              coinsBreakdown: [],
-              isPrivate: match.isPrivate,
-              categoryId: match.categoryId,
-              answers: myStats.answers,
-              questions: match.questions
-            };
-            setResult(reconstructed);
-        } else {
-            // Fallback to history
-            const historyItem = userData.history?.find(h => h.matchId === matchId);
-            if (!historyItem) throw new Error("Match not found in history");
-            const reconstructed: GameResult = {
-                matchId: historyItem.matchId,
-                won: historyItem.result === 'win',
-                score: historyItem.score,
-                opponentScore: historyItem.opponentScore,
-                eloChange: historyItem.eloChange,
-                newElo: userData.elo, // Approximate, current elo
-                reactionTimes: [], // Unavailable
-                xpEarned: 0,
-                coinsEarned: 0,
-                xpBreakdown: [],
-                coinsBreakdown: [],
-                isPrivate: false, // Unknown
-                categoryId: 'unknown', // Could try to infer or leave generic
-                // Missing questions/answers
-            };
-            setResult(reconstructed);
-        }
+        const [match, userData] = await Promise.all([
+          api<MatchState>(`/api/match/${matchId}`),
+          api<User>(`/api/users/${user.id}`)
+        ]);
+        const myStats = match.players[user.id];
+        if (!myStats) throw new Error("You were not in this match");
+        const opponentId = Object.keys(match.players).find(id => id !== user.id);
+        const opponentStats = opponentId ? match.players[opponentId] : null;
+        const historyItem = userData.history?.find(h => h.matchId === matchId);
+        // Reconstruct result for archive view
+        const reconstructed: GameResult = {
+          matchId: match.id,
+          won: historyItem ? historyItem.result === 'win' : myStats.score > (opponentStats?.score || 0),
+          score: myStats.score,
+          opponentScore: opponentStats?.score || 0,
+          eloChange: historyItem?.eloChange || 0,
+          newElo: userData.elo,
+          reactionTimes: myStats.answers.map((a, i) => ({
+            question: i + 1,
+            time: a.timeMs
+          })),
+          xpEarned: 0,
+          coinsEarned: 0,
+          xpBreakdown: [],
+          coinsBreakdown: [],
+          isPrivate: match.isPrivate,
+          categoryId: match.categoryId // Added for Play Again
+        };
+        setResult(reconstructed);
       } catch (err) {
         console.error(err);
         toast.error("Could not load match results");
@@ -141,46 +82,42 @@ export function ResultsPage() {
       }
     };
     loadData();
-  }, [matchId, user, storeResult, storeQuestions, reduceMotion]);
+  }, [matchId, user, storeResult]);
   const triggerConfetti = () => {
-    // Reduced duration and intensity for better UX
-    const count = 100;
-    const defaults = {
-      origin: { y: 0.7 },
-      zIndex: 100
-    };
-    // Single burst sequence
-    confetti({
-      ...defaults,
-      particleCount: 50,
-      spread: 60,
-      startVelocity: 45,
-    });
-    confetti({
-      ...defaults,
-      particleCount: 30,
-      spread: 100,
-      decay: 0.9,
-      scalar: 1.2
-    });
+    const duration = 3000;
+    const end = Date.now() + duration;
+    (function frame() {
+      confetti({
+        particleCount: 3,
+        angle: 60,
+        spread: 55,
+        origin: { x: 0 },
+        colors: ['#6366f1', '#8b5cf6', '#ec4899']
+      });
+      confetti({
+        particleCount: 3,
+        angle: 120,
+        spread: 55,
+        origin: { x: 1 },
+        colors: ['#6366f1', '#8b5cf6', '#ec4899']
+      });
+      if (Date.now() < end) {
+        requestAnimationFrame(frame);
+      }
+    }());
   };
   const triggerLevelUpConfetti = () => {
       confetti({
-          particleCount: 80,
+          particleCount: 100,
           spread: 70,
           origin: { y: 0.6 },
-          colors: ['#fbbf24', '#f59e0b', '#d97706'],
-          disableForReducedMotion: true
+          colors: ['#fbbf24', '#f59e0b', '#d97706']
       });
   };
   const handleShare = () => {
-    if (!result) return;
-    const outcome = result.won ? 'Victory' : 'Match Result';
-    shareContent({
-      title: `Quiz Arena: ${outcome}`,
-      text: `I just scored ${result.score} points in Quiz Arena! Can you beat me?`,
-      url: window.location.href
-    });
+    const url = window.location.href;
+    navigator.clipboard.writeText(url);
+    toast.success("Result link copied to clipboard!");
   };
   if (loading) {
     return (
@@ -211,7 +148,6 @@ export function ResultsPage() {
         animate={{ scale: 1, opacity: 1 }}
         className="relative z-10 max-w-4xl w-full bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6 md:p-12 text-center shadow-2xl overflow-y-auto max-h-[90vh]"
       >
-        {result.newAchievements && result.newAchievements.length > 0 && <AchievementUnlock achievements={result.newAchievements} />}
         {/* Level Up Celebration */}
         {result.levelUp && (
           <motion.div
@@ -255,12 +191,6 @@ export function ResultsPage() {
             )}
           </div>
         </div>
-        {/* XP Progress Bar */}
-        {user && result.xpEarned > 0 && (
-          <div className="mb-8">
-            <XPProgress totalXp={user.xp || 0} gainedXp={result.xpEarned} />
-          </div>
-        )}
         {/* Rewards Grid */}
         {(result.xpEarned > 0 || result.coinsEarned > 0) && (
           <div className="grid grid-cols-2 gap-4 mb-8 max-w-lg mx-auto">
@@ -364,35 +294,19 @@ export function ResultsPage() {
             </div>
           </div>
         )}
-        {/* Match Review Section */}
-        {result.questions && result.answers ? (
-          <div className="mb-12">
-            <MatchReview questions={result.questions} answers={result.answers} />
-          </div>
-        ) : (
-            <div className="mb-12 p-6 rounded-xl bg-white/5 border border-white/5 text-muted-foreground text-sm">
-                Detailed stats unavailable for archived match.
-            </div>
-        )}
         {/* Elo Change */}
         <div className="mb-12">
           <div className="text-sm text-muted-foreground mb-2">Rating Update</div>
           <div className="flex items-center justify-center gap-3">
-            {result.mode === 'practice' ? (
-              <span className="text-lg font-bold text-amber-400">Practice Match - No Rating Change</span>
-            ) : (
-              <>
-                <span className="text-3xl font-bold text-white">{result.newElo}</span>
-                <span className={result.eloChange > 0 ? "text-emerald-400" : result.eloChange < 0 ? "text-rose-400" : "text-yellow-400"}>
-                  ({result.eloChange > 0 ? "+" : ""}{result.eloChange})
-                </span>
-              </>
-            )}
+            <span className="text-3xl font-bold text-white">{result.newElo}</span>
+            <span className={result.eloChange > 0 ? "text-emerald-400" : result.eloChange < 0 ? "text-rose-400" : "text-yellow-400"}>
+              ({result.eloChange > 0 ? "+" : ""}{result.eloChange})
+            </span>
           </div>
         </div>
         {/* Actions */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Link to="/categories" state={{ autoJoin: true, mode: result.mode || (result.isPrivate ? 'private' : 'ranked'), categoryId: result.categoryId }}>
+          <Link to="/categories" state={{ autoJoin: true, mode: result.isPrivate ? 'private' : 'ranked', categoryId: result.categoryId }}>
             <Button size="lg" className="w-full sm:w-auto h-12 px-8 rounded-full bg-white text-black hover:bg-gray-100 font-bold">
               <RotateCcw className="w-4 h-4 mr-2" /> Play Again
             </Button>
