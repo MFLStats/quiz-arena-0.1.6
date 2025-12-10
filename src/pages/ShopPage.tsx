@@ -408,7 +408,7 @@ function ShopItemCard({ item, index, purchased, equipped, canAfford, isProcessin
               item.rarity === 'rare' ? "text-blue-400" : "text-white"
             )} />
           ) : item.type === 'frame' ? (
-            <div className={cn("w-32 h-32 rounded-full border-4 flex items-center justify-center", item.assetUrl)}>
+            <div className={cn("w-32 h-32 rounded-full flex items-center justify-center relative", item.assetUrl)}>
                <div className="w-full h-full rounded-full bg-white/10" />
             </div>
           ) : (

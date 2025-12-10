@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Play, Zap, ArrowRight, Calendar, Loader2, Trophy, HelpCircle, Timer, Users, Megaphone, Flame, Gift, CheckCircle } from 'lucide-react';
+import { Play, Sparkles, ArrowRight, Calendar, Loader2, HelpCircle, Timer, Users, Megaphone, Flame, Gift, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { api } from '@/lib/api-client';
@@ -12,7 +12,6 @@ import { HowToPlayModal } from '@/components/game/HowToPlayModal';
 import { JoinGameModal } from '@/components/game/JoinGameModal';
 import { useCategories } from '@/hooks/use-categories';
 import type { SystemConfig, SystemStats } from '@shared/types';
-import { Progress } from '@/components/ui/progress';
 // Season Timer Component
 function SeasonTimer({ endDate }: { endDate?: string }) {
   const [timeLeft, setTimeLeft] = useState('');
@@ -254,7 +253,7 @@ export function HomePage() {
         <section className="py-12 md:py-20 container mx-auto px-4 relative z-10">
           <div className="flex items-center justify-between mb-6 md:mb-10">
             <h2 className="text-2xl md:text-3xl font-bold flex items-center gap-3">
-              <Zap className="w-6 h-6 md:w-8 md:h-8 text-yellow-400 fill-yellow-400" /> Trending Categories
+              <Sparkles className="w-6 h-6 md:w-8 md:h-8 text-yellow-400 fill-yellow-400" /> Newest Categories
             </h2>
             <Link to="/categories" className="group text-sm font-medium text-muted-foreground hover:text-white flex items-center gap-2 transition-colors">
               View All <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -266,7 +265,7 @@ export function HomePage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8">
-              {categories.slice(0, 3).map((cat, i) => (
+              {categories.slice().reverse().slice(0, 3).map((cat, i) => (
                 <motion.div
                   key={cat.id}
                   initial={{ opacity: 0, y: 20 }}

@@ -162,10 +162,7 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate }: ProfileBannerPro
         {/* Avatar Group */}
         <div className="relative shrink-0">
           <div className="absolute -inset-2 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full blur-lg opacity-50 group-hover:opacity-75 transition duration-500" />
-          <div className={cn(
-            "relative w-32 h-32 md:w-40 md:h-40 rounded-full p-1.5 bg-zinc-900 ring-4 ring-zinc-900/50",
-            user.frame // Apply frame styles if present
-          )}>
+          <div className="relative w-32 h-32 md:w-40 md:h-40 rounded-full p-1.5 bg-zinc-900 ring-4 ring-zinc-900/50">
             <Avatar className="w-full h-full border-2 border-white/10">
               <AvatarImage src={user.avatar} className="object-cover" />
               <AvatarFallback className="text-4xl font-bold bg-zinc-800 text-white">
@@ -178,7 +175,7 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate }: ProfileBannerPro
             )}
             {/* CSS Frame Fallback */}
             {user.frame && !user.frame.startsWith('http') && (
-               <div className={cn("absolute inset-0 rounded-full border-4 pointer-events-none", user.frame)} />
+               <div className={cn("absolute inset-0 rounded-full pointer-events-none z-20", user.frame)} />
             )}
           </div>
           {/* Quick Edit Button */}
@@ -353,7 +350,7 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate }: ProfileBannerPro
                                         frame === item.assetUrl ? "border-indigo-500 ring-2 ring-indigo-500/30" : "border-white/10 hover:border-white/30"
                                       )}
                                     >
-                                      <div className={cn("w-12 h-12 rounded-full border-2", item.assetUrl)} />
+                                      <div className={cn("w-12 h-12 rounded-full", item.assetUrl)} />
                                       {frame === item.assetUrl && (
                                         <div className="absolute inset-0 bg-indigo-500/20 flex items-center justify-center rounded-xl">
                                           <Check className="w-6 h-6 text-white drop-shadow-md" />
