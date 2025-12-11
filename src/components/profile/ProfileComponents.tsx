@@ -28,7 +28,8 @@ import {
   User as UserIcon,
   Wand2,
   Share2,
-  Activity
+  Activity,
+  Search
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -69,6 +70,7 @@ import { MOCK_SHOP_ITEMS } from '@shared/mock-data';
 import { AvatarCreator } from './AvatarCreator';
 import { toast } from 'sonner';
 import { eachDayOfInterval, subDays, format, isSameDay, startOfWeek, endOfWeek } from 'date-fns';
+import { api } from '@/lib/api-client';
 // --- Icon Map ---
 const ICON_MAP: Record<string, React.ElementType> = {
   Swords, Zap, Target, Shield, Coins, Flame, Users, Calendar
@@ -78,12 +80,15 @@ interface ProfileBannerProps {
   user: User;
   isOwnProfile: boolean;
   onUpdate: (data: UpdateUserRequest) => Promise<void>;
+  onAddFriend?: () => Promise<void>;
+  isFriend?: boolean;
 }
-export function ProfileBanner({ user, isOwnProfile, onUpdate }: ProfileBannerProps) {
+export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFriend }: ProfileBannerProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showCreator, setShowCreator] = useState(false);
   const [showAvatarDialog, setShowAvatarDialog] = useState(false);
+  const [isAddingFriend, setIsAddingFriend] = useState(false);
   // Form State
   const [name, setName] = useState(user.name);
   const [country, setCountry] = useState(user.country || 'US');
@@ -132,6 +137,15 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate }: ProfileBannerPro
     const url = window.location.href;
     navigator.clipboard.writeText(url);
     toast.success("Profile link copied!");
+  };
+  const handleFriendAction = async () => {
+    if (!onAddFriend) return;
+    setIsAddingFriend(true);
+    try {
+      await onAddFriend();
+    } finally {
+      setIsAddingFriend(false);
+    }
   };
   // Filter owned items
   const ownedItems = MOCK_SHOP_ITEMS.filter(item => user.inventory?.includes(item.id));
@@ -211,17 +225,18 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate }: ProfileBannerPro
             <h1 className="text-3xl md:text-5xl font-display font-bold text-white tracking-tight drop-shadow-lg">
               {user.name}
             </h1>
-            {isOwnProfile && (
-              <div className="flex items-center gap-2">
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-9 w-9 rounded-full bg-white/5 hover:bg-white/10 text-white/70 hover:text-white backdrop-blur-sm border border-white/5"
-                  onClick={handleShare}
-                  title="Share Profile"
-                >
-                  <Share2 className="w-4 h-4" />
-                </Button>
+            {/* Actions */}
+            <div className="flex items-center gap-2">
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-9 w-9 rounded-full bg-white/5 hover:bg-white/10 text-white/70 hover:text-white backdrop-blur-sm border border-white/5"
+                onClick={handleShare}
+                title="Share Profile"
+              >
+                <Share2 className="w-4 h-4" />
+              </Button>
+              {isOwnProfile ? (
                 <Dialog open={isEditing} onOpenChange={setIsEditing}>
                   <DialogTrigger asChild>
                     <Button size="icon" variant="ghost" className="h-9 w-9 rounded-full bg-white/5 hover:bg-white/10 text-white/70 hover:text-white backdrop-blur-sm border border-white/5">
@@ -412,8 +427,30 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate }: ProfileBannerPro
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
-              </div>
-            )}
+              ) : (
+                // Public Profile Actions
+                <>
+                  {!isFriend ? (
+                    <Button 
+                      size="sm" 
+                      className="bg-indigo-600 hover:bg-indigo-500 text-white gap-2"
+                      onClick={handleFriendAction}
+                      disabled={isAddingFriend}
+                    >
+                      {isAddingFriend ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
+                      Add Friend
+                    </Button>
+                  ) : (
+                    <Link to="/categories?mode=private">
+                      <Button size="sm" className="bg-emerald-600 hover:bg-emerald-500 text-white gap-2">
+                        <Swords className="w-4 h-4" />
+                        Challenge
+                      </Button>
+                    </Link>
+                  )}
+                </>
+              )}
+            </div>
           </div>
           <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 text-sm font-medium text-white/70">
             {user.title && (
@@ -825,21 +862,45 @@ interface FriendsListProps {
   onAddFriend: (id: string) => Promise<void>;
 }
 export function FriendsList({ friends, onAddFriend }: FriendsListProps) {
-  const [friendId, setFriendId] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<Partial<User>[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   // CRITICAL FIX: Deduplicate friends list to prevent key collisions
   const uniqueFriends = useMemo(() => {
     const map = new Map();
     friends.forEach(f => map.set(f.id, f));
     return Array.from(map.values());
   }, [friends]);
-  const handleAdd = async () => {
-    if (!friendId.trim()) return;
+  // Debounced search effect
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (searchQuery.length >= 2) {
+        setIsSearching(true);
+        try {
+          const results = await api<Partial<User>[]>(`/api/users/search?query=${encodeURIComponent(searchQuery)}`);
+          // Filter out existing friends and self (handled by backend usually but good to double check if we had current user ID)
+          const friendIds = new Set(friends.map(f => f.id));
+          setSearchResults(results.filter(u => u.id && !friendIds.has(u.id)));
+        } catch (e) {
+          console.error("Search failed", e);
+        } finally {
+          setIsSearching(false);
+        }
+      } else {
+        setSearchResults([]);
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery, friends]);
+  const handleAdd = async (friendId: string) => {
+    if (!friendId) return;
     setIsAdding(true);
     try {
       await onAddFriend(friendId);
-      setFriendId('');
+      setSearchQuery('');
+      setSearchResults([]);
       setIsOpen(false);
     } finally {
       setIsAdding(false);
@@ -861,23 +922,55 @@ export function FriendsList({ friends, onAddFriend }: FriendsListProps) {
           <DialogContent className="bg-zinc-950 border-white/10">
             <DialogHeader>
               <DialogTitle>Add Friend</DialogTitle>
-              <DialogDescription>Enter their User ID to connect.</DialogDescription>
+              <DialogDescription>Search for players by name to connect.</DialogDescription>
             </DialogHeader>
-            <div className="py-4">
-              <Label>User ID</Label>
-              <Input
-                value={friendId}
-                onChange={(e) => setFriendId(e.target.value)}
-                placeholder="e.g. u_123456"
-                className="bg-black/20 border-white/10 mt-2"
-              />
+            <div className="py-4 space-y-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search users..."
+                  className="pl-9 bg-black/20 border-white/10"
+                />
+              </div>
+              <ScrollArea className="h-[200px] rounded-md border border-white/5 bg-black/20 p-2">
+                {isSearching ? (
+                  <div className="flex justify-center py-4">
+                    <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
+                  </div>
+                ) : searchResults.length > 0 ? (
+                  <div className="space-y-2">
+                    {searchResults.map(user => (
+                      <div key={user.id} className="flex items-center justify-between p-2 rounded hover:bg-white/5 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="w-8 h-8 border border-white/10">
+                            <AvatarImage src={user.avatar} />
+                            <AvatarFallback>{user.name?.substring(0, 2).toUpperCase()}</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <div className="text-sm font-medium text-white">{user.name}</div>
+                            <div className="text-xs text-muted-foreground">Lvl {user.level} • {getFlagEmoji(user.country)}</div>
+                          </div>
+                        </div>
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          onClick={() => user.id && handleAdd(user.id)}
+                          disabled={isAdding}
+                        >
+                          <UserPlus className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : searchQuery.length >= 2 ? (
+                  <div className="text-center py-4 text-muted-foreground text-sm">No users found.</div>
+                ) : (
+                  <div className="text-center py-4 text-muted-foreground text-sm">Type to search...</div>
+                )}
+              </ScrollArea>
             </div>
-            <DialogFooter>
-              <Button variant="ghost" onClick={() => setIsOpen(false)}>Cancel</Button>
-              <Button onClick={handleAdd} disabled={isAdding}>
-                {isAdding ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Add Friend'}
-              </Button>
-            </DialogFooter>
           </DialogContent>
         </Dialog>
       </CardHeader>
@@ -885,7 +978,7 @@ export function FriendsList({ friends, onAddFriend }: FriendsListProps) {
         {uniqueFriends.length > 0 ? (
           uniqueFriends.map(friend => (
             <div key={friend.id} className="flex items-center justify-between p-3 rounded-xl bg-black/20 border border-white/5 hover:bg-white/5 transition-colors group">
-              <div className="flex items-center gap-3">
+              <Link to={`/profile/${friend.id}`} className="flex items-center gap-3 flex-1">
                 <div className="relative">
                   <Avatar className="w-9 h-9 border border-white/10">
                     <AvatarImage src={friend.avatar} />
@@ -899,7 +992,7 @@ export function FriendsList({ friends, onAddFriend }: FriendsListProps) {
                     {getFlagEmoji(friend.country)} {friend.elo} Elo
                   </div>
                 </div>
-              </div>
+              </Link>
               <Link to="/categories?mode=private">
                 <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-indigo-500/20 hover:text-indigo-400" title="Challenge Friend">
                   <Swords className="w-3.5 h-3.5" />

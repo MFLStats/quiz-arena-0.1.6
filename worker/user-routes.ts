@@ -25,6 +25,11 @@ function sanitizeUser(user: User): User {
   const { passwordHash, ...rest } = user;
   return rest;
 }
+function publicSanitizeUser(user: User): Partial<User> {
+  // Remove sensitive or private data for public viewing
+  const { passwordHash, email, inventory, friends, ...rest } = user;
+  return rest;
+}
 async function isAdmin(env: Env, userId: string): Promise<boolean> {
   if (userId === 'Crushed') return true;
   const userEntity = new UserEntity(env, userId);
@@ -194,12 +199,34 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       return c.json({ success: false, error: 'Internal Server Error' }, 500);
     }
   });
+  app.get('/api/users/search', async (c) => {
+    try {
+      const query = c.req.query('query')?.toLowerCase();
+      if (!query || query.length < 2) return ok(c, []);
+      // Note: In a real production app with millions of users, we would use a proper search index (e.g. D1 or external).
+      // For this Durable Object setup, we scan the user index.
+      const { items } = await UserEntity.list(c.env, null, 1000);
+      const matches = items.filter(u => u.name.toLowerCase().includes(query));
+      // Return sanitized public profiles
+      return ok(c, matches.map(publicSanitizeUser));
+    } catch (e) {
+      console.error('[API] Search error:', e);
+      return c.json({ success: false, error: 'Search failed' }, 500);
+    }
+  });
   app.get('/api/users/:id', async (c) => {
     try {
       const id = c.req.param('id');
+      const requesterId = c.req.query('requesterId');
       const userEntity = new UserEntity(c.env, id);
       if (!await userEntity.exists()) return notFound(c, 'User not found');
-      return ok(c, sanitizeUser(await userEntity.getState()));
+      const user = await userEntity.getState();
+      // If the requester is the user themselves, return full data (sanitized of password)
+      if (requesterId === id) {
+        return ok(c, sanitizeUser(user));
+      }
+      // Otherwise return public profile
+      return ok(c, publicSanitizeUser(user));
     } catch (e) {
       console.error(`[API] Error fetching user ${c.req.param('id')}:`, e);
       return c.json({ success: false, error: 'Internal Server Error' }, 500);
@@ -255,14 +282,14 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
             const fEntity = new UserEntity(c.env, fid);
             if (!await fEntity.exists()) return null;
             const f = await fEntity.getState();
-            return sanitizeUser(f);
+            return publicSanitizeUser(f); // Always return public profile for friends list
           } catch (err) {
             console.error(`[API] Failed to fetch friend ${fid}:`, err);
             return null;
           }
         })
       );
-      const friends = friendsResults.filter((f): f is User => f !== null);
+      const friends = friendsResults.filter((f): f is Partial<User> => f !== null);
       return ok(c, friends);
     } catch (e) {
       console.error(`[API] Error fetching friends for ${c.req.param('id')}:`, e);
@@ -293,8 +320,8 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     const newItem = await c.req.json() as ShopItem;
     if (!newItem.name || !newItem.type || !newItem.price) return bad(c, 'Missing required fields');
     const shopEntity = new ShopEntity(c.env, 'global');
-    await shopEntity.mutate(s => ({ 
-      items: [...s.items, { ...newItem, id: newItem.id || crypto.randomUUID() }] 
+    await shopEntity.mutate(s => ({
+      items: [...s.items, { ...newItem, id: newItem.id || crypto.randomUUID() }]
     }));
     return ok(c, { success: true });
   });
@@ -465,7 +492,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     try {
       await UserEntity.ensureSeed(c.env);
       const { items } = await UserEntity.list(c.env, null, 50);
-      const sorted = items.map(sanitizeUser).sort((a, b) => b.elo - a.elo);
+      const sorted = items.map(publicSanitizeUser).sort((a, b) => (b.elo || 0) - (a.elo || 0));
       return ok(c, sorted);
     } catch (e) {
       console.error('[API] Error fetching leaderboard:', e);
@@ -959,9 +986,9 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     const { items } = await UserEntity.list(c.env, null, 100);
     let filtered = items.map(sanitizeUser);
     if (search) {
-      filtered = filtered.filter(u =>
-        u.name.toLowerCase().includes(search) ||
-        u.id.toLowerCase().includes(search) ||
+      filtered = filtered.filter(u => 
+        u.name.toLowerCase().includes(search) || 
+        u.id.toLowerCase().includes(search) || 
         (u.email && u.email.toLowerCase().includes(search))
       );
     }

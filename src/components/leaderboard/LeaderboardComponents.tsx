@@ -70,29 +70,31 @@ export function Podium({
               {icon}
             </div>
           )}
-          <div className={cn(
-            "relative rounded-full p-1 bg-gradient-to-br shadow-2xl transition-transform duration-300 group-hover:scale-105",
-            rank === 1 ? "from-yellow-300 to-yellow-600" :
-            rank === 2 ? "from-slate-300 to-slate-500" :
-            "from-amber-600 to-amber-800",
-            avatarSize
-          )}>
-            <Avatar className="w-full h-full border-2 md:border-4 border-zinc-900">
-              <AvatarImage src={user.avatar} className="object-cover" />
-              <AvatarFallback className="bg-zinc-800 text-white font-bold text-xs md:text-base">
-                {user.name.substring(0, 2).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            {/* Level Badge */}
-            <div className="absolute -top-1 -right-1 md:-top-2 md:-right-2 bg-zinc-900 text-white text-[8px] md:text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-white/10 flex items-center gap-0.5 shadow-lg">
-              <Star className="w-2 h-2 md:w-2.5 md:h-2.5 fill-yellow-400 text-yellow-400" />
-              {level}
+          <Link to={`/profile/${user.id}`}>
+            <div className={cn(
+              "relative rounded-full p-1 bg-gradient-to-br shadow-2xl transition-transform duration-300 group-hover:scale-105 cursor-pointer",
+              rank === 1 ? "from-yellow-300 to-yellow-600" :
+              rank === 2 ? "from-slate-300 to-slate-500" :
+              "from-amber-600 to-amber-800",
+              avatarSize
+            )}>
+              <Avatar className="w-full h-full border-2 md:border-4 border-zinc-900">
+                <AvatarImage src={user.avatar} className="object-cover" />
+                <AvatarFallback className="bg-zinc-800 text-white font-bold text-xs md:text-base">
+                  {user.name.substring(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              {/* Level Badge */}
+              <div className="absolute -top-1 -right-1 md:-top-2 md:-right-2 bg-zinc-900 text-white text-[8px] md:text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-white/10 flex items-center gap-0.5 shadow-lg">
+                <Star className="w-2 h-2 md:w-2.5 md:h-2.5 fill-yellow-400 text-yellow-400" />
+                {level}
+              </div>
+              <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-zinc-900 text-white text-[10px] md:text-xs font-bold px-2 py-0.5 rounded-full border border-white/10 whitespace-nowrap flex items-center gap-1 max-w-[120%] shadow-md z-10">
+                {getFlagEmoji(user.country)}
+                <span className="max-w-[60px] md:max-w-[80px] truncate">{user.name}</span>
+              </div>
             </div>
-            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-zinc-900 text-white text-[10px] md:text-xs font-bold px-2 py-0.5 rounded-full border border-white/10 whitespace-nowrap flex items-center gap-1 max-w-[120%] shadow-md z-10">
-              {getFlagEmoji(user.country)}
-              <span className="max-w-[60px] md:max-w-[80px] truncate">{user.name}</span>
-            </div>
-          </div>
+          </Link>
         </div>
         {/* Pedestal */}
         <div className={cn(
@@ -183,8 +185,8 @@ export function LeaderboardList({
           const isMe = user.id === currentUser?.id;
           const isFriend = friends.some(f => f.id === user.id);
           const score = getDisplayScore(user);
-          const winRate = user.stats?.matches
-            ? Math.round((user.stats.wins / user.stats.matches) * 100)
+          const winRate = user.stats?.matches 
+            ? Math.round((user.stats.wins / user.stats.matches) * 100) 
             : 0;
           const { level } = getLevelFromXp(user.xp || 0);
           return (
@@ -209,34 +211,36 @@ export function LeaderboardList({
               </div>
               {/* Player Info */}
               <div className="col-span-7 md:col-span-6 flex items-center gap-2 md:gap-3 overflow-hidden">
-                <div className="relative flex-shrink-0">
-                  <Avatar className="w-8 h-8 md:w-10 md:h-10 border border-white/10">
-                    <AvatarImage src={user.avatar} />
-                    <AvatarFallback className="text-[10px] md:text-xs bg-zinc-800">
-                      {user.name.substring(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="absolute -bottom-1 -right-1 bg-zinc-900 text-[8px] font-bold px-1 rounded-full border border-white/10 text-yellow-400">
-                    L{level}
+                <Link to={`/profile/${user.id}`} className="flex items-center gap-2 md:gap-3 overflow-hidden flex-1">
+                  <div className="relative flex-shrink-0">
+                    <Avatar className="w-8 h-8 md:w-10 md:h-10 border border-white/10">
+                      <AvatarImage src={user.avatar} />
+                      <AvatarFallback className="text-[10px] md:text-xs bg-zinc-800">
+                        {user.name.substring(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="absolute -bottom-1 -right-1 bg-zinc-900 text-[8px] font-bold px-1 rounded-full border border-white/10 text-yellow-400">
+                      L{level}
+                    </div>
                   </div>
-                </div>
-                <div className="flex flex-col min-w-0 overflow-hidden">
-                  <span className={cn(
-                    "font-bold text-sm md:text-base flex items-center gap-1 md:gap-2 truncate",
-                    isMe && "text-indigo-400"
-                  )}>
-                    <span className="truncate">{user.name}</span>
-                    {isMe && <span className="hidden sm:inline text-xs opacity-70">(You)</span>}
-                    <span className="text-sm md:text-base flex-shrink-0" title={user.country}>
-                      {getFlagEmoji(user.country)}
+                  <div className="flex flex-col min-w-0 overflow-hidden">
+                    <span className={cn(
+                      "font-bold text-sm md:text-base flex items-center gap-1 md:gap-2 truncate",
+                      isMe && "text-indigo-400"
+                    )}>
+                      <span className="truncate">{user.name}</span>
+                      {isMe && <span className="hidden sm:inline text-xs opacity-70">(You)</span>}
+                      <span className="text-sm md:text-base flex-shrink-0" title={user.country}>
+                        {getFlagEmoji(user.country)}
+                      </span>
                     </span>
-                  </span>
-                  {user.title && (
-                    <span className="text-[8px] md:text-[10px] text-amber-400 font-bold uppercase tracking-wider flex items-center gap-1 truncate">
-                      <Crown className="w-2.5 h-2.5 md:w-3 md:h-3 flex-shrink-0" /> {user.title}
-                    </span>
-                  )}
-                </div>
+                    {user.title && (
+                      <span className="text-[8px] md:text-[10px] text-amber-400 font-bold uppercase tracking-wider flex items-center gap-1 truncate">
+                        <Crown className="w-2.5 h-2.5 md:w-3 md:h-3 flex-shrink-0" /> {user.title}
+                      </span>
+                    )}
+                  </div>
+                </Link>
               </div>
               {/* Stats (Desktop Only) */}
               <div className="col-span-3 hidden md:block text-center text-sm font-mono text-muted-foreground">

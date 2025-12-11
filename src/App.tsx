@@ -65,6 +65,15 @@ const router = createBrowserRouter([
     errorElement: <RouteErrorBoundary />,
   },
   {
+    path: "/profile/:userId",
+    element: (
+      <AuthGuard>
+        <ProfilePage />
+      </AuthGuard>
+    ),
+    errorElement: <RouteErrorBoundary />,
+  },
+  {
     path: "/leaderboard",
     element: (
       <AuthGuard>
