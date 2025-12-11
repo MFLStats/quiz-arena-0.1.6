@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -123,6 +123,7 @@ export function AdminPage() {
   const [editingShopItem, setEditingShopItem] = useState<Partial<ShopItem> | null>(null);
   const [isSavingShopItem, setIsSavingShopItem] = useState(false);
   const [deletingShopItemId, setDeletingShopItemId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   // Reports State
   const [reports, setReports] = useState<Report[]>([]);
   const [processingReportId, setProcessingReportId] = useState<string | null>(null);
@@ -547,6 +548,26 @@ export function AdminPage() {
     }
   };
   // --- Shop Management Handlers ---
+  const handleAssetUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 500 * 1024) {
+      toast.error("File too large. Max 500KB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      if (event.target?.result && typeof event.target.result === 'string') {
+        setEditingShopItem(prev => prev ? ({ ...prev, assetUrl: event.target!.result as string }) : null);
+        toast.success("Asset uploaded!");
+      }
+    };
+    reader.onerror = () => {
+        toast.error("Failed to read file");
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
   const handleSaveShopItem = async () => {
     if (!user || !editingShopItem) return;
     setIsSavingShopItem(true);
@@ -1269,178 +1290,212 @@ export function AdminPage() {
             </Card>
           </div>
         </div>
-      </div>
-      {/* Edit Category Dialog */}
-      <Dialog open={!!editingCategory} onOpenChange={(open) => !open && setEditingCategory(null)}>
-        <DialogContent className="bg-zinc-950 border-white/10 max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Edit Category</DialogTitle>
-            <DialogDescription>Update category details and appearance.</DialogDescription>
-          </DialogHeader>
-          {editingCategory && (
-            <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Name</Label>
-                  <Input
-                    value={editingCategory.name}
-                    onChange={(e) => setEditingCategory({ ...editingCategory, name: e.target.value })}
-                    className="bg-black/20 border-white/10"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Group</Label>
-                  <Select
-                    value={editingCategory.group}
-                    onValueChange={(val: any) => setEditingCategory({ ...editingCategory, group: val })}
-                  >
-                    <SelectTrigger className="bg-black/20 border-white/10">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-zinc-900 border-white/10">
-                      <SelectItem value="General">General</SelectItem>
-                      <SelectItem value="Education">Education</SelectItem>
-                      <SelectItem value="TV & Movies">TV & Movies</SelectItem>
-                      <SelectItem value="Sports">Sports</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Description</Label>
-                <Input
-                  value={editingCategory.description}
-                  onChange={(e) => setEditingCategory({ ...editingCategory, description: e.target.value })}
-                  className="bg-black/20 border-white/10"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Color Theme</Label>
-                <ColorPicker
-                  value={editingCategory.color}
-                  onChange={(val) => setEditingCategory({ ...editingCategory, color: val })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Icon</Label>
-                <IconPicker
-                  value={editingCategory.icon}
-                  onChange={(val) => setEditingCategory({ ...editingCategory, icon: val })}
-                />
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setEditingCategory(null)}>Cancel</Button>
-            <Button onClick={handleUpdateCategory} disabled={isUpdatingCategory}>
-              {isUpdatingCategory ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Changes'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      {/* Edit Shop Item Dialog */}
-      <Dialog open={!!editingShopItem} onOpenChange={(open) => !open && setEditingShopItem(null)}>
-        <DialogContent className="bg-zinc-950 border-white/10 max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{editingShopItem?.id ? 'Edit Item' : 'Add New Item'}</DialogTitle>
-            <DialogDescription>Configure shop item details.</DialogDescription>
-          </DialogHeader>
-          {editingShopItem && (
-            <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Name</Label>
-                  <Input
-                    value={editingShopItem.name || ''}
-                    onChange={(e) => setEditingShopItem({ ...editingShopItem, name: e.target.value })}
-                    className="bg-black/20 border-white/10"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Price</Label>
-                  <Input
-                    type="number"
-                    value={editingShopItem.price || 0}
-                    onChange={(e) => setEditingShopItem({ ...editingShopItem, price: parseInt(e.target.value) })}
-                    className="bg-black/20 border-white/10"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Type</Label>
-                  <Select
-                    value={editingShopItem.type}
-                    onValueChange={(val: ItemType) => setEditingShopItem({ ...editingShopItem, type: val })}
-                  >
-                    <SelectTrigger className="bg-black/20 border-white/10">
-                      <SelectValue placeholder="Select Type" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-zinc-900 border-white/10">
-                      <SelectItem value="avatar">Avatar</SelectItem>
-                      <SelectItem value="frame">Frame</SelectItem>
-                      <SelectItem value="banner">Banner</SelectItem>
-                      <SelectItem value="title">Title</SelectItem>
-                      <SelectItem value="box">Box</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Rarity</Label>
-                  <Select
-                    value={editingShopItem.rarity}
-                    onValueChange={(val: ItemRarity) => setEditingShopItem({ ...editingShopItem, rarity: val })}
-                  >
-                    <SelectTrigger className="bg-black/20 border-white/10">
-                      <SelectValue placeholder="Select Rarity" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-zinc-900 border-white/10">
-                      <SelectItem value="common">Common</SelectItem>
-                      <SelectItem value="rare">Rare</SelectItem>
-                      <SelectItem value="epic">Epic</SelectItem>
-                      <SelectItem value="legendary">Legendary</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Description</Label>
-                <Input
-                  value={editingShopItem.description || ''}
-                  onChange={(e) => setEditingShopItem({ ...editingShopItem, description: e.target.value })}
-                  className="bg-black/20 border-white/10"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Asset URL / Value</Label>
-                <Input
-                  value={editingShopItem.assetUrl || ''}
-                  onChange={(e) => setEditingShopItem({ ...editingShopItem, assetUrl: e.target.value })}
-                  className="bg-black/20 border-white/10"
-                  placeholder="https://... or css-class"
-                />
-                {editingShopItem.assetUrl && (
-                  <div className="mt-2 p-2 bg-black/40 rounded border border-white/10 flex justify-center">
-                    {editingShopItem.type === 'avatar' ? (
-                      <img src={editingShopItem.assetUrl} className="w-16 h-16 rounded-full" alt="Preview" />
-                    ) : editingShopItem.type === 'banner' ? (
-                      <div className="w-full h-12 rounded" style={{ background: editingShopItem.assetUrl }} />
-                    ) : (
-                      <span className="text-xs text-muted-foreground">Preview not available</span>
-                    )}
+        {/* Edit Category Dialog */}
+        <Dialog open={!!editingCategory} onOpenChange={(open) => !open && setEditingCategory(null)}>
+          <DialogContent className="bg-zinc-950 border-white/10 max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Edit Category</DialogTitle>
+              <DialogDescription>Update category details and appearance.</DialogDescription>
+            </DialogHeader>
+            {editingCategory && (
+              <div className="space-y-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Name</Label>
+                    <Input
+                      value={editingCategory.name}
+                      onChange={(e) => setEditingCategory({ ...editingCategory, name: e.target.value })}
+                      className="bg-black/20 border-white/10"
+                    />
                   </div>
-                )}
+                  <div className="space-y-2">
+                    <Label>Group</Label>
+                    <Select
+                      value={editingCategory.group}
+                      onValueChange={(val: any) => setEditingCategory({ ...editingCategory, group: val })}
+                    >
+                      <SelectTrigger className="bg-black/20 border-white/10">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-zinc-900 border-white/10">
+                        <SelectItem value="General">General</SelectItem>
+                        <SelectItem value="Education">Education</SelectItem>
+                        <SelectItem value="TV & Movies">TV & Movies</SelectItem>
+                        <SelectItem value="Sports">Sports</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Description</Label>
+                  <Input
+                    value={editingCategory.description}
+                    onChange={(e) => setEditingCategory({ ...editingCategory, description: e.target.value })}
+                    className="bg-black/20 border-white/10"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Color Theme</Label>
+                  <ColorPicker
+                    value={editingCategory.color}
+                    onChange={(val) => setEditingCategory({ ...editingCategory, color: val })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Icon</Label>
+                  <IconPicker
+                    value={editingCategory.icon}
+                    onChange={(val) => setEditingCategory({ ...editingCategory, icon: val })}
+                  />
+                </div>
               </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setEditingShopItem(null)}>Cancel</Button>
-            <Button onClick={handleSaveShopItem} disabled={isSavingShopItem}>
-              {isSavingShopItem ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Item'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            )}
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setEditingCategory(null)}>Cancel</Button>
+              <Button onClick={handleUpdateCategory} disabled={isUpdatingCategory}>
+                {isUpdatingCategory ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Changes'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        {/* Edit Shop Item Dialog */}
+        <Dialog open={!!editingShopItem} onOpenChange={(open) => !open && setEditingShopItem(null)}>
+          <DialogContent className="bg-zinc-950 border-white/10 max-w-lg">
+            <DialogHeader>
+              <DialogTitle>{editingShopItem?.id ? 'Edit Item' : 'Add New Item'}</DialogTitle>
+              <DialogDescription>Configure shop item details.</DialogDescription>
+            </DialogHeader>
+            {editingShopItem && (
+              <div className="space-y-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Name</Label>
+                    <Input
+                      value={editingShopItem.name || ''}
+                      onChange={(e) => setEditingShopItem({ ...editingShopItem, name: e.target.value })}
+                      className="bg-black/20 border-white/10"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Price</Label>
+                    <Input
+                      type="number"
+                      value={editingShopItem.price || 0}
+                      onChange={(e) => setEditingShopItem({ ...editingShopItem, price: parseInt(e.target.value) })}
+                      className="bg-black/20 border-white/10"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Type</Label>
+                    <Select
+                      value={editingShopItem.type}
+                      onValueChange={(val: ItemType) => setEditingShopItem({ ...editingShopItem, type: val })}
+                    >
+                      <SelectTrigger className="bg-black/20 border-white/10">
+                        <SelectValue placeholder="Select Type" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-zinc-900 border-white/10">
+                        <SelectItem value="avatar">Avatar</SelectItem>
+                        <SelectItem value="frame">Frame</SelectItem>
+                        <SelectItem value="banner">Banner</SelectItem>
+                        <SelectItem value="title">Title</SelectItem>
+                        <SelectItem value="box">Box</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Rarity</Label>
+                    <Select
+                      value={editingShopItem.rarity}
+                      onValueChange={(val: ItemRarity) => setEditingShopItem({ ...editingShopItem, rarity: val })}
+                    >
+                      <SelectTrigger className="bg-black/20 border-white/10">
+                        <SelectValue placeholder="Select Rarity" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-zinc-900 border-white/10">
+                        <SelectItem value="common">Common</SelectItem>
+                        <SelectItem value="rare">Rare</SelectItem>
+                        <SelectItem value="epic">Epic</SelectItem>
+                        <SelectItem value="legendary">Legendary</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Description</Label>
+                  <Input
+                    value={editingShopItem.description || ''}
+                    onChange={(e) => setEditingShopItem({ ...editingShopItem, description: e.target.value })}
+                    className="bg-black/20 border-white/10"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Asset URL / Value</Label>
+                  <div className="flex gap-2">
+                      <Input
+                      value={editingShopItem.assetUrl || ''}
+                      onChange={(e) => setEditingShopItem({ ...editingShopItem, assetUrl: e.target.value })}
+                      className="bg-black/20 border-white/10 flex-1"
+                      placeholder="https://... or css-class"
+                      />
+                      <Button
+                          type="button"
+                          variant="outline"
+                          className="border-white/10 hover:bg-white/5 px-3"
+                          onClick={() => fileInputRef.current?.click()}
+                          title="Upload Image"
+                      >
+                          <Upload className="w-4 h-4" />
+                      </Button>
+                      <input
+                          type="file"
+                          ref={fileInputRef}
+                          className="hidden"
+                          accept="image/png,image/jpeg,image/svg+xml,image/gif,image/webp"
+                          onChange={handleAssetUpload}
+                      />
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">
+                      Upload images (PNG, JPG, SVG, GIF). Max 500KB.
+                  </p>
+                  {editingShopItem.assetUrl && (
+                    <div className="mt-2 p-2 bg-black/40 rounded border border-white/10 flex justify-center">
+                      {editingShopItem.type === 'avatar' ? (
+                        <img src={editingShopItem.assetUrl} className="w-16 h-16 rounded-full object-cover" alt="Preview" />
+                      ) : editingShopItem.type === 'banner' ? (
+                         <div
+                           className="w-full h-12 rounded bg-cover bg-center"
+                           style={{
+                             background: editingShopItem.assetUrl.startsWith('linear')
+                               ? editingShopItem.assetUrl
+                               : `url(${editingShopItem.assetUrl})`
+                           }}
+                         />
+                      ) : (
+                         <div className="relative w-16 h-16 flex items-center justify-center">
+                            {editingShopItem.assetUrl.startsWith('border') ? (
+                               <div className={cn("w-full h-full rounded-full", editingShopItem.assetUrl)} />
+                            ) : (
+                               <img src={editingShopItem.assetUrl} className="max-w-full max-h-full object-contain" alt="Preview" />
+                            )}
+                         </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setEditingShopItem(null)}>Cancel</Button>
+              <Button onClick={handleSaveShopItem} disabled={isSavingShopItem}>
+                {isSavingShopItem ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Item'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
     </AppLayout>
   );
 }
