@@ -1,10 +1,11 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@/lib/game-store';
 import { useAuthStore } from '@/lib/auth-store';
 import { api } from '@/lib/api-client';
-import { TimerCircle, AnswerButton, ScoreBadge, OpponentAvatar, EmotePicker, EmoteFloater } from '@/components/game/GameComponents';
+import { TimerCircle, AnswerButton, ScoreBadge, OpponentAvatar, EmotePicker, EmoteFloater, RoundIntermission } from '@/components/game/GameComponents';
+import { MatchLoadingScreen } from '@/components/game/MatchLoadingScreen';
 import { toast } from 'sonner';
 import { Loader2, Check, AlertTriangle, Flame, Flag, Zap } from 'lucide-react';
 import { cn, getFlagEmoji } from '@/lib/utils';
@@ -59,6 +60,8 @@ export function ArenaPage() {
   const [matchData, setMatchData] = useState<MatchState | null>(null);
   const [streak, setStreak] = useState(0);
   const [now, setNow] = useState(Date.now());
+  // Race Condition Guard
+  const isFinishingRef = useRef(false);
   // Report State
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [reportReason, setReportReason] = useState<ReportReason>('other');
@@ -85,7 +88,6 @@ export function ArenaPage() {
   useEffect(() => {
     if (isFinalRound && !isIntermission && !showIntro && gameStatus === 'playing') {
         // Play sound only once per round transition
-        // Since this effect depends on isFinalRound and isIntermission, it will trigger when intermission ends for the final round
         playSfx('double_points');
     }
   }, [isFinalRound, isIntermission, showIntro, gameStatus]);
@@ -156,6 +158,9 @@ export function ArenaPage() {
         }
         // Sync Status
         if (latestMatch.status === 'finished' && useGameStore.getState().status !== 'finished') {
+             // Prevent duplicate finish calls
+             if (isFinishingRef.current) return;
+             isFinishingRef.current = true;
              // Trigger finish flow
              try {
                 const finishRes = await api<FinishMatchResponse>(`/api/match/${matchId}/finish`, {
@@ -280,8 +285,6 @@ export function ArenaPage() {
         method: 'POST',
         body: JSON.stringify({ userId: user.id, emoji })
       });
-      // Optimistic update not needed as we don't show our own emotes floating (usually)
-      // But we could if we wanted to. For now, just send.
     } catch (err) {
       console.error("Failed to send emote", err);
     }
@@ -293,11 +296,7 @@ export function ArenaPage() {
     }
   };
   if (!matchData || !user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-zinc-950">
-        <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
-      </div>
-    );
+    return <MatchLoadingScreen />;
   }
   // LOBBY VIEW (Waiting for opponent)
   if (gameStatus === 'waiting' && isPrivate) {
@@ -539,7 +538,7 @@ export function ArenaPage() {
                         exit={{ opacity: 0, scale: 0.8 }}
                         className={cn(
                           "absolute top-full mt-2 flex items-center gap-1.5 px-3 py-1 rounded-full border font-bold text-sm backdrop-blur-md z-20 animate-shake",
-                          streak >= 5 
+                          streak >= 5
                             ? "bg-red-500/20 border-red-500/40 text-red-400 shadow-[0_0_20px_rgba(239,68,68,0.4)]"
                             : "bg-orange-500/20 border-orange-500/40 text-orange-400 shadow-[0_0_15px_rgba(249,115,22,0.3)]"
                         )}
@@ -572,7 +571,14 @@ export function ArenaPage() {
         {/* Arena */}
         <main className="flex-1 flex flex-col items-center justify-center p-4 w-full relative z-10 pb-20 md:pb-20">
           <AnimatePresence mode="wait">
-            {currentQuestion && (
+            {isIntermission && !showIntro && (
+               <RoundIntermission
+                 key="intermission"
+                 roundNumber={Math.min(currentIndex + 1, questions.length)}
+                 totalRounds={questions.length}
+               />
+            )}
+            {!isIntermission && currentQuestion && (
               <motion.div
                 key={currentQuestion.id}
                 initial={{ opacity: 0, y: 40, scale: 0.95 }}

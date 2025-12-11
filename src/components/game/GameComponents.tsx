@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { Check, X, User as UserIcon, Loader2, Crown, Smile } from 'lucide-react';
+import { Check, X, User as UserIcon, Loader2, Crown, Smile, Swords } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 // --- Timer Circle ---
@@ -191,7 +191,7 @@ interface EmotePickerProps {
   onSelect: (emoji: string) => void;
   disabled?: boolean;
 }
-const EMOJIS = ['😂', '👏', '🤔', '😱', '😎', '��', '🤯', '🔥'];
+const EMOJIS = ['😂', '👏', '🤔', '😱', '😎', '😭', '🤯', '🔥'];
 export function EmotePicker({ onSelect, disabled }: EmotePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isCooldown, setIsCooldown] = useState(false);
@@ -256,5 +256,43 @@ export function EmoteFloater({ emoji, timestamp }: EmoteFloaterProps) {
         {emoji}
       </motion.div>
     </AnimatePresence>
+  );
+}
+// --- Round Intermission ---
+interface RoundIntermissionProps {
+  roundNumber: number;
+  totalRounds: number;
+}
+export function RoundIntermission({ roundNumber, totalRounds }: RoundIntermissionProps) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 1.1 }}
+      className="absolute inset-0 z-20 flex items-center justify-center bg-black/60 backdrop-blur-sm rounded-[2rem]"
+    >
+      <div className="flex flex-col items-center gap-4 p-8 rounded-3xl bg-zinc-900/90 border border-white/10 shadow-2xl text-center">
+        <div className="p-4 rounded-full bg-indigo-500/20 border border-indigo-500/30 mb-2">
+          <Swords className="w-8 h-8 text-indigo-400" />
+        </div>
+        <div>
+          <h3 className="text-3xl font-display font-bold text-white mb-1">
+            Round {roundNumber}
+          </h3>
+          <p className="text-indigo-200/70 font-medium uppercase tracking-widest text-xs">
+            of {totalRounds}
+          </p>
+        </div>
+        <div className="h-1 w-24 bg-white/10 rounded-full overflow-hidden mt-2">
+          <motion.div
+            initial={{ width: "0%" }}
+            animate={{ width: "100%" }}
+            transition={{ duration: 1.5, ease: "easeInOut" }}
+            className="h-full bg-indigo-500"
+          />
+        </div>
+        <p className="text-sm text-muted-foreground animate-pulse">Get Ready...</p>
+      </div>
+    </motion.div>
   );
 }
