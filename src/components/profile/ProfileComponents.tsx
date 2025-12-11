@@ -148,7 +148,7 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate }: ProfileBannerPro
       className="relative overflow-hidden rounded-[2rem] bg-zinc-900 border border-white/10 shadow-2xl group"
     >
       {/* Banner Background */}
-      <div className="absolute inset-0 h-48 md:h-64 overflow-hidden">
+      <div className="absolute inset-0 h-56 md:h-80 overflow-hidden">
         <div
           className="absolute inset-0 bg-cover bg-center opacity-60 transition-transform duration-1000 group-hover:scale-105"
           style={{
@@ -158,7 +158,7 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate }: ProfileBannerPro
         />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-zinc-900/80 to-zinc-900" />
       </div>
-      <div className="relative z-10 pt-32 px-6 pb-6 md:px-10 md:pb-10 flex flex-col md:flex-row items-center md:items-end gap-6 md:gap-8">
+      <div className="relative z-10 pt-40 md:pt-56 px-6 pb-6 md:px-10 md:pb-10 flex flex-col md:flex-row items-center md:items-end gap-6 md:gap-8">
         {/* Avatar Group */}
         <div className="relative shrink-0">
           <div className="absolute -inset-2 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full blur-lg opacity-50 group-hover:opacity-75 transition duration-500" />
@@ -718,14 +718,14 @@ export function AchievementsGrid({ userAchievements }: AchievementsGridProps) {
                       transition={{ delay: 0.1 + (i * 0.05) }}
                       className={cn(
                         "aspect-square rounded-xl flex flex-col items-center justify-center p-3 text-center border transition-all duration-300 group cursor-default",
-                        isUnlocked 
-                          ? "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20" 
+                        isUnlocked
+                          ? "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"
                           : "bg-black/20 border-white/5 opacity-50 grayscale"
                       )}
                     >
                       <div className={cn(
                         "w-10 h-10 rounded-full flex items-center justify-center mb-2 transition-transform group-hover:scale-110",
-                        isUnlocked 
+                        isUnlocked
                           ? achievement.rarity === 'legendary' ? "bg-yellow-500/20 text-yellow-400 shadow-[0_0_15px_rgba(234,179,8,0.3)]" :
                             achievement.rarity === 'epic' ? "bg-purple-500/20 text-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.3)]" :
                             achievement.rarity === 'rare' ? "bg-blue-500/20 text-blue-400" :
@@ -769,9 +769,9 @@ export function MatchHistoryList({ history }: MatchHistoryListProps) {
       <CardContent className="space-y-2">
         {history.length > 0 ? (
           history.slice(0, 8).map((match, i) => (
-            <Link 
+            <Link
               // CRITICAL FIX: Use composite key to prevent collisions if matchId is duplicated in mock data
-              key={`${match.matchId}-${i}`} 
+              key={`${match.matchId}-${i}`}
               to={`/results/${match.matchId}`}
               className="block"
             >
@@ -865,7 +865,7 @@ export function FriendsList({ friends, onAddFriend }: FriendsListProps) {
             </DialogHeader>
             <div className="py-4">
               <Label>User ID</Label>
-              <Input 
+              <Input
                 value={friendId}
                 onChange={(e) => setFriendId(e.target.value)}
                 placeholder="e.g. u_123456"
