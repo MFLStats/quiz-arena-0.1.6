@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Shield, Plus, Save, Loader2, CheckCircle, Trash2, FileText, AlertCircle, Upload, Layers, Flag, XCircle, Star, Settings, Users, BarChart3, HelpCircle, Pencil, Download } from 'lucide-react';
+import { Shield, Plus, Save, Loader2, CheckCircle, Trash2, FileText, AlertCircle, Upload, Layers, Flag, XCircle, Star, Settings, Users, HelpCircle, Pencil, Download, Palette, Grid } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,11 +16,14 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useAuthStore } from '@/lib/auth-store';
 import { api } from '@/lib/api-client';
 import { toast } from 'sonner';
 import type { Question, CategoryGroup, BulkImportRequest, Report, Category, SystemConfig, User, SystemStats } from '@shared/types';
 import { useCategories } from '@/hooks/use-categories';
+import { CATEGORY_ICONS, ICON_KEYS } from '@/lib/icons';
+import { cn } from '@/lib/utils';
 const questionSchema = z.object({
   text: z.string().min(5, "Question text must be at least 5 characters"),
   categoryId: z.string().min(1, "Category is required"),
@@ -31,6 +34,64 @@ const questionSchema = z.object({
   correctIndex: z.string(),
 });
 type QuestionFormData = z.infer<typeof questionSchema>;
+const CATEGORY_COLORS = [
+  'from-blue-500 to-cyan-400',
+  'from-amber-500 to-orange-400',
+  'from-purple-500 to-indigo-400',
+  'from-emerald-500 to-green-400',
+  'from-pink-500 to-rose-400',
+  'from-red-500 to-orange-500',
+  'from-indigo-500 to-blue-500',
+  'from-cyan-500 to-blue-500',
+  'from-fuchsia-500 to-pink-500',
+  'from-lime-500 to-green-500',
+  'from-slate-500 to-zinc-500',
+];
+// --- Helper Components ---
+function ColorPicker({ value, onChange }: { value: string, onChange: (val: string) => void }) {
+  return (
+    <div className="grid grid-cols-6 gap-2">
+      {CATEGORY_COLORS.map((color) => (
+        <button
+          key={color}
+          type="button"
+          onClick={() => onChange(color)}
+          className={cn(
+            "w-8 h-8 rounded-full bg-gradient-to-br transition-all hover:scale-110",
+            color,
+            value === color ? "ring-2 ring-white ring-offset-2 ring-offset-zinc-900" : "opacity-70 hover:opacity-100"
+          )}
+          title={color}
+        />
+      ))}
+    </div>
+  );
+}
+function IconPicker({ value, onChange }: { value: string, onChange: (val: string) => void }) {
+  return (
+    <ScrollArea className="h-48 rounded-md border border-white/10 bg-black/20 p-2">
+      <div className="grid grid-cols-6 gap-2">
+        {ICON_KEYS.map((iconKey) => {
+          const Icon = CATEGORY_ICONS[iconKey];
+          return (
+            <button
+              key={iconKey}
+              type="button"
+              onClick={() => onChange(iconKey)}
+              className={cn(
+                "flex items-center justify-center p-2 rounded-md transition-all hover:bg-white/10",
+                value === iconKey ? "bg-indigo-500/20 text-indigo-400 ring-1 ring-indigo-500/50" : "text-muted-foreground"
+              )}
+              title={iconKey}
+            >
+              <Icon className="w-5 h-5" />
+            </button>
+          );
+        })}
+      </div>
+    </ScrollArea>
+  );
+}
 export function AdminPage() {
   const navigate = useNavigate();
   const user = useAuthStore(s => s.user);
@@ -51,6 +112,11 @@ export function AdminPage() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryGroup, setNewCategoryGroup] = useState<CategoryGroup>('General');
+  const [newCategoryColor, setNewCategoryColor] = useState(CATEGORY_COLORS[0]);
+  const [newCategoryIcon, setNewCategoryIcon] = useState('Atom');
+  // Category Edit State
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [isUpdatingCategory, setIsUpdatingCategory] = useState(false);
   // Reports State
   const [reports, setReports] = useState<Report[]>([]);
   const [processingReportId, setProcessingReportId] = useState<string | null>(null);
@@ -247,14 +313,37 @@ export function AdminPage() {
       setTogglingFeaturedId(null);
     }
   };
+  const handleUpdateCategory = async () => {
+    if (!user || !editingCategory) return;
+    setIsUpdatingCategory(true);
+    try {
+      await api(`/api/admin/categories/${editingCategory.id}?userId=${user.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          name: editingCategory.name,
+          description: editingCategory.description,
+          group: editingCategory.group,
+          color: editingCategory.color,
+          icon: editingCategory.icon
+        })
+      });
+      await refreshCategories();
+      toast.success("Category updated successfully");
+      setEditingCategory(null);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to update category");
+    } finally {
+      setIsUpdatingCategory(false);
+    }
+  };
   const parseQuestions = () => {
     if (!bulkText.trim()) return;
     const blocks = bulkText.split(/\n\s*\n/);
     const parsed: Partial<Question>[] = [];
     blocks.forEach(block => {
       const lines = block.split('\n').map(l => l.trim()).filter(l => l);
-      if (lines.length < 2) return; // Need at least question + 1 option
-      // Strip leading numbering (e.g. "1. ", "100) ", "Q1. ")
+      if (lines.length < 2) return;
       const text = lines[0].replace(/^(?:Q|q)?\d+[.)]\s+/, '').trim();
       const rawOptions = lines.slice(1);
       const options: string[] = [];
@@ -262,22 +351,16 @@ export function AdminPage() {
       rawOptions.forEach((opt, idx) => {
         let clean = opt;
         let isCorrect = false;
-        // Check for leading asterisk (e.g. "* Answer" or "*Answer")
         if (clean.startsWith('*')) {
           isCorrect = true;
           clean = clean.substring(1).trim();
-        }
-        // Check for leading caret
-        else if (clean.startsWith('^')) {
+        } else if (clean.startsWith('^')) {
           isCorrect = true;
           clean = clean.substring(1).trim();
-        }
-        // Check for trailing (correct)
-        else if (clean.toLowerCase().endsWith('(correct)')) {
+        } else if (clean.toLowerCase().endsWith('(correct)')) {
           isCorrect = true;
           clean = clean.replace(/\(correct\)$/i, '').trim();
         }
-        // Strip common option prefixes like "a) ", "b. "
         clean = clean.replace(/^[a-zA-Z][.)]\s+/, '');
         if (isCorrect) {
           correctIndex = idx;
@@ -285,7 +368,6 @@ export function AdminPage() {
         options.push(clean);
       });
       const finalOptions = options.slice(0, 4);
-      // Ensure we have at least 2 options
       if (finalOptions.length >= 2) {
         parsed.push({
           text,
@@ -300,6 +382,35 @@ export function AdminPage() {
     } else {
         toast.success(`Parsed ${parsed.length} questions.`);
     }
+  };
+  const handleJsonUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const json = JSON.parse(event.target?.result as string);
+        if (Array.isArray(json)) {
+          // Map JSON structure to Partial<Question>
+          const mapped = json.map((q: any) => ({
+            text: q.text,
+            options: q.options,
+            correctIndex: q.correctIndex,
+            media: q.media
+          })).filter(q => q.text && Array.isArray(q.options));
+          setParsedQuestions(mapped);
+          toast.success(`Loaded ${mapped.length} questions from JSON`);
+        } else {
+          toast.error("Invalid JSON format. Expected an array of questions.");
+        }
+      } catch (err) {
+        console.error(err);
+        toast.error("Failed to parse JSON file");
+      }
+    };
+    reader.readAsText(file);
+    // Reset input
+    e.target.value = '';
   };
   const handleBulkImport = async () => {
     if (!user || parsedQuestions.length === 0) return;
@@ -321,7 +432,9 @@ export function AdminPage() {
               id: importMode === 'existing' ? selectedCategoryId : undefined,
               create: importMode === 'new' ? {
                 name: newCategoryName,
-                group: newCategoryGroup
+                group: newCategoryGroup,
+                color: newCategoryColor,
+                icon: newCategoryIcon
               } : undefined
             }
         };
@@ -354,7 +467,7 @@ export function AdminPage() {
       const downloadAnchorNode = document.createElement('a');
       downloadAnchorNode.setAttribute("href", dataStr);
       downloadAnchorNode.setAttribute("download", `questions_export_${new Date().toISOString().split('T')[0]}.json`);
-      document.body.appendChild(downloadAnchorNode); // required for firefox
+      document.body.appendChild(downloadAnchorNode);
       downloadAnchorNode.click();
       downloadAnchorNode.remove();
       toast.success(`Exported ${questions.length} questions`);
@@ -384,11 +497,9 @@ export function AdminPage() {
     if (!confirm("Are you sure? This will delete the question permanently.")) return;
     setProcessingReportId(reportId);
     try {
-      // 1. Delete Question
       await api(`/api/admin/questions/${questionId}?userId=${user.id}`, {
         method: 'DELETE'
       });
-      // 2. Delete Report
       await api(`/api/admin/reports/${reportId}?userId=${user.id}`, {
         method: 'DELETE'
       });
@@ -610,7 +721,7 @@ export function AdminPage() {
                             <CardTitle className="flex items-center gap-2">
                                 <FileText className="w-5 h-5 text-indigo-400" /> Bulk Import
                             </CardTitle>
-                            <CardDescription>Paste raw text to automatically parse multiple questions.</CardDescription>
+                            <CardDescription>Paste raw text or upload a JSON file to import questions.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-6">
                             <div className="space-y-4 p-4 rounded-xl bg-white/5 border border-white/5">
@@ -637,60 +748,86 @@ export function AdminPage() {
                                     </SelectContent>
                                 </Select>
                               ) : (
-                                <div className="grid grid-cols-2 gap-4">
-                                  <div className="space-y-2">
-                                    <Label>New Category Name</Label>
-                                    <Input
-                                      placeholder="e.g. Ancient Mythology"
-                                      className="bg-black/20 border-white/10"
-                                      value={newCategoryName}
-                                      onChange={(e) => setNewCategoryName(e.target.value)}
-                                    />
+                                <div className="space-y-4">
+                                  <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                      <Label>New Category Name</Label>
+                                      <Input
+                                        placeholder="e.g. Ancient Mythology"
+                                        className="bg-black/20 border-white/10"
+                                        value={newCategoryName}
+                                        onChange={(e) => setNewCategoryName(e.target.value)}
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <Label>Group</Label>
+                                      <Select value={newCategoryGroup} onValueChange={(v: any) => setNewCategoryGroup(v)}>
+                                        <SelectTrigger className="bg-black/20 border-white/10">
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent className="bg-zinc-900 border-white/10">
+                                          <SelectItem value="General">General</SelectItem>
+                                          <SelectItem value="Education">Education</SelectItem>
+                                          <SelectItem value="TV & Movies">TV & Movies</SelectItem>
+                                          <SelectItem value="Sports">Sports</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
                                   </div>
                                   <div className="space-y-2">
-                                    <Label>Group</Label>
-                                    <Select value={newCategoryGroup} onValueChange={(v: any) => setNewCategoryGroup(v)}>
-                                      <SelectTrigger className="bg-black/20 border-white/10">
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent className="bg-zinc-900 border-white/10">
-                                        <SelectItem value="General">General</SelectItem>
-                                        <SelectItem value="Education">Education</SelectItem>
-                                        <SelectItem value="TV & Movies">TV & Movies</SelectItem>
-                                        <SelectItem value="Sports">Sports</SelectItem>
-                                      </SelectContent>
-                                    </Select>
+                                    <Label>Color Theme</Label>
+                                    <ColorPicker value={newCategoryColor} onChange={setNewCategoryColor} />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label>Icon</Label>
+                                    <IconPicker value={newCategoryIcon} onChange={setNewCategoryIcon} />
                                   </div>
                                 </div>
                               )}
                             </div>
-                            <div className="space-y-2">
-                                <div className="flex justify-between items-center">
-                                    <Label>Raw Text Input</Label>
-                                    <span className="text-xs text-muted-foreground">Separate questions with empty lines</span>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <div className="flex justify-between items-center">
+                                        <Label>Raw Text Input</Label>
+                                        <span className="text-xs text-muted-foreground">Separate questions with empty lines</span>
+                                    </div>
+                                    <Textarea
+                                        placeholder={`Example:\n\n1. What is the capital of France?\nLondon\nBerlin\n*Paris\nMadrid\n\n2. What is 2+2?\n3\n*4\n5`}
+                                        className="bg-black/20 border-white/10 font-mono text-sm min-h-[200px]"
+                                        value={bulkText}
+                                        onChange={(e) => setBulkText(e.target.value)}
+                                    />
+                                    <div className="flex items-center gap-2 text-xs text-muted-foreground bg-white/5 p-2 rounded">
+                                        <AlertCircle className="w-4 h-4 text-indigo-400" />
+                                        <span>Mark correct answers with <strong>*</strong> at the start or <strong>(correct)</strong> at the end.</span>
+                                    </div>
+                                    <Button onClick={parseQuestions} variant="secondary" className="w-full">
+                                        Parse Text
+                                    </Button>
                                 </div>
-                                <Textarea
-                                    placeholder={`Example:\n\n1. What is the capital of France?\nLondon\nBerlin\n*Paris\nMadrid\n\n2. What is 2+2?\n3\n*4\n5`}
-                                    className="bg-black/20 border-white/10 font-mono text-sm min-h-[200px]"
-                                    value={bulkText}
-                                    onChange={(e) => setBulkText(e.target.value)}
-                                />
-                                <div className="flex items-center gap-2 text-xs text-muted-foreground bg-white/5 p-2 rounded">
-                                    <AlertCircle className="w-4 h-4 text-indigo-400" />
-                                    <span>Mark correct answers with <strong>*</strong> at the start or <strong>(correct)</strong> at the end.</span>
+                                <div className="space-y-2">
+                                    <Label>Or Upload JSON</Label>
+                                    <div className="border-2 border-dashed border-white/10 rounded-xl p-8 flex flex-col items-center justify-center text-center hover:bg-white/5 transition-colors cursor-pointer relative">
+                                        <Upload className="w-8 h-8 text-muted-foreground mb-2" />
+                                        <p className="text-sm text-muted-foreground">Click to upload or drag and drop</p>
+                                        <p className="text-xs text-muted-foreground/50 mt-1">.json files only</p>
+                                        <input
+                                            type="file"
+                                            accept=".json"
+                                            className="absolute inset-0 opacity-0 cursor-pointer"
+                                            onChange={handleJsonUpload}
+                                        />
+                                    </div>
+                                    <div className="flex justify-end">
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => { setBulkText(''); setParsedQuestions([]); }}
+                                            disabled={!bulkText && parsedQuestions.length === 0}
+                                        >
+                                            Clear All
+                                        </Button>
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="flex gap-4">
-                                <Button onClick={parseQuestions} variant="secondary" className="flex-1">
-                                    Parse Text
-                                </Button>
-                                <Button
-                                    variant="outline"
-                                    onClick={() => { setBulkText(''); setParsedQuestions([]); }}
-                                    disabled={!bulkText && parsedQuestions.length === 0}
-                                >
-                                    Clear
-                                </Button>
                             </div>
                             {parsedQuestions.length > 0 && (
                                 <div className="space-y-4 pt-4 border-t border-white/5">
@@ -744,7 +881,7 @@ export function AdminPage() {
                   <Card className="bg-zinc-900/50 border-white/10 backdrop-blur-sm">
                     <CardHeader>
                       <CardTitle>Manage Categories</CardTitle>
-                      <CardDescription>View and remove community-created categories.</CardDescription>
+                      <CardDescription>View, edit, and remove community-created categories.</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <ScrollArea className="h-[400px] rounded-lg border border-white/10 bg-black/20 p-4">
@@ -753,7 +890,10 @@ export function AdminPage() {
                             <div key={cat.id} className="flex items-center justify-between p-3 rounded bg-white/5 border border-white/5">
                                <div className="flex items-center gap-3">
                                  <div className={`w-8 h-8 rounded flex items-center justify-center bg-gradient-to-br ${cat.color}`}>
-                                    <span className="font-bold text-white">{cat.name[0]}</span>
+                                    {(() => {
+                                        const Icon = CATEGORY_ICONS[cat.icon] || Star;
+                                        return <Icon className="w-4 h-4 text-white" />;
+                                    })()}
                                  </div>
                                  <div>
                                    <div className="font-medium text-white flex items-center gap-2">
@@ -775,14 +915,24 @@ export function AdminPage() {
                                    {togglingFeaturedId === cat.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Star className={`w-4 h-4 ${cat.isFeatured ? "fill-current" : ""}`} />}
                                  </Button>
                                  {cat.id.startsWith('cat_') && (
-                                   <Button
-                                     size="sm"
-                                     variant="destructive"
-                                     onClick={() => handleDeleteCategory(cat.id)}
-                                     disabled={deletingCatId === cat.id}
-                                   >
-                                     {deletingCatId === cat.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                                   </Button>
+                                   <>
+                                     <Button
+                                       size="sm"
+                                       variant="ghost"
+                                       onClick={() => setEditingCategory(cat)}
+                                       className="text-muted-foreground hover:text-indigo-400 hover:bg-indigo-500/10"
+                                     >
+                                       <Pencil className="w-4 h-4" />
+                                     </Button>
+                                     <Button
+                                       size="sm"
+                                       variant="destructive"
+                                       onClick={() => handleDeleteCategory(cat.id)}
+                                       disabled={deletingCatId === cat.id}
+                                     >
+                                       {deletingCatId === cat.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                                     </Button>
+                                   </>
                                  )}
                                </div>
                             </div>
@@ -1001,6 +1151,74 @@ export function AdminPage() {
           </div>
         </div>
       </div>
+      {/* Edit Category Dialog */}
+      <Dialog open={!!editingCategory} onOpenChange={(open) => !open && setEditingCategory(null)}>
+        <DialogContent className="bg-zinc-950 border-white/10 max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit Category</DialogTitle>
+            <DialogDescription>Update category details and appearance.</DialogDescription>
+          </DialogHeader>
+          {editingCategory && (
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Name</Label>
+                  <Input
+                    value={editingCategory.name}
+                    onChange={(e) => setEditingCategory({ ...editingCategory, name: e.target.value })}
+                    className="bg-black/20 border-white/10"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Group</Label>
+                  <Select
+                    value={editingCategory.group}
+                    onValueChange={(val: any) => setEditingCategory({ ...editingCategory, group: val })}
+                  >
+                    <SelectTrigger className="bg-black/20 border-white/10">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-zinc-900 border-white/10">
+                      <SelectItem value="General">General</SelectItem>
+                      <SelectItem value="Education">Education</SelectItem>
+                      <SelectItem value="TV & Movies">TV & Movies</SelectItem>
+                      <SelectItem value="Sports">Sports</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Description</Label>
+                <Input
+                  value={editingCategory.description}
+                  onChange={(e) => setEditingCategory({ ...editingCategory, description: e.target.value })}
+                  className="bg-black/20 border-white/10"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Color Theme</Label>
+                <ColorPicker
+                  value={editingCategory.color}
+                  onChange={(val) => setEditingCategory({ ...editingCategory, color: val })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Icon</Label>
+                <IconPicker
+                  value={editingCategory.icon}
+                  onChange={(val) => setEditingCategory({ ...editingCategory, icon: val })}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setEditingCategory(null)}>Cancel</Button>
+            <Button onClick={handleUpdateCategory} disabled={isUpdatingCategory}>
+              {isUpdatingCategory ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Changes'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
