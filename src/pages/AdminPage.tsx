@@ -25,6 +25,7 @@ import { useCategories } from '@/hooks/use-categories';
 import { useShop } from '@/hooks/use-shop';
 import { CATEGORY_ICONS, ICON_KEYS } from '@/lib/icons';
 import { cn } from '@/lib/utils';
+import { Loader2 } from 'lucide-react';
 const questionSchema = z.object({
   text: z.string().min(5, "Question text must be at least 5 characters"),
   categoryId: z.string().min(1, "Category is required"),
@@ -93,6 +94,44 @@ function IconPicker({ value, onChange }: { value: string, onChange: (val: string
     </ScrollArea>
   );
 }
+const compressImage = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_SIZE = 256; // Max dimension
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_SIZE) {
+            height *= MAX_SIZE / width;
+            width = MAX_SIZE;
+          }
+        } else {
+          if (height > MAX_SIZE) {
+            width *= MAX_SIZE / height;
+            height = MAX_SIZE;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        // Compress to WebP at 0.8 quality
+        const dataUrl = canvas.toDataURL('image/webp', 0.8);
+        resolve(dataUrl);
+      };
+      img.onerror = (err) => reject(err);
+    };
+    reader.onerror = (err) => reject(err);
+  });
+};
+
 export function AdminPage() {
   const navigate = useNavigate();
   const user = useAuthStore(s => s.user);
@@ -548,24 +587,31 @@ export function AdminPage() {
     }
   };
   // --- Shop Management Handlers ---
-  const handleAssetUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAssetUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 500 * 1024) {
-      toast.error("File too large. Max 500KB.");
+    
+    // Client-side size check (pre-compression)
+    if (file.size > 2 * 1024 * 1024) { // 2MB limit for input
+      toast.error("File too large. Max 2MB input.");
       return;
     }
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      if (event.target?.result && typeof event.target.result === 'string') {
-        setEditingShopItem(prev => prev ? ({ ...prev, assetUrl: event.target!.result as string }) : null);
+
+    try {
+        const compressedDataUrl = await compressImage(file);
+        
+        // Check compressed size (approximate string length in bytes)
+        if (compressedDataUrl.length > 100 * 1024) {
+             toast.error("Compressed image is still too large (>100KB). Please use a simpler image.");
+             return;
+        }
+
+        setEditingShopItem(prev => prev ? ({ ...prev, assetUrl: compressedDataUrl }) : null);
         toast.success("Asset uploaded!");
-      }
-    };
-    reader.onerror = () => {
-        toast.error("Failed to read file");
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+        console.error("Image processing failed", err);
+        toast.error("Failed to process image");
+    }
     e.target.value = '';
   };
   const handleSaveShopItem = async () => {

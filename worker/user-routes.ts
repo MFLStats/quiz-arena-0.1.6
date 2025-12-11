@@ -311,18 +311,17 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
   });
   // --- SHOP ---
   app.get('/api/shop/items', async (c) => {
-    const shopEntity = new ShopEntity(c.env, 'global');
-    return ok(c, await shopEntity.getState());
+    await ShopEntity.ensureSeed(c.env);
+    const { items, next } = await ShopEntity.list(c.env, null, 100);
+    return ok(c, { items, next });
   });
   app.post('/api/admin/shop/items', async (c) => {
     const userId = c.req.query('userId');
     if (!userId || !await isAdmin(c.env, userId)) return c.json({ success: false, error: 'Unauthorized' }, 403);
     const newItem = await c.req.json() as ShopItem;
     if (!newItem.name || !newItem.type || !newItem.price) return bad(c, 'Missing required fields');
-    const shopEntity = new ShopEntity(c.env, 'global');
-    await shopEntity.mutate(s => ({
-      items: [...s.items, { ...newItem, id: newItem.id || crypto.randomUUID() }]
-    }));
+    const id = newItem.id || crypto.randomUUID();
+    await ShopEntity.create(c.env, { ...newItem, id });
     return ok(c, { success: true });
   });
   app.put('/api/admin/shop/items/:id', async (c) => {
@@ -330,20 +329,17 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     const itemId = c.req.param('id');
     if (!userId || !await isAdmin(c.env, userId)) return c.json({ success: false, error: 'Unauthorized' }, 403);
     const updates = await c.req.json() as Partial<ShopItem>;
-    const shopEntity = new ShopEntity(c.env, 'global');
-    await shopEntity.mutate(s => ({
-      items: s.items.map(item => item.id === itemId ? { ...item, ...updates } : item)
-    }));
+    const shopEntity = new ShopEntity(c.env, itemId);
+    if (!await shopEntity.exists()) return notFound(c, 'Item not found');
+    await shopEntity.patch(updates);
     return ok(c, { success: true });
   });
   app.delete('/api/admin/shop/items/:id', async (c) => {
     const userId = c.req.query('userId');
     const itemId = c.req.param('id');
     if (!userId || !await isAdmin(c.env, userId)) return c.json({ success: false, error: 'Unauthorized' }, 403);
-    const shopEntity = new ShopEntity(c.env, 'global');
-    await shopEntity.mutate(s => ({
-      items: s.items.filter(item => item.id !== itemId)
-    }));
+    const existed = await ShopEntity.delete(c.env, itemId);
+    if (!existed) return notFound(c, 'Item not found');
     return ok(c, { success: true });
   });
   app.post('/api/shop/purchase', async (c) => {
@@ -352,21 +348,22 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       if (!userId || !itemId) return bad(c, 'userId and itemId required');
       const userEntity = new UserEntity(c.env, userId);
       if (!await userEntity.exists()) return notFound(c, 'User not found');
-      const shopEntity = new ShopEntity(c.env, 'global');
-      const shopState = await shopEntity.getState();
-      const item = shopState.items.find(i => i.id === itemId);
-      if (!item) return notFound(c, 'Item not found');
+      const shopEntity = new ShopEntity(c.env, itemId);
+      if (!await shopEntity.exists()) return notFound(c, 'Item not found');
+      const item = await shopEntity.getState();
       const user = await userEntity.getState();
       if ((user.currency || 0) < item.price) return bad(c, 'Insufficient funds');
       let itemToAwardId = itemId;
       if (item.type === 'box') {
+        // Fetch all items to build pool
+        const { items: allItems } = await ShopEntity.list(c.env, null, 1000);
         let pool: ShopItem[] = [];
         if (item.rarity === 'common') {
-          pool = shopState.items.filter(i => i.type !== 'box' && (i.rarity === 'common' || i.rarity === 'rare'));
+          pool = allItems.filter(i => i.type !== 'box' && (i.rarity === 'common' || i.rarity === 'rare'));
         } else if (item.rarity === 'rare') {
-          pool = shopState.items.filter(i => i.type !== 'box' && (i.rarity === 'rare' || i.rarity === 'epic'));
+          pool = allItems.filter(i => i.type !== 'box' && (i.rarity === 'rare' || i.rarity === 'epic'));
         } else {
-          pool = shopState.items.filter(i => i.type !== 'box' && (i.rarity === 'epic' || i.rarity === 'legendary'));
+          pool = allItems.filter(i => i.type !== 'box' && (i.rarity === 'epic' || i.rarity === 'legendary'));
         }
         const unowned = pool.filter(i => !user.inventory?.includes(i.id));
         const targetPool = unowned.length > 0 ? unowned : pool;
@@ -396,10 +393,9 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       if (!await userEntity.exists()) return notFound(c, 'User not found');
       const user = await userEntity.getState();
       if (!user.inventory?.includes(itemId)) return bad(c, 'Item not owned');
-      const shopEntity = new ShopEntity(c.env, 'global');
-      const shopState = await shopEntity.getState();
-      const item = shopState.items.find(i => i.id === itemId);
-      if (!item) return notFound(c, 'Item not found');
+      const shopEntity = new ShopEntity(c.env, itemId);
+      if (!await shopEntity.exists()) return notFound(c, 'Item not found');
+      const item = await shopEntity.getState();
       if (item.type !== type) return bad(c, 'Item type mismatch');
       await userEntity.mutate(u => ({
         ...u,
@@ -988,7 +984,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     if (search) {
       filtered = filtered.filter(u => 
         u.name.toLowerCase().includes(search) || 
-        u.id.toLowerCase().includes(search) || 
+        u.id.toLowerCase().includes(search) ||
         (u.email && u.email.toLowerCase().includes(search))
       );
     }

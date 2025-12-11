@@ -50,23 +50,20 @@ export class ConfigEntity extends Entity<SystemConfig> {
     seasonEndDate: '2025-12-31'
   };
 }
-// SHOP ENTITY: Stores dynamic shop items
-export interface ShopState {
-  items: ShopItem[];
-}
-export class ShopEntity extends Entity<ShopState> {
-  static readonly entityName = "shop";
-  static readonly initialState: ShopState = { items: [] };
-  protected override async ensureState(): Promise<ShopState> {
-    const s = await super.ensureState();
-    // Seed with mock data if empty
-    if (!s.items || s.items.length === 0) {
-      const seededState = { items: MOCK_SHOP_ITEMS };
-      this._state = seededState;
-      return seededState;
-    }
-    return s;
-  }
+// SHOP ENTITY: Stores dynamic shop items individually
+export class ShopEntity extends IndexedEntity<ShopItem> {
+  static readonly entityName = "shop_item";
+  static readonly indexName = "shop_items";
+  static readonly initialState: ShopItem = {
+    id: "",
+    name: "",
+    type: "avatar",
+    rarity: "common",
+    price: 0,
+    assetUrl: "",
+    description: ""
+  };
+  static seedData = MOCK_SHOP_ITEMS;
 }
 // CATEGORY ENTITY: Stores dynamic categories created by admins
 export class CategoryEntity extends IndexedEntity<Category> {
@@ -460,7 +457,7 @@ export class MatchEntity extends IndexedEntity<MatchState> {
     }));
     const updatedState = await this.getState();
     const currentQId = updatedState.questions[updatedState.currentQuestionIndex].id;
-    const allAnswered = Object.values(updatedState.players).every(p =>
+    const allAnswered = Object.values(updatedState.players).every(p => 
         p.answers.some(a => a.questionId === currentQId)
     );
     if (allAnswered) {

@@ -8,7 +8,8 @@ export function useShop() {
   const fetchItems = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await api<{ items: ShopItem[] }>('/api/shop/items');
+      // The API now returns { items: ShopItem[], next: string | null }
+      const data = await api<{ items: ShopItem[], next: string | null }>('/api/shop/items');
       setItems(data.items || []);
       setError(null);
     } catch (err: any) {
