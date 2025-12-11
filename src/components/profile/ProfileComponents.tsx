@@ -431,8 +431,8 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
                 // Public Profile Actions
                 <>
                   {!isFriend ? (
-                    <Button 
-                      size="sm" 
+                    <Button
+                      size="sm"
                       className="bg-indigo-600 hover:bg-indigo-500 text-white gap-2"
                       onClick={handleFriendAction}
                       disabled={isAddingFriend}
@@ -459,10 +459,26 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
                 {user.title}
               </span>
             )}
-            <span className="flex items-center gap-1.5 bg-white/5 px-3 py-1 rounded-full border border-white/5">
-              <Shield className="w-3.5 h-3.5 text-indigo-400" />
-              ID: {user.id.substring(0, 8)}
-            </span>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button 
+                    onClick={() => {
+                      navigator.clipboard.writeText(user.id);
+                      toast.success("User ID copied to clipboard!");
+                    }}
+                    className="flex items-center gap-1.5 bg-white/5 px-3 py-1 rounded-full border border-white/5 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
+                    title="Click to copy full ID"
+                  >
+                    <Shield className="w-3.5 h-3.5 text-indigo-400" />
+                    <span className="font-mono">ID: {user.id.substring(0, 8)}</span>
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent className="bg-zinc-900 border-white/10 text-xs">
+                  Click to copy full ID
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <span className="flex items-center gap-1.5 bg-white/5 px-3 py-1 rounded-full border border-white/5">
               <MapPin className="w-3.5 h-3.5 text-emerald-400" />
               {getFlagEmoji(user.country)} {user.country || 'Global'}
@@ -953,9 +969,9 @@ export function FriendsList({ friends, onAddFriend }: FriendsListProps) {
                             <div className="text-xs text-muted-foreground">Lvl {user.level} • {getFlagEmoji(user.country)}</div>
                           </div>
                         </div>
-                        <Button 
-                          size="sm" 
-                          variant="ghost" 
+                        <Button
+                          size="sm"
+                          variant="ghost"
                           onClick={() => user.id && handleAdd(user.id)}
                           disabled={isAdding}
                         >

@@ -25,7 +25,6 @@ import { useCategories } from '@/hooks/use-categories';
 import { useShop } from '@/hooks/use-shop';
 import { CATEGORY_ICONS, ICON_KEYS } from '@/lib/icons';
 import { cn } from '@/lib/utils';
-import { Loader2 } from 'lucide-react';
 const questionSchema = z.object({
   text: z.string().min(5, "Question text must be at least 5 characters"),
   categoryId: z.string().min(1, "Category is required"),
@@ -106,7 +105,6 @@ const compressImage = (file: File): Promise<string> => {
         const MAX_SIZE = 256; // Max dimension
         let width = img.width;
         let height = img.height;
-
         if (width > height) {
           if (width > MAX_SIZE) {
             height *= MAX_SIZE / width;
@@ -131,7 +129,6 @@ const compressImage = (file: File): Promise<string> => {
     reader.onerror = (err) => reject(err);
   });
 };
-
 export function AdminPage() {
   const navigate = useNavigate();
   const user = useAuthStore(s => s.user);
@@ -590,22 +587,18 @@ export function AdminPage() {
   const handleAssetUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
     // Client-side size check (pre-compression)
     if (file.size > 2 * 1024 * 1024) { // 2MB limit for input
       toast.error("File too large. Max 2MB input.");
       return;
     }
-
     try {
         const compressedDataUrl = await compressImage(file);
-        
         // Check compressed size (approximate string length in bytes)
         if (compressedDataUrl.length > 100 * 1024) {
              toast.error("Compressed image is still too large (>100KB). Please use a simpler image.");
              return;
         }
-
         setEditingShopItem(prev => prev ? ({ ...prev, assetUrl: compressedDataUrl }) : null);
         toast.success("Asset uploaded!");
     } catch (err) {

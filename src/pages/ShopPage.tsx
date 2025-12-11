@@ -97,10 +97,17 @@ export function ShopPage() {
         method: 'POST',
         body: JSON.stringify(req)
       });
+      // Play purchase sound immediately
+      playSfx('purchase');
+      // If box, add suspense
+      if (item.type === 'box') {
+        // Wait for 1.5s to build suspense
+        await new Promise(resolve => setTimeout(resolve, 1500));
+      }
       setUserCurrency(updatedUser.currency || 0);
       setInventory(updatedUser.inventory || []);
       updateUser(updatedUser);
-      playSfx('purchase');
+      // Trigger effects
       confetti({
         particleCount: 100,
         spread: 70,
@@ -115,6 +122,8 @@ export function ShopPage() {
           const awardedItem = shopItems.find(i => i.id === awardedId);
           if (awardedItem) {
             setMysteryBoxResult(awardedItem);
+            // Play win sound for the reveal
+            playSfx('win'); 
           }
         } else {
           toast.success("Mystery Box opened! Check your inventory.");
