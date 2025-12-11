@@ -162,22 +162,31 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate }: ProfileBannerPro
         {/* Avatar Group */}
         <div className="relative shrink-0">
           <div className="absolute -inset-2 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full blur-lg opacity-50 group-hover:opacity-75 transition duration-500" />
-          <div className="relative w-32 h-32 md:w-40 md:h-40 rounded-full p-1.5 bg-zinc-900 ring-4 ring-zinc-900/50">
-            <Avatar className="w-full h-full border-2 border-white/10">
-              <AvatarImage src={user.avatar} className="object-cover" />
-              <AvatarFallback className="text-4xl font-bold bg-zinc-800 text-white">
-                {user.name.substring(0, 2).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            {/* Frame Overlay (if it were an image) */}
-            {user.frame && user.frame.startsWith('http') && (
-               <img src={user.frame} className="absolute inset-0 w-full h-full pointer-events-none" />
-            )}
-            {/* CSS Frame Fallback */}
-            {user.frame && !user.frame.startsWith('http') && (
-               <div className={cn("absolute inset-0 rounded-full pointer-events-none z-20", user.frame)} />
-            )}
-          </div>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="relative w-32 h-32 md:w-40 md:h-40 rounded-full p-1.5 bg-zinc-900 ring-4 ring-zinc-900/50 cursor-help">
+                  <Avatar className="w-full h-full border-2 border-white/10">
+                    <AvatarImage src={user.avatar} className="object-cover" />
+                    <AvatarFallback className="text-4xl font-bold bg-zinc-800 text-white">
+                      {user.name.substring(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  {/* Frame Overlay (if it were an image) */}
+                  {user.frame && user.frame.startsWith('http') && (
+                     <img src={user.frame} className="absolute inset-0 w-full h-full pointer-events-none" />
+                  )}
+                  {/* CSS Frame Fallback */}
+                  {user.frame && !user.frame.startsWith('http') && (
+                     <div className={cn("absolute inset-0 rounded-full pointer-events-none z-20", user.frame)} />
+                  )}
+                </div>
+              </TooltipTrigger>
+              <TooltipContent className="bg-zinc-900 border-white/10 text-xs font-medium">
+                Vector SVG • 1:1 Aspect Ratio
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           {/* Quick Edit Button */}
           {isOwnProfile && (
             <div className="absolute bottom-0 right-0 z-20 translate-x-1/4 translate-y-1/4">
@@ -709,14 +718,14 @@ export function AchievementsGrid({ userAchievements }: AchievementsGridProps) {
                       transition={{ delay: 0.1 + (i * 0.05) }}
                       className={cn(
                         "aspect-square rounded-xl flex flex-col items-center justify-center p-3 text-center border transition-all duration-300 group cursor-default",
-                        isUnlocked
-                          ? "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"
+                        isUnlocked 
+                          ? "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20" 
                           : "bg-black/20 border-white/5 opacity-50 grayscale"
                       )}
                     >
                       <div className={cn(
                         "w-10 h-10 rounded-full flex items-center justify-center mb-2 transition-transform group-hover:scale-110",
-                        isUnlocked
+                        isUnlocked 
                           ? achievement.rarity === 'legendary' ? "bg-yellow-500/20 text-yellow-400 shadow-[0_0_15px_rgba(234,179,8,0.3)]" :
                             achievement.rarity === 'epic' ? "bg-purple-500/20 text-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.3)]" :
                             achievement.rarity === 'rare' ? "bg-blue-500/20 text-blue-400" :
@@ -760,9 +769,9 @@ export function MatchHistoryList({ history }: MatchHistoryListProps) {
       <CardContent className="space-y-2">
         {history.length > 0 ? (
           history.slice(0, 8).map((match, i) => (
-            <Link
+            <Link 
               // CRITICAL FIX: Use composite key to prevent collisions if matchId is duplicated in mock data
-              key={`${match.matchId}-${i}`}
+              key={`${match.matchId}-${i}`} 
               to={`/results/${match.matchId}`}
               className="block"
             >
@@ -856,7 +865,7 @@ export function FriendsList({ friends, onAddFriend }: FriendsListProps) {
             </DialogHeader>
             <div className="py-4">
               <Label>User ID</Label>
-              <Input
+              <Input 
                 value={friendId}
                 onChange={(e) => setFriendId(e.target.value)}
                 placeholder="e.g. u_123456"

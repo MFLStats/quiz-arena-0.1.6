@@ -3,9 +3,15 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dices, Check, Palette, User, Smile, Shirt, Loader2, ImageOff, RefreshCw, Ban } from 'lucide-react';
+import { Dices, Check, Palette, User, Smile, Shirt, Loader2, ImageOff, RefreshCw, Ban, Download, Info } from 'lucide-react';
 import { AVATAR_OPTIONS, AVATAR_TOPS_SHORT, AVATAR_TOPS_LONG } from '@shared/constants';
 import { cn } from '@/lib/utils';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 interface AvatarCreatorProps {
   initialUrl?: string;
   onSave: (url: string) => void;
@@ -114,6 +120,7 @@ export function AvatarCreator({ initialUrl, onSave, onCancel }: AvatarCreatorPro
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+  const [isDownloading, setIsDownloading] = useState(false);
   // Debounce ref
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -250,6 +257,26 @@ export function AvatarCreator({ initialUrl, onSave, onCancel }: AvatarCreatorPro
   const handleSave = () => {
     onSave(constructApiUrl());
   };
+  const handleDownload = async () => {
+    setIsDownloading(true);
+    try {
+      const url = constructApiUrl();
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `avatar-${seed}.svg`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error("Download failed", error);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
   const currentTops = avatarStyle === 'A' ? AVATAR_TOPS_SHORT : AVATAR_TOPS_LONG;
   return (
     <div className="flex flex-col h-full gap-4 md:gap-6 overflow-hidden">
@@ -290,9 +317,9 @@ export function AvatarCreator({ initialUrl, onSave, onCancel }: AvatarCreatorPro
              <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-800 text-muted-foreground p-2 text-center z-10">
                 <ImageOff className="w-8 h-8 mb-1 opacity-50" />
                 <span className="text-[10px]">Failed to load</span>
-                <Button
-                  size="sm"
-                  variant="ghost"
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
                   className="h-6 text-[10px] mt-1 hover:bg-white/10"
                   onClick={handleRetry}
                 >
@@ -302,9 +329,9 @@ export function AvatarCreator({ initialUrl, onSave, onCancel }: AvatarCreatorPro
           ) : (
             /* Image Display */
             previewSrc && (
-              <img
-                  src={previewSrc}
-                  alt="Avatar Preview"
+              <img 
+                  src={previewSrc} 
+                  alt="Avatar Preview" 
                   className="w-full h-full object-cover transition-opacity duration-300"
                   style={{ opacity: isLoading ? 0.5 : 1 }}
               />
@@ -315,6 +342,30 @@ export function AvatarCreator({ initialUrl, onSave, onCancel }: AvatarCreatorPro
            <Button size="sm" variant="outline" onClick={handleRandomize} className="gap-2 border-white/10 hover:bg-white/5">
              <Dices className="w-4 h-4" /> Randomize
            </Button>
+           <Button size="sm" variant="outline" onClick={handleDownload} disabled={isDownloading} className="gap-2 border-white/10 hover:bg-white/5">
+             {isDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+             Download
+           </Button>
+        </div>
+        {/* Specs Info Block */}
+        <div className="mt-2 flex items-center gap-4 text-[10px] text-muted-foreground bg-black/20 px-3 py-2 rounded-lg border border-white/5">
+          <div className="flex items-center gap-1">
+            <span className="font-bold text-white/50">Format:</span>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger className="flex items-center gap-1 cursor-help hover:text-white transition-colors">
+                  SVG (Vector) <Info className="w-3 h-3" />
+                </TooltipTrigger>
+                <TooltipContent className="bg-zinc-900 border-white/10 text-xs">
+                  Scalable Vector Graphics. Looks sharp at any size!
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+          <div className="w-px h-3 bg-white/10" />
+          <div><span className="font-bold text-white/50">Ratio:</span> 1:1</div>
+          <div className="w-px h-3 bg-white/10" />
+          <div><span className="font-bold text-white/50">Display:</span> 128px - 160px</div>
         </div>
       </div>
       {/* Customization Area */}
@@ -524,8 +575,8 @@ function OptionButton({ label, selected, onClick, icon }: { label: string, selec
       onClick={onClick}
       className={cn(
         "px-2 py-2 rounded-lg text-xs font-medium border transition-all truncate flex items-center justify-center gap-1",
-        selected
-          ? "bg-indigo-500/20 border-indigo-500 text-indigo-300"
+        selected 
+          ? "bg-indigo-500/20 border-indigo-500 text-indigo-300" 
           : "bg-white/5 border-white/10 hover:bg-white/10 text-muted-foreground"
       )}
       title={displayLabel}
