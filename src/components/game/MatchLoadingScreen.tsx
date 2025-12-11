@@ -1,7 +1,14 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Loader2, Swords } from 'lucide-react';
 export function MatchLoadingScreen() {
+  const [dots, setDots] = useState('');
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setDots(prev => prev.length >= 3 ? '' : prev + '.');
+    }, 500);
+    return () => clearInterval(interval);
+  }, []);
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-zinc-950 overflow-hidden">
       {/* Background Effects */}
@@ -35,7 +42,9 @@ export function MatchLoadingScreen() {
           </h2>
           <div className="flex items-center justify-center gap-2 text-indigo-300 font-mono text-sm">
             <Loader2 className="w-4 h-4 animate-spin" />
-            <span>ESTABLISHING CONNECTION...</span>
+            <span className="tabular-nums min-w-[200px] text-left">
+              ESTABLISHING CONNECTION{dots}
+            </span>
           </div>
         </div>
       </motion.div>
