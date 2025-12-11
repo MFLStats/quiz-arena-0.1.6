@@ -1,14 +1,13 @@
 import { Hono } from "hono";
 import type { Env } from './core-utils';
 import { UserEntity } from "./entities";
-import { MatchEntity, QueueEntity, QuestionEntity, CategoryEntity, ReportEntity, CodeRegistryEntity, ConfigEntity } from "./game-entities";
+import { MatchEntity, QueueEntity, QuestionEntity, CategoryEntity, ReportEntity, CodeRegistryEntity, ConfigEntity, ShopEntity } from "./game-entities";
 import { ok, bad, notFound, isStr, Index } from './core-utils';
 import type { FinishMatchResponse, MatchHistoryItem, UpdateUserRequest, PurchaseItemRequest, EquipItemRequest, RegisterRequest, LoginEmailRequest, LoginRequest, User, RewardBreakdown, ShopItem, UserAchievement, Question, BulkImportRequest, Category, ClaimRewardRequest, UpgradeSeasonPassRequest, CreateReportRequest, Report, JoinMatchRequest, SystemConfig, SystemStats } from "@shared/types";
-import { MOCK_SHOP_ITEMS, MOCK_CATEGORIES, MOCK_QUESTIONS } from "@shared/mock-data";
+import { MOCK_CATEGORIES, MOCK_QUESTIONS } from "@shared/mock-data";
 import { PROGRESSION_CONSTANTS, getLevelFromXp, getXpRequiredForNextLevel } from "@shared/progression";
 import { SEASON_REWARDS_CONFIG as SHARED_SEASON_CONFIG, SEASON_COST } from "@shared/constants";
 // --- Helpers ---
-// Generate a deterministic User ID from email
 async function generateUserId(email: string): Promise<string> {
   const msgBuffer = new TextEncoder().encode(email.toLowerCase().trim());
   const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
@@ -16,19 +15,16 @@ async function generateUserId(email: string): Promise<string> {
   const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   return `u_${hashHex.substring(0, 16)}`;
 }
-// Simple password hashing (SHA-256)
 async function hashPassword(password: string): Promise<string> {
   const msgBuffer = new TextEncoder().encode(password);
   const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
-// Strip sensitive data from user object
 function sanitizeUser(user: User): User {
   const { passwordHash, ...rest } = user;
   return rest;
 }
-// Admin Check Helper
 async function isAdmin(env: Env, userId: string): Promise<boolean> {
   if (userId === 'Crushed') return true;
   const userEntity = new UserEntity(env, userId);
@@ -41,7 +37,6 @@ async function isAdmin(env: Env, userId: string): Promise<boolean> {
 export function userRoutes(app: Hono<{ Bindings: Env }>) {
   app.get('/api/test', (c) => c.json({ success: true, data: { name: 'Quiz Arena API' }}));
   // --- AUTH ---
-  // Register with Email
   app.post('/api/auth/register', async (c) => {
     try {
       const { name, email, password, avatar } = await c.req.json() as RegisterRequest;
@@ -93,7 +88,6 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       return bad(c, 'Registration failed');
     }
   });
-  // Login with Email
   app.post('/api/auth/login-email', async (c) => {
     try {
       const { email, password } = await c.req.json() as LoginEmailRequest;
@@ -106,7 +100,6 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
         return bad(c, 'Invalid credentials');
       }
       const user = await userEntity.getState();
-      // Check if user has a password set (might be social login only)
       if (!user.passwordHash) {
         console.warn(`[AUTH] Login failed: No password set for ${normalizedEmail} (Provider: ${user.provider})`);
         return bad(c, 'Account exists but has no password. Please use social login.');
@@ -116,7 +109,6 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
         console.warn(`[AUTH] Login failed: Password mismatch for ${normalizedEmail}`);
         return bad(c, 'Invalid credentials');
       }
-      // Process Daily Login
       await userEntity.processLogin();
       console.log(`[AUTH] Login successful: ${userId}`);
       return ok(c, sanitizeUser(await userEntity.getState()));
@@ -125,7 +117,6 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       return bad(c, 'Login failed due to server error');
     }
   });
-  // Login with Provider (Simulated OAuth)
   app.post('/api/auth/login', async (c) => {
     const { provider, email } = await c.req.json() as LoginRequest;
     if (!provider) return bad(c, 'Provider required');
@@ -156,7 +147,6 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     }
     const userEntity = new UserEntity(c.env, id);
     if (await userEntity.exists()) {
-      // Process Daily Login for existing users
       await userEntity.processLogin();
       return ok(c, sanitizeUser(await userEntity.getState()));
     }
@@ -259,7 +249,6 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       if (!await userEntity.exists()) return notFound(c, 'User not found');
       const user = await userEntity.getState();
       const friendIds = user.friends || [];
-      // Resilient fetch: catch individual errors
       const friendsResults = await Promise.all(
         friendIds.map(async fid => {
           try {
@@ -273,7 +262,6 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
           }
         })
       );
-      // Filter out nulls
       const friends = friendsResults.filter((f): f is User => f !== null);
       return ok(c, friends);
     } catch (e) {
@@ -281,12 +269,10 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       return c.json({ success: false, error: 'Internal Server Error' }, 500);
     }
   });
-  // DELETE User (Admin or Self)
   app.delete('/api/users/:id', async (c) => {
     const targetId = c.req.param('id');
     const requesterId = c.req.query('userId');
     if (!requesterId) return bad(c, 'requesterId required');
-    // Check if requester is admin
     const admin = await isAdmin(c.env, requesterId);
     const isSelf = targetId === requesterId;
     if (!isSelf && !admin) {
@@ -297,36 +283,69 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     return ok(c, { success: true });
   });
   // --- SHOP ---
+  app.get('/api/shop/items', async (c) => {
+    const shopEntity = new ShopEntity(c.env, 'global');
+    return ok(c, await shopEntity.getState());
+  });
+  app.post('/api/admin/shop/items', async (c) => {
+    const userId = c.req.query('userId');
+    if (!userId || !await isAdmin(c.env, userId)) return c.json({ success: false, error: 'Unauthorized' }, 403);
+    const newItem = await c.req.json() as ShopItem;
+    if (!newItem.name || !newItem.type || !newItem.price) return bad(c, 'Missing required fields');
+    const shopEntity = new ShopEntity(c.env, 'global');
+    await shopEntity.mutate(s => ({ 
+      items: [...s.items, { ...newItem, id: newItem.id || crypto.randomUUID() }] 
+    }));
+    return ok(c, { success: true });
+  });
+  app.put('/api/admin/shop/items/:id', async (c) => {
+    const userId = c.req.query('userId');
+    const itemId = c.req.param('id');
+    if (!userId || !await isAdmin(c.env, userId)) return c.json({ success: false, error: 'Unauthorized' }, 403);
+    const updates = await c.req.json() as Partial<ShopItem>;
+    const shopEntity = new ShopEntity(c.env, 'global');
+    await shopEntity.mutate(s => ({
+      items: s.items.map(item => item.id === itemId ? { ...item, ...updates } : item)
+    }));
+    return ok(c, { success: true });
+  });
+  app.delete('/api/admin/shop/items/:id', async (c) => {
+    const userId = c.req.query('userId');
+    const itemId = c.req.param('id');
+    if (!userId || !await isAdmin(c.env, userId)) return c.json({ success: false, error: 'Unauthorized' }, 403);
+    const shopEntity = new ShopEntity(c.env, 'global');
+    await shopEntity.mutate(s => ({
+      items: s.items.filter(item => item.id !== itemId)
+    }));
+    return ok(c, { success: true });
+  });
   app.post('/api/shop/purchase', async (c) => {
     try {
       const { userId, itemId } = await c.req.json() as PurchaseItemRequest;
       if (!userId || !itemId) return bad(c, 'userId and itemId required');
       const userEntity = new UserEntity(c.env, userId);
       if (!await userEntity.exists()) return notFound(c, 'User not found');
-      const item = MOCK_SHOP_ITEMS.find(i => i.id === itemId);
+      const shopEntity = new ShopEntity(c.env, 'global');
+      const shopState = await shopEntity.getState();
+      const item = shopState.items.find(i => i.id === itemId);
       if (!item) return notFound(c, 'Item not found');
       const user = await userEntity.getState();
       if ((user.currency || 0) < item.price) return bad(c, 'Insufficient funds');
-      // Handle Mystery Box Logic
       let itemToAwardId = itemId;
       if (item.type === 'box') {
-        // Filter items by rarity based on box type
         let pool: ShopItem[] = [];
         if (item.rarity === 'common') {
-          pool = MOCK_SHOP_ITEMS.filter(i => i.type !== 'box' && (i.rarity === 'common' || i.rarity === 'rare'));
+          pool = shopState.items.filter(i => i.type !== 'box' && (i.rarity === 'common' || i.rarity === 'rare'));
         } else if (item.rarity === 'rare') {
-          pool = MOCK_SHOP_ITEMS.filter(i => i.type !== 'box' && (i.rarity === 'rare' || i.rarity === 'epic'));
+          pool = shopState.items.filter(i => i.type !== 'box' && (i.rarity === 'rare' || i.rarity === 'epic'));
         } else {
-          pool = MOCK_SHOP_ITEMS.filter(i => i.type !== 'box' && (i.rarity === 'epic' || i.rarity === 'legendary'));
+          pool = shopState.items.filter(i => i.type !== 'box' && (i.rarity === 'epic' || i.rarity === 'legendary'));
         }
-        // Filter out owned items if possible (or allow duplicates converted to coins - simplified here to just pick random)
         const unowned = pool.filter(i => !user.inventory?.includes(i.id));
         const targetPool = unowned.length > 0 ? unowned : pool;
         if (targetPool.length > 0) {
           const randomItem = targetPool[Math.floor(Math.random() * targetPool.length)];
           itemToAwardId = randomItem.id;
-        } else {
-          // Fallback if they own everything: refund or give coins (simplified: just give item ID even if owned)
         }
       } else {
         if (user.inventory?.includes(itemId)) return bad(c, 'Item already owned');
@@ -334,7 +353,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       await userEntity.mutate(u => ({
         ...u,
         currency: (u.currency || 0) - item.price,
-        inventory: Array.from(new Set([...(u.inventory || []), itemToAwardId])) // Prevent duplicates
+        inventory: Array.from(new Set([...(u.inventory || []), itemToAwardId]))
       }));
       return ok(c, sanitizeUser(await userEntity.getState()));
     } catch (e) {
@@ -350,7 +369,9 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       if (!await userEntity.exists()) return notFound(c, 'User not found');
       const user = await userEntity.getState();
       if (!user.inventory?.includes(itemId)) return bad(c, 'Item not owned');
-      const item = MOCK_SHOP_ITEMS.find(i => i.id === itemId);
+      const shopEntity = new ShopEntity(c.env, 'global');
+      const shopState = await shopEntity.getState();
+      const item = shopState.items.find(i => i.id === itemId);
       if (!item) return notFound(c, 'Item not found');
       if (item.type !== type) return bad(c, 'Item type mismatch');
       await userEntity.mutate(u => ({
@@ -375,25 +396,20 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       if (!await userEntity.exists()) return notFound(c, 'User not found');
       const user = await userEntity.getState();
       const seasonPass = user.seasonPass || { level: 1, xp: 0, isPremium: false, claimedRewards: [] };
-      // Validate Level Requirement (using main user level as driver)
       if ((user.level || 1) < level) {
         return bad(c, 'Level requirement not met');
       }
-      // Validate Premium Requirement
       if (track === 'premium' && !seasonPass.isPremium) {
         return bad(c, 'Premium pass required');
       }
-      // Validate Duplicate Claim
       const claimKey = `${level}:${track}`;
       if (seasonPass.claimedRewards.includes(claimKey)) {
         return bad(c, 'Reward already claimed');
       }
-      // Find Reward Config
       const rewardConfig = SHARED_SEASON_CONFIG.find(r => r.level === level);
       if (!rewardConfig) return bad(c, 'Invalid level');
       const reward = track === 'free' ? rewardConfig.free : rewardConfig.premium;
       if (reward.type === 'none') return bad(c, 'No reward at this level');
-      // Grant Reward
       let currencyToAdd = 0;
       const inventoryToAdd: string[] = [];
       if (reward.type === 'coins') {
@@ -458,7 +474,6 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
   });
   // --- CATEGORIES ---
   app.get('/api/categories', async (c) => {
-    // Fetch dynamic categories
     let dynamicCategories: Category[] = [];
     try {
       const { items } = await CategoryEntity.list(c.env, null, 100);
@@ -466,8 +481,6 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     } catch (e) {
       console.error("Failed to fetch dynamic categories", e);
     }
-    // Merge with mock categories
-    // Ensure no ID collisions (mock IDs are simple strings, dynamic are UUIDs usually)
     const allCategories = [...MOCK_CATEGORIES, ...dynamicCategories];
     return ok(c, allCategories);
   });
@@ -516,13 +529,10 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     if (!userId || !categoryId) return bad(c, 'userId and categoryId required');
     const matchId = crypto.randomUUID();
     const matchEntity = new MatchEntity(c.env, matchId);
-    // Start match in 'waiting' state
     const matchState = await matchEntity.startMatch([userId], categoryId, 'ranked', true);
-    // Register code
     const registry = new CodeRegistryEntity(c.env, 'global');
     try {
       const code = await registry.register(matchId);
-      // Update match with code
       await matchEntity.mutate(s => ({ ...s, code }));
       return ok(c, { ...matchState, code });
     } catch (e) {
@@ -565,7 +575,6 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     await matchEntity.submitEmote(userId, emoji);
     return ok(c, { success: true });
   });
-  // Finish Match & Update Stats (REFACTORED FOR PROGRESSION)
   app.post('/api/match/:id/finish', async (c) => {
     const matchId = c.req.param('id');
     const { userId } = await c.req.json() as { userId?: string };
@@ -581,23 +590,18 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     const won = myStats.score > opponentScore;
     const draw = myStats.score === opponentScore;
     const isDaily = matchState.mode === 'daily';
-    // --- REWARD CALCULATION ---
     const xpBreakdown: RewardBreakdown[] = [];
     const coinsBreakdown: RewardBreakdown[] = [];
     let totalXp = 0;
     let totalCoins = 0;
-    // 1. Per Question Rewards
     let correctCount = 0;
     let fastCount = 0;
     myStats.answers.forEach(ans => {
       if (ans.correct) {
         correctCount++;
-        // XP
         totalXp += PROGRESSION_CONSTANTS.XP_PER_CORRECT_ANSWER;
-        // Coins
         totalCoins += PROGRESSION_CONSTANTS.COINS_PER_CORRECT_ANSWER;
-        // Fast Bonus (Simulated threshold < 5s)
-        if (ans.timeMs < 5000) { // 5 seconds elapsed means > 5s remaining
+        if (ans.timeMs < 5000) {
            if (ans.timeMs < 5000) {
              fastCount++;
              totalXp += PROGRESSION_CONSTANTS.XP_PER_FAST_ANSWER;
@@ -614,12 +618,10 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       xpBreakdown.push({ source: 'Speed Bonus', amount: fastCount * PROGRESSION_CONSTANTS.XP_PER_FAST_ANSWER });
       coinsBreakdown.push({ source: 'Speed Bonus', amount: fastCount * PROGRESSION_CONSTANTS.COINS_PER_FASTEST_ANSWER });
     }
-    // Perfect Round Bonus
     if (correctCount === matchState.questions.length) {
       totalXp += PROGRESSION_CONSTANTS.XP_PER_PERFECT_ROUND;
       xpBreakdown.push({ source: 'Perfect Round', amount: PROGRESSION_CONSTANTS.XP_PER_PERFECT_ROUND });
     }
-    // 2. Match Result Rewards
     if (won) {
       totalXp += PROGRESSION_CONSTANTS.XP_MATCH_WIN;
       totalCoins += PROGRESSION_CONSTANTS.COINS_MATCH_WIN;
@@ -636,9 +638,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       xpBreakdown.push({ source: 'Participation', amount: PROGRESSION_CONSTANTS.XP_MATCH_LOSS });
       coinsBreakdown.push({ source: 'Participation', amount: PROGRESSION_CONSTANTS.COINS_MATCH_LOSS });
     }
-    // Elo Change
     const eloChange = isDaily ? 0 : (won ? 12 : (draw ? 0 : -8));
-    // Update User Entity
     const userEntity = new UserEntity(c.env, userId);
     let newElo = 1200;
     let levelUp = false;
@@ -646,16 +646,13 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     const newAchievements: string[] = [];
     await userEntity.mutate(user => {
       newElo = user.elo + eloChange;
-      // XP & Leveling
       const currentXp = user.xp || 0;
       const currentLevel = user.level || 1;
       const updatedXp = currentXp + totalXp;
-      // Check Level Up
       const { level: calculatedLevel } = getLevelFromXp(updatedXp);
       if (calculatedLevel > currentLevel) {
         levelUp = true;
         newLevel = calculatedLevel;
-        // Award Level Up Coins
         const levelDiff = calculatedLevel - currentLevel;
         const levelUpCoins = levelDiff * PROGRESSION_CONSTANTS.COINS_LEVEL_UP;
         totalCoins += levelUpCoins;
@@ -663,12 +660,10 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       } else {
         newLevel = currentLevel;
       }
-      // Stats
       const stats = user.stats || { wins: 0, losses: 0, matches: 0 };
       stats.matches += 1;
       if (won) stats.wins += 1;
       else if (!draw) stats.losses += 1;
-      // History
       const historyItem: MatchHistoryItem = {
         matchId,
         opponentName: isDaily ? 'Daily Challenge' : (opponentStats?.name || 'Opponent'),
@@ -679,14 +674,12 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
         timestamp: Date.now()
       };
       const history = [historyItem, ...(user.history || [])].slice(0, 20);
-      // Category Elo
       const categoryId = matchState.categoryId;
       const currentCategoryElo = user.categoryElo?.[categoryId] ?? 1200;
       const newCategoryElo = {
         ...(user.categoryElo || {}),
         [categoryId]: currentCategoryElo + eloChange
       };
-      // Daily Stats
       let dailyStats = user.dailyStats;
       let title = user.title;
       const today = new Date().toISOString().split('T')[0];
@@ -698,11 +691,9 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
           title = 'Daily Challenge Winner';
         }
       }
-      // Activity Map Update
       const activityMap = user.activityMap || {};
       const newActivityCount = (activityMap[today] || 0) + 1;
       const newActivityMap = { ...activityMap, [today]: newActivityCount };
-      // --- ACHIEVEMENTS CHECK ---
       const currentAchievements = user.achievements || [];
       const unlockedIds = new Set(currentAchievements.map(a => a.achievementId));
       const addAchievement = (id: string) => {
@@ -712,20 +703,13 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
           unlockedIds.add(id);
         }
       };
-      // 1. First Blood
       if (won && stats.wins === 1) addAchievement('first_win');
-      // 2. Speed Demon (3+ fast answers)
       if (fastCount >= 3) addAchievement('speed_demon');
-      // 3. Perfectionist (All correct)
       if (correctCount === matchState.questions.length) addAchievement('perfect_round');
-      // 4. Veteran (50 matches)
       if (stats.matches >= 50) addAchievement('veteran');
-      // 5. High Roller (5000 coins) - Check after adding coins
       if ((user.currency || 0) + totalCoins >= 5000) addAchievement('high_roller');
-      // 6. Unstoppable (3 wins in a row)
-      // Check history for last 2 matches + current win
       if (won && history.length >= 3) {
-        const last3 = history.slice(0, 3); // Current match is at index 0
+        const last3 = history.slice(0, 3);
         if (last3.every(h => h.result === 'win')) {
           addAchievement('streaker');
         }
@@ -743,7 +727,6 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
         title,
         achievements: currentAchievements,
         activityMap: newActivityMap,
-        // Sync season pass level with main level
         seasonPass: {
           ...(user.seasonPass || { isPremium: false, claimedRewards: [] }),
           level: newLevel,
@@ -767,14 +750,13 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       newLevel,
       newAchievements,
       isPrivate: matchState.isPrivate,
-      categoryId: matchState.categoryId // Added for Play Again
+      categoryId: matchState.categoryId
     };
     return ok(c, response);
   });
   app.get('/api/match/:id', async (c) => {
     const matchEntity = new MatchEntity(c.env, c.req.param('id'));
     if (!await matchEntity.exists()) return notFound(c, 'Match not found');
-    // NEW: Process turn logic to ensure timer advancement
     await matchEntity.processTurn();
     return ok(c, await matchEntity.getState());
   });
@@ -797,11 +779,9 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       correctIndex: question.correctIndex ?? 0,
       media: question.media
     };
-    // CHANGED: Use createQuestion instead of create
     await QuestionEntity.createQuestion(c.env, newQuestion);
     return ok(c, newQuestion);
   });
-  // NEW: Update Question Endpoint
   app.put('/api/admin/questions/:id', async (c) => {
     const userId = c.req.query('userId');
     const questionId = c.req.param('id');
@@ -810,7 +790,6 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     if (!await isAdmin(c.env, userId)) {
       return c.json({ success: false, error: 'Unauthorized' }, 403);
     }
-    // Basic validation
     if (Object.keys(updates).length === 0) {
         return bad(c, 'No updates provided');
     }
@@ -822,20 +801,17 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
         return bad(c, e.message || 'Failed to update question');
     }
   });
-  // NEW: Bulk Import Endpoint with Dynamic Categories
   app.post('/api/admin/questions/bulk', async (c) => {
     const { userId, questions, targetCategory } = await c.req.json() as BulkImportRequest;
     if (!userId || !questions || !Array.isArray(questions) || !targetCategory) return bad(c, 'Missing required fields');
     if (!await isAdmin(c.env, userId)) {
       return c.json({ success: false, error: 'Unauthorized' }, 403);
     }
-    // Determine Category ID
     let categoryId = '';
     if (targetCategory.mode === 'existing') {
       if (!targetCategory.id) return bad(c, 'Category ID required for existing mode');
       categoryId = targetCategory.id;
     } else {
-      // Create New Category
       if (!targetCategory.create) return bad(c, 'Category details required for new mode');
       const newId = `cat_${crypto.randomUUID().substring(0, 8)}`;
       const newCategory: Category = {
@@ -872,7 +848,6 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     if (!await isAdmin(c.env, userId)) {
       return c.json({ success: false, error: 'Unauthorized' }, 403);
     }
-    // Parse limit from query, default to 50, max 1000
     const limitParam = c.req.query('limit');
     const limit = limitParam ? Math.min(1000, Math.max(1, parseInt(limitParam))) : 50;
     const { items } = await QuestionEntity.list(c.env, null, limit);
@@ -903,7 +878,6 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     if (!existed) return notFound(c, 'Category not found');
     return ok(c, { success: true });
   });
-  // NEW: Update Category (e.g. Toggle Featured)
   app.put('/api/admin/categories/:id', async (c) => {
     const userId = c.req.query('userId');
     const categoryId = c.req.param('id');
@@ -920,11 +894,9 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     }));
     return ok(c, await categoryEntity.getState());
   });
-  // --- REPORTING ROUTES ---
   app.post('/api/reports', async (c) => {
     const { userId, questionId, questionText, reason } = await c.req.json() as CreateReportRequest & { userId: string };
     if (!userId || !questionId || !reason) return bad(c, 'Missing required fields');
-    // Get reporter name
     const userEntity = new UserEntity(c.env, userId);
     let reporterName = 'Anonymous';
     if (await userEntity.exists()) {
@@ -951,7 +923,6 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       return c.json({ success: false, error: 'Unauthorized' }, 403);
     }
     const { items } = await ReportEntity.list(c.env, null, 100);
-    // Sort by newest first
     const sorted = items.sort((a, b) => b.timestamp - a.timestamp);
     return ok(c, sorted);
   });
@@ -966,7 +937,6 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     if (!existed) return notFound(c, 'Report not found');
     return ok(c, { success: true });
   });
-  // --- SYSTEM CONFIG ROUTES ---
   app.get('/api/config', async (c) => {
     const configEntity = new ConfigEntity(c.env, 'global');
     return ok(c, await configEntity.getState());
@@ -979,7 +949,6 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     await configEntity.mutate(s => ({ ...s, ...updates }));
     return ok(c, await configEntity.getState());
   });
-  // NEW: Get Users (Admin)
   app.get('/api/admin/users', async (c) => {
     const requesterId = c.req.query('userId');
     const search = c.req.query('search')?.toLowerCase();
@@ -987,7 +956,6 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     if (!await isAdmin(c.env, requesterId)) {
       return c.json({ success: false, error: 'Unauthorized' }, 403);
     }
-    // Fetch users (limit 100 for performance)
     const { items } = await UserEntity.list(c.env, null, 100);
     let filtered = items.map(sanitizeUser);
     if (search) {
@@ -999,9 +967,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     }
     return ok(c, filtered);
   });
-  // --- ANALYTICS ---
   app.get('/api/stats', async (c) => {
-    // Fetch counts via Index lookups (optimized)
     const userIdx = new Index<string>(c.env, UserEntity.indexName);
     const { items: userIds } = await userIdx.page(null, 2000);
     const questionIdx = new Index<string>(c.env, QuestionEntity.indexName);
@@ -1021,7 +987,6 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
   app.get('/api/admin/stats', async (c) => {
     const userId = c.req.query('userId');
     if (!userId || !await isAdmin(c.env, userId)) return c.json({ success: false, error: 'Unauthorized' }, 403);
-    // Reuse optimized logic
     const userIdx = new Index<string>(c.env, UserEntity.indexName);
     const { items: userIds } = await userIdx.page(null, 2000);
     const questionIdx = new Index<string>(c.env, QuestionEntity.indexName);

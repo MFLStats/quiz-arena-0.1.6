@@ -17,9 +17,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { MOCK_SHOP_ITEMS } from '@shared/mock-data';
 import { api } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/auth-store';
+import { useShop } from '@/hooks/use-shop';
 import type { User, PurchaseItemRequest, EquipItemRequest, ShopItem } from '@shared/types';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -28,27 +28,26 @@ import { Link, useNavigate } from 'react-router-dom';
 import confetti from 'canvas-confetti';
 import { playSfx } from '@/lib/sound-fx';
 export function ShopPage() {
-  // Select only what we need to avoid unnecessary re-renders
   const currentUser = useAuthStore(s => s.user);
   const currentUserId = useAuthStore(s => s.user?.id);
   const updateUser = useAuthStore(s => s.updateUser);
   const logout = useAuthStore(s => s.logout);
   const navigate = useNavigate();
+  const { items: shopItems, loading: shopLoading, error: shopError, refresh: refreshShop } = useShop();
   const [userCurrency, setUserCurrency] = useState(0);
   const [inventory, setInventory] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [userLoading, setUserLoading] = useState(true);
+  const [userError, setUserError] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [mysteryBoxResult, setMysteryBoxResult] = useState<ShopItem | null>(null);
   const [itemToBuy, setItemToBuy] = useState<ShopItem | null>(null);
-  // Break dependency loop: depend on ID, not the whole user object
   const fetchUserData = useCallback(async () => {
     if (!currentUserId) {
-      setLoading(false);
+      setUserLoading(false);
       return;
     }
-    setLoading(true);
-    setError(null);
+    setUserLoading(true);
+    setUserError(null);
     try {
       const user = await api<User>(`/api/users/${currentUserId}`);
       setUserCurrency(user.currency || 0);
@@ -56,27 +55,25 @@ export function ShopPage() {
       updateUser(user);
     } catch (err: any) {
       console.error('Failed to fetch user data:', err);
-      setError(err.message || 'Failed to load shop data');
-      // Fallback to local state if API fails
+      setUserError(err.message || 'Failed to load shop data');
       const fallbackUser = useAuthStore.getState().user;
       if (fallbackUser) {
         setUserCurrency(fallbackUser.currency || 0);
         setInventory(fallbackUser.inventory || []);
       }
     } finally {
-      setLoading(false);
+      setUserLoading(false);
     }
   }, [currentUserId, updateUser]);
   useEffect(() => {
     fetchUserData();
   }, [fetchUserData]);
-  // Memoize filtered items
   const { avatars, banners, frames, boxes } = useMemo(() => ({
-    avatars: MOCK_SHOP_ITEMS.filter(i => i.type === 'avatar'),
-    banners: MOCK_SHOP_ITEMS.filter(i => i.type === 'banner'),
-    frames: MOCK_SHOP_ITEMS.filter(i => i.type === 'frame'),
-    boxes: MOCK_SHOP_ITEMS.filter(i => i.type === 'box'),
-  }), []);
+    avatars: shopItems.filter(i => i.type === 'avatar'),
+    banners: shopItems.filter(i => i.type === 'banner'),
+    frames: shopItems.filter(i => i.type === 'frame'),
+    boxes: shopItems.filter(i => i.type === 'box'),
+  }), [shopItems]);
   const handleLogout = () => {
     logout();
     navigate('/login');
@@ -93,7 +90,7 @@ export function ShopPage() {
     if (!currentUser || !itemToBuy) return;
     const item = itemToBuy;
     setProcessingId(item.id);
-    setItemToBuy(null); // Close dialog immediately
+    setItemToBuy(null);
     try {
       const req: PurchaseItemRequest = { userId: currentUser.id, itemId: item.id };
       const updatedUser = await api<User>('/api/shop/purchase', {
@@ -103,21 +100,19 @@ export function ShopPage() {
       setUserCurrency(updatedUser.currency || 0);
       setInventory(updatedUser.inventory || []);
       updateUser(updatedUser);
-      // Success Feedback
       playSfx('purchase');
       confetti({
         particleCount: 100,
         spread: 70,
         origin: { y: 0.6 },
-        colors: ['#fbbf24', '#f59e0b', '#d97706'] // Gold colors
+        colors: ['#fbbf24', '#f59e0b', '#d97706']
       });
       if (item.type === 'box') {
-        // Find the new item added to inventory (simplified logic: assume last added or diff)
         const oldInv = new Set(inventory);
         const newInv = updatedUser.inventory || [];
         const awardedId = newInv.find(id => !oldInv.has(id));
         if (awardedId) {
-          const awardedItem = MOCK_SHOP_ITEMS.find(i => i.id === awardedId);
+          const awardedItem = shopItems.find(i => i.id === awardedId);
           if (awardedItem) {
             setMysteryBoxResult(awardedItem);
           }
@@ -152,6 +147,8 @@ export function ShopPage() {
       setProcessingId(null);
     }
   };
+  const loading = shopLoading || userLoading;
+  const error = shopError || userError;
   if (loading) {
     return (
       <AppLayout>
@@ -210,7 +207,7 @@ export function ShopPage() {
           <h2 className="text-xl font-bold text-white">Something went wrong</h2>
           <p className="text-muted-foreground max-w-md">{error}</p>
           <div className="flex gap-4">
-            <Button onClick={fetchUserData} variant="outline" className="gap-2">
+            <Button onClick={() => { fetchUserData(); refreshShop(); }} variant="outline" className="gap-2">
                 <RefreshCw className="w-4 h-4" /> Retry
             </Button>
             <Button onClick={handleLogout} variant="destructive" className="gap-2">
@@ -307,7 +304,7 @@ export function ShopPage() {
                   key={item.id}
                   item={item}
                   index={i}
-                  purchased={false} // Boxes are consumable
+                  purchased={false}
                   equipped={false}
                   canAfford={userCurrency >= item.price}
                   isProcessing={processingId === item.id}
@@ -318,7 +315,6 @@ export function ShopPage() {
             </div>
           </TabsContent>
         </Tabs>
-        {/* Purchase Confirmation Dialog */}
         <AlertDialog open={!!itemToBuy} onOpenChange={(open) => !open && setItemToBuy(null)}>
           <AlertDialogContent className="bg-zinc-950 border-white/10">
             <AlertDialogHeader>
@@ -333,7 +329,6 @@ export function ShopPage() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-        {/* Mystery Box Reveal Modal */}
         <Dialog open={!!mysteryBoxResult} onOpenChange={() => setMysteryBoxResult(null)}>
           <DialogContent className="bg-zinc-950 border-white/10 text-center sm:max-w-sm">
             <DialogHeader>

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Shield, Plus, Save, Loader2, CheckCircle, Trash2, FileText, AlertCircle, Upload, Layers, Flag, XCircle, Star, Settings, Users, HelpCircle, Pencil, Download, Palette, Grid } from 'lucide-react';
+import { Shield, Plus, Save, Loader2, CheckCircle, Trash2, FileText, AlertCircle, Upload, Layers, Flag, XCircle, Star, Settings, Users, HelpCircle, Pencil, Download, Palette, Grid, ShoppingBag, Image as ImageIcon } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,8 +20,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { useAuthStore } from '@/lib/auth-store';
 import { api } from '@/lib/api-client';
 import { toast } from 'sonner';
-import type { Question, CategoryGroup, BulkImportRequest, Report, Category, SystemConfig, User, SystemStats } from '@shared/types';
+import type { Question, CategoryGroup, BulkImportRequest, Report, Category, SystemConfig, User, SystemStats, ShopItem, ItemType, ItemRarity } from '@shared/types';
 import { useCategories } from '@/hooks/use-categories';
+import { useShop } from '@/hooks/use-shop';
 import { CATEGORY_ICONS, ICON_KEYS } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 const questionSchema = z.object({
@@ -96,6 +97,7 @@ export function AdminPage() {
   const navigate = useNavigate();
   const user = useAuthStore(s => s.user);
   const { categories, refresh: refreshCategories } = useCategories();
+  const { items: shopItems, refresh: refreshShop } = useShop();
   const [activeTab, setActiveTab] = useState("overview");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [recentQuestions, setRecentQuestions] = useState<Question[]>([]);
@@ -117,6 +119,10 @@ export function AdminPage() {
   // Category Edit State
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [isUpdatingCategory, setIsUpdatingCategory] = useState(false);
+  // Shop Edit State
+  const [editingShopItem, setEditingShopItem] = useState<Partial<ShopItem> | null>(null);
+  const [isSavingShopItem, setIsSavingShopItem] = useState(false);
+  const [deletingShopItemId, setDeletingShopItemId] = useState<string | null>(null);
   // Reports State
   const [reports, setReports] = useState<Report[]>([]);
   const [processingReportId, setProcessingReportId] = useState<string | null>(null);
@@ -191,7 +197,6 @@ export function AdminPage() {
     setIsSubmitting(true);
     try {
       if (editingId) {
-        // UPDATE
         const updatePayload = {
             text: data.text,
             categoryId: data.categoryId,
@@ -206,7 +211,6 @@ export function AdminPage() {
         setRecentQuestions(prev => prev.map(q => q.id === editingId ? updatedQuestion : q));
         setEditingId(null);
       } else {
-        // CREATE
         const payload = {
             userId: user.id,
             question: {
@@ -224,7 +228,7 @@ export function AdminPage() {
         setRecentQuestions(prev => [newQuestion, ...prev]);
       }
       reset({
-        categoryId: data.categoryId, // Keep category selected for convenience
+        categoryId: data.categoryId,
         correctIndex: "0",
         text: '',
         option0: '',
@@ -391,7 +395,6 @@ export function AdminPage() {
       try {
         const json = JSON.parse(event.target?.result as string);
         if (Array.isArray(json)) {
-          // Map JSON structure to Partial<Question>
           const mapped = json.map((q: any) => ({
             text: q.text,
             options: q.options,
@@ -409,7 +412,6 @@ export function AdminPage() {
       }
     };
     reader.readAsText(file);
-    // Reset input
     e.target.value = '';
   };
   const handleBulkImport = async () => {
@@ -544,6 +546,52 @@ export function AdminPage() {
       setDeletingUserId(null);
     }
   };
+  // --- Shop Management Handlers ---
+  const handleSaveShopItem = async () => {
+    if (!user || !editingShopItem) return;
+    setIsSavingShopItem(true);
+    try {
+      if (editingShopItem.id) {
+        // Update
+        await api(`/api/admin/shop/items/${editingShopItem.id}?userId=${user.id}`, {
+          method: 'PUT',
+          body: JSON.stringify(editingShopItem)
+        });
+        toast.success("Item updated");
+      } else {
+        // Create
+        await api(`/api/admin/shop/items?userId=${user.id}`, {
+          method: 'POST',
+          body: JSON.stringify(editingShopItem)
+        });
+        toast.success("Item created");
+      }
+      await refreshShop();
+      setEditingShopItem(null);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to save item");
+    } finally {
+      setIsSavingShopItem(false);
+    }
+  };
+  const handleDeleteShopItem = async (itemId: string) => {
+    if (!user || deletingShopItemId) return;
+    if (!confirm("Are you sure? This will remove the item from the shop.")) return;
+    setDeletingShopItemId(itemId);
+    try {
+      await api(`/api/admin/shop/items/${itemId}?userId=${user.id}`, {
+        method: 'DELETE'
+      });
+      await refreshShop();
+      toast.success("Item deleted");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to delete item");
+    } finally {
+      setDeletingShopItemId(null);
+    }
+  };
   if (!user || (user.id !== 'Crushed' && user.name !== 'Crushed')) {
     return null;
   }
@@ -562,11 +610,12 @@ export function AdminPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-7 bg-white/5 mb-6">
+                <TabsList className="grid w-full grid-cols-8 bg-white/5 mb-6">
                     <TabsTrigger value="overview">Overview</TabsTrigger>
                     <TabsTrigger value="single">Single</TabsTrigger>
                     <TabsTrigger value="bulk">Bulk</TabsTrigger>
                     <TabsTrigger value="categories">Cats</TabsTrigger>
+                    <TabsTrigger value="shop">Shop</TabsTrigger>
                     <TabsTrigger value="reports" className="relative">
                       Reports
                       {reports.length > 0 && (
@@ -860,7 +909,6 @@ export function AdminPage() {
                                     </ScrollArea>
                                 </div>
                             )}
-                            {/* Export Section */}
                             <div className="pt-6 border-t border-white/10">
                                 <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
                                     <div>
@@ -935,6 +983,77 @@ export function AdminPage() {
                                    </>
                                  )}
                                </div>
+                            </div>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+                <TabsContent value="shop">
+                  <Card className="bg-zinc-900/50 border-white/10 backdrop-blur-sm">
+                    <CardHeader>
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <CardTitle className="flex items-center gap-2">
+                            <ShoppingBag className="w-5 h-5 text-indigo-400" /> Shop Management
+                          </CardTitle>
+                          <CardDescription>Manage items available in the shop.</CardDescription>
+                        </div>
+                        <Button onClick={() => setEditingShopItem({})} className="gap-2">
+                          <Plus className="w-4 h-4" /> Add Item
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <ScrollArea className="h-[500px] rounded-lg border border-white/10 bg-black/20 p-4">
+                        <div className="space-y-3">
+                          {shopItems.map(item => (
+                            <div key={item.id} className="flex items-center justify-between p-3 rounded bg-white/5 border border-white/5">
+                              <div className="flex items-center gap-3">
+                                <div className="w-12 h-12 rounded bg-black/40 flex items-center justify-center overflow-hidden border border-white/10">
+                                  {item.type === 'avatar' ? (
+                                    <img src={item.assetUrl} alt={item.name} className="w-full h-full object-cover" />
+                                  ) : item.type === 'banner' ? (
+                                    <div className="w-full h-full" style={{ background: item.assetUrl }} />
+                                  ) : (
+                                    <ImageIcon className="w-6 h-6 text-muted-foreground" />
+                                  )}
+                                </div>
+                                <div>
+                                  <div className="font-medium text-white">{item.name}</div>
+                                  <div className="text-xs text-muted-foreground flex gap-2">
+                                    <span className="capitalize">{item.type}</span>
+                                    <span>•</span>
+                                    <span className={cn(
+                                      "capitalize font-bold",
+                                      item.rarity === 'legendary' ? "text-yellow-400" :
+                                      item.rarity === 'epic' ? "text-purple-400" :
+                                      item.rarity === 'rare' ? "text-blue-400" : "text-white"
+                                    )}>{item.rarity}</span>
+                                    <span>•</span>
+                                    <span className="text-yellow-500">{item.price} Coins</span>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => setEditingShopItem(item)}
+                                  className="text-muted-foreground hover:text-indigo-400 hover:bg-indigo-500/10"
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() => handleDeleteShopItem(item.id)}
+                                  disabled={deletingShopItemId === item.id}
+                                >
+                                  {deletingShopItemId === item.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                                </Button>
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -1215,6 +1334,109 @@ export function AdminPage() {
             <Button variant="ghost" onClick={() => setEditingCategory(null)}>Cancel</Button>
             <Button onClick={handleUpdateCategory} disabled={isUpdatingCategory}>
               {isUpdatingCategory ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Changes'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Edit Shop Item Dialog */}
+      <Dialog open={!!editingShopItem} onOpenChange={(open) => !open && setEditingShopItem(null)}>
+        <DialogContent className="bg-zinc-950 border-white/10 max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{editingShopItem?.id ? 'Edit Item' : 'Add New Item'}</DialogTitle>
+            <DialogDescription>Configure shop item details.</DialogDescription>
+          </DialogHeader>
+          {editingShopItem && (
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Name</Label>
+                  <Input
+                    value={editingShopItem.name || ''}
+                    onChange={(e) => setEditingShopItem({ ...editingShopItem, name: e.target.value })}
+                    className="bg-black/20 border-white/10"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Price</Label>
+                  <Input
+                    type="number"
+                    value={editingShopItem.price || 0}
+                    onChange={(e) => setEditingShopItem({ ...editingShopItem, price: parseInt(e.target.value) })}
+                    className="bg-black/20 border-white/10"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Type</Label>
+                  <Select
+                    value={editingShopItem.type}
+                    onValueChange={(val: ItemType) => setEditingShopItem({ ...editingShopItem, type: val })}
+                  >
+                    <SelectTrigger className="bg-black/20 border-white/10">
+                      <SelectValue placeholder="Select Type" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-zinc-900 border-white/10">
+                      <SelectItem value="avatar">Avatar</SelectItem>
+                      <SelectItem value="frame">Frame</SelectItem>
+                      <SelectItem value="banner">Banner</SelectItem>
+                      <SelectItem value="title">Title</SelectItem>
+                      <SelectItem value="box">Box</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Rarity</Label>
+                  <Select
+                    value={editingShopItem.rarity}
+                    onValueChange={(val: ItemRarity) => setEditingShopItem({ ...editingShopItem, rarity: val })}
+                  >
+                    <SelectTrigger className="bg-black/20 border-white/10">
+                      <SelectValue placeholder="Select Rarity" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-zinc-900 border-white/10">
+                      <SelectItem value="common">Common</SelectItem>
+                      <SelectItem value="rare">Rare</SelectItem>
+                      <SelectItem value="epic">Epic</SelectItem>
+                      <SelectItem value="legendary">Legendary</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Description</Label>
+                <Input
+                  value={editingShopItem.description || ''}
+                  onChange={(e) => setEditingShopItem({ ...editingShopItem, description: e.target.value })}
+                  className="bg-black/20 border-white/10"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Asset URL / Value</Label>
+                <Input
+                  value={editingShopItem.assetUrl || ''}
+                  onChange={(e) => setEditingShopItem({ ...editingShopItem, assetUrl: e.target.value })}
+                  className="bg-black/20 border-white/10"
+                  placeholder="https://... or css-class"
+                />
+                {editingShopItem.assetUrl && (
+                  <div className="mt-2 p-2 bg-black/40 rounded border border-white/10 flex justify-center">
+                    {editingShopItem.type === 'avatar' ? (
+                      <img src={editingShopItem.assetUrl} className="w-16 h-16 rounded-full" alt="Preview" />
+                    ) : editingShopItem.type === 'banner' ? (
+                      <div className="w-full h-12 rounded" style={{ background: editingShopItem.assetUrl }} />
+                    ) : (
+                      <span className="text-xs text-muted-foreground">Preview not available</span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setEditingShopItem(null)}>Cancel</Button>
+            <Button onClick={handleSaveShopItem} disabled={isSavingShopItem}>
+              {isSavingShopItem ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Item'}
             </Button>
           </DialogFooter>
         </DialogContent>
