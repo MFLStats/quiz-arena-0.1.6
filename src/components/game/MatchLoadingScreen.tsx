@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Loader2, Swords, Lightbulb } from 'lucide-react';
+import { Loader2, Swords, Lightbulb, AlertCircle } from 'lucide-react';
 const TIPS = [
   "Speed matters! Faster answers earn significantly more points.",
   "The final question is worth Double Points. Make it count!",
@@ -14,6 +14,7 @@ const TIPS = [
 export function MatchLoadingScreen() {
   const [dots, setDots] = useState('');
   const [tipIndex, setTipIndex] = useState(0);
+  const [showLongWait, setShowLongWait] = useState(false);
   useEffect(() => {
     const interval = setInterval(() => {
       setDots(prev => prev.length >= 3 ? '' : prev + '.');
@@ -26,6 +27,13 @@ export function MatchLoadingScreen() {
       setTipIndex((prev) => (prev + 1) % TIPS.length);
     }, 4000);
     return () => clearInterval(interval);
+  }, []);
+  useEffect(() => {
+    // Show long wait message after 8 seconds to reassure user during cold starts
+    const timer = setTimeout(() => {
+      setShowLongWait(true);
+    }, 8000);
+    return () => clearTimeout(timer);
   }, []);
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-zinc-950 overflow-hidden">
@@ -58,11 +66,25 @@ export function MatchLoadingScreen() {
           <h2 className="text-3xl font-display font-bold text-white tracking-wider">
             ENTERING ARENA
           </h2>
-          <div className="flex items-center justify-center gap-2 text-indigo-300 font-mono text-sm">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            <span className="tabular-nums min-w-[200px] text-left">
-              ESTABLISHING CONNECTION{dots}
-            </span>
+          <div className="flex flex-col items-center gap-2">
+            <div className="flex items-center justify-center gap-2 text-indigo-300 font-mono text-sm">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span className="tabular-nums min-w-[200px] text-left">
+                ESTABLISHING CONNECTION{dots}
+              </span>
+            </div>
+            <AnimatePresence>
+              {showLongWait && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex items-center gap-2 text-yellow-500/80 text-xs font-medium mt-1"
+                >
+                  <AlertCircle className="w-3 h-3" />
+                  <span>Taking longer than usual...</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
         {/* Pro Tips Section */}
