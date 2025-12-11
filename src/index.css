@@ -89,6 +89,20 @@
     /* Mobile optimization */
     touch-action: manipulation;
   }
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-white/10 rounded-full transition-colors;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-white/20;
+  }
 }
 @layer components {
   /* Button System */
@@ -238,7 +252,6 @@
     animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
   }
 }
-
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
   25% { transform: translateX(-5px) rotate(-5deg); }
