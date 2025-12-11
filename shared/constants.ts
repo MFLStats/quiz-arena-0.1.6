@@ -105,18 +105,23 @@ export const SEASON_REWARDS_CONFIG = Array.from({ length: SEASON_LEVELS }, (_, i
       iconName: level === 30 ? 'Crown' : (isMilestone ? 'Box' : 'Coins'),
       itemId: level === 30 ? 'title_legendary' : (isMilestone ? 'box_rare' : undefined)
   };
-  // Overrides for Santa's Coming Season
+  // Overrides for Holiday Season
   if (level === 5) {
-      premiumReward = { type: 'avatar', amount: 1, label: 'Elf Avatar', iconName: 'User', itemId: 'av_elf' };
+      premiumReward = { type: 'avatar', amount: 1, label: 'Reindeer Avatar', iconName: 'User', itemId: 'av_reindeer' };
   }
   if (level === 10) {
+      // Keep free frame
       freeReward = { type: 'frame', amount: 1, label: 'Holiday Frame', itemId: 'fr_holiday' };
+      premiumReward = { type: 'avatar', amount: 1, label: 'Gingerbread Avatar', iconName: 'User', itemId: 'av_gingerbread' };
   }
   if (level === 15) {
       premiumReward = { type: 'banner', amount: 1, label: 'Winter Banner', iconName: 'Image', itemId: 'bn_winter' };
   }
   if (level === 20) {
-      premiumReward = { type: 'title', amount: 1, label: 'Santa\'s Helper', iconName: 'Crown', itemId: 'title_santa' };
+      premiumReward = { type: 'avatar', amount: 1, label: 'Snowman Avatar', iconName: 'User', itemId: 'av_snowman_scarf' };
+  }
+  if (level === 25) {
+       premiumReward = { type: 'title', amount: 1, label: 'Santa\'s Helper', iconName: 'Crown', itemId: 'title_santa' };
   }
   if (level === 30) {
       premiumReward = { type: 'avatar', amount: 1, label: 'Santa Avatar', iconName: 'User', itemId: 'av_santa' };

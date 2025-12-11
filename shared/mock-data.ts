@@ -734,24 +734,61 @@ export const MOCK_SHOP_ITEMS: ShopItem[] = [
     assetUrl: 'https://api.dicebear.com/9.x/avataaars/svg?seed=Jack&backgroundColor=ffd5dc&clothing=blazerAndShirt&clothingColor=black',
     description: 'The ultimate status symbol.'
   },
-  // Christmas Items
+  // Christmas Items - Season Pass Rewards
   {
     id: 'av_santa',
     name: 'Santa Claus',
     type: 'avatar',
     rarity: 'legendary',
     price: 1200,
-    assetUrl: 'https://api.dicebear.com/9.x/avataaars/svg?seed=Santa&top=winterHat2&hairColor=silverGray&facialHair=beardMajestic&clothing=collarAndSweater&clothingColor=red&backgroundColor=166534',
+    assetUrl: 'https://api.dicebear.com/9.x/avataaars/svg?seed=Santa&top=winterHat2&hatColor=red&hairColor=silverGray&facialHair=beardMajestic&clothing=collarAndSweater&clothingColor=red&skinColor=light&accessories=readingGlasses',
     description: 'Ho ho ho! Merry Christmas!'
   },
   {
-    id: 'av_elf',
-    name: 'Holiday Elf',
+    id: 'av_reindeer',
+    name: 'Reindeer',
+    type: 'avatar',
+    rarity: 'rare',
+    price: 600,
+    assetUrl: 'https://api.dicebear.com/9.x/avataaars/svg?seed=Reindeer&top=winterHat1&hatColor=brown&hairColor=brown&skinColor=brown&clothing=collarAndSweater&clothingColor=brown&accessories=kurt&eyebrows=raisedExcited',
+    description: 'Guiding the sleigh tonight.'
+  },
+  {
+    id: 'av_gingerbread',
+    name: 'Gingerbread Man',
     type: 'avatar',
     rarity: 'epic',
-    price: 600,
-    assetUrl: 'https://api.dicebear.com/9.x/avataaars/svg?seed=Elf&top=winterHat1&clothing=collarAndSweater&clothingColor=pastelGreen&backgroundColor=bbf7d0',
-    description: 'Santa\'s little helper.'
+    price: 800,
+    assetUrl: 'https://api.dicebear.com/9.x/avataaars/svg?seed=Gingerbread&top=shortFlat&hairColor=brown&skinColor=brown&clothing=collarAndSweater&clothingColor=red&facialHair=none&accessories=none&eyes=happy&mouth=smile',
+    description: 'Run, run, as fast as you can!'
+  },
+  {
+    id: 'av_snowman_scarf',
+    name: 'Snowman (Scarf)',
+    type: 'avatar',
+    rarity: 'epic',
+    price: 800,
+    assetUrl: 'https://api.dicebear.com/9.x/avataaars/svg?seed=SnowmanScarf&top=winterHat2&hatColor=red&skinColor=pale&clothing=collarAndSweater&clothingColor=red&accessories=none&eyes=default&mouth=smile',
+    description: 'Frosty and festive.'
+  },
+  // Christmas Items - Shop Purchasable
+  {
+    id: 'av_snowman_hat',
+    name: 'Snowman (Hat)',
+    type: 'avatar',
+    rarity: 'rare',
+    price: 500,
+    assetUrl: 'https://api.dicebear.com/9.x/avataaars/svg?seed=SnowmanHat&top=hat&hatColor=black&skinColor=pale&clothing=collarAndSweater&clothingColor=blue&accessories=none&eyes=default&mouth=smile',
+    description: 'A classic winter look.'
+  },
+  {
+    id: 'av_girl_santa',
+    name: 'Santa Helper',
+    type: 'avatar',
+    rarity: 'rare',
+    price: 500,
+    assetUrl: 'https://api.dicebear.com/9.x/avataaars/svg?seed=SantaGirl&top=winterHat2&hatColor=red&hairColor=auburn&skinColor=light&clothing=collarAndSweater&clothingColor=red&accessories=none&eyes=happy&mouth=smile',
+    description: 'Spreading holiday cheer.'
   },
   // Banners
   {
