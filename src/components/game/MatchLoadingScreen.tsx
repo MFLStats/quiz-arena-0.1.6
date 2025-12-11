@@ -1,12 +1,30 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Loader2, Swords } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Loader2, Swords, Lightbulb } from 'lucide-react';
+const TIPS = [
+  "Speed matters! Faster answers earn significantly more points.",
+  "The final question is worth Double Points. Make it count!",
+  "Don't guess randomly. Incorrect answers award 0 points.",
+  "Check the shop for new avatars and frames to customize your profile.",
+  "Daily Challenges reset every 24 hours. Play daily to keep your streak!",
+  "Use the 'Report' flag if you spot an incorrect question.",
+  "Private lobbies let you challenge friends directly via code.",
+  "Winning matches increases your Elo rating and leaderboard rank."
+];
 export function MatchLoadingScreen() {
   const [dots, setDots] = useState('');
+  const [tipIndex, setTipIndex] = useState(0);
   useEffect(() => {
     const interval = setInterval(() => {
       setDots(prev => prev.length >= 3 ? '' : prev + '.');
     }, 500);
+    return () => clearInterval(interval);
+  }, []);
+  useEffect(() => {
+    // Rotate tips every 4 seconds
+    const interval = setInterval(() => {
+      setTipIndex((prev) => (prev + 1) % TIPS.length);
+    }, 4000);
     return () => clearInterval(interval);
   }, []);
   return (
@@ -17,7 +35,7 @@ export function MatchLoadingScreen() {
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="relative z-10 flex flex-col items-center gap-8"
+        className="relative z-10 flex flex-col items-center gap-8 max-w-md px-6 text-center"
       >
         {/* Central Pulse */}
         <div className="relative">
@@ -36,7 +54,7 @@ export function MatchLoadingScreen() {
             <Swords className="w-12 h-12 text-white fill-white/20 animate-pulse" />
           </div>
         </div>
-        <div className="text-center space-y-2">
+        <div className="space-y-2">
           <h2 className="text-3xl font-display font-bold text-white tracking-wider">
             ENTERING ARENA
           </h2>
@@ -45,6 +63,26 @@ export function MatchLoadingScreen() {
             <span className="tabular-nums min-w-[200px] text-left">
               ESTABLISHING CONNECTION{dots}
             </span>
+          </div>
+        </div>
+        {/* Pro Tips Section */}
+        <div className="mt-8 p-4 rounded-xl bg-white/5 border border-white/10 backdrop-blur-sm w-full min-h-[100px] flex flex-col items-center justify-center">
+          <div className="flex items-center gap-2 text-xs font-bold text-yellow-400 uppercase tracking-widest mb-2">
+            <Lightbulb className="w-3 h-3" /> Pro Tip
+          </div>
+          <div className="relative w-full h-12 flex items-center justify-center">
+            <AnimatePresence mode="wait">
+              <motion.p
+                key={tipIndex}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3 }}
+                className="text-sm text-indigo-100 font-medium leading-relaxed"
+              >
+                {TIPS[tipIndex]}
+              </motion.p>
+            </AnimatePresence>
           </div>
         </div>
       </motion.div>
