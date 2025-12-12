@@ -178,50 +178,51 @@ export function AdminPage() {
       correctIndex: "0"
     }
   });
+  const isAuthorized = user && (user.id === 'Crushed' || user.name === 'Crushed' || user.id === 'Greeky' || user.name === 'Greeky');
   useEffect(() => {
     if (!user) {
       navigate('/login');
       return;
     }
-    if (user.id !== 'Crushed' && user.name !== 'Crushed') {
+    if (!isAuthorized) {
       toast.error("Unauthorized access");
       navigate('/');
     }
-  }, [user, navigate]);
+  }, [user, navigate, isAuthorized]);
   const fetchRecentQuestions = useCallback(() => {
-    if (user && (user.id === 'Crushed' || user.name === 'Crushed')) {
+    if (isAuthorized && user) {
       api<Question[]>(`/api/admin/questions?userId=${user.id}`)
         .then(setRecentQuestions)
         .catch(console.error);
     }
-  }, [user]);
+  }, [user, isAuthorized]);
   const fetchReports = useCallback(() => {
-    if (user && (user.id === 'Crushed' || user.name === 'Crushed')) {
+    if (isAuthorized && user) {
       api<Report[]>(`/api/admin/reports?userId=${user.id}`)
         .then(setReports)
         .catch(console.error);
     }
-  }, [user]);
+  }, [user, isAuthorized]);
   const fetchSystemConfig = useCallback(() => {
     api<SystemConfig>('/api/config')
       .then(setSystemConfig)
       .catch(console.error);
   }, []);
   const fetchUsers = useCallback(() => {
-    if (user && (user.id === 'Crushed' || user.name === 'Crushed')) {
+    if (isAuthorized && user) {
       const query = userSearch ? `&search=${encodeURIComponent(userSearch)}` : '';
       api<User[]>(`/api/admin/users?userId=${user.id}${query}`)
         .then(setUsers)
         .catch(console.error);
     }
-  }, [user, userSearch]);
+  }, [user, userSearch, isAuthorized]);
   const fetchStats = useCallback(() => {
-    if (user && (user.id === 'Crushed' || user.name === 'Crushed')) {
+    if (isAuthorized && user) {
       api<SystemStats>(`/api/admin/stats?userId=${user.id}`)
         .then(setStats)
         .catch(console.error);
     }
-  }, [user]);
+  }, [user, isAuthorized]);
   useEffect(() => {
     fetchRecentQuestions();
     fetchReports();
@@ -652,7 +653,7 @@ export function AdminPage() {
       setDeletingShopItemId(null);
     }
   };
-  if (!user || (user.id !== 'Crushed' && user.name !== 'Crushed')) {
+  if (!isAuthorized) {
     return null;
   }
   return (

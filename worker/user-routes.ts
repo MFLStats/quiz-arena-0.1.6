@@ -31,11 +31,11 @@ function publicSanitizeUser(user: User): Partial<User> {
   return rest;
 }
 async function isAdmin(env: Env, userId: string): Promise<boolean> {
-  if (userId === 'Crushed') return true;
+  if (userId === 'Crushed' || userId === 'Greeky') return true;
   const userEntity = new UserEntity(env, userId);
   if (await userEntity.exists()) {
     const user = await userEntity.getState();
-    return user.name === 'Crushed';
+    return user.name === 'Crushed' || user.name === 'Greeky';
   }
   return false;
 }
@@ -982,8 +982,8 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     const { items } = await UserEntity.list(c.env, null, 100);
     let filtered = items.map(sanitizeUser);
     if (search) {
-      filtered = filtered.filter(u => 
-        u.name.toLowerCase().includes(search) || 
+      filtered = filtered.filter(u =>
+        u.name.toLowerCase().includes(search) ||
         u.id.toLowerCase().includes(search) ||
         (u.email && u.email.toLowerCase().includes(search))
       );

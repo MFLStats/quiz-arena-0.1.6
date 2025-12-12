@@ -1,7 +1,5 @@
 import React from "react";
-import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/app-sidebar";
-import { MobileNav } from "@/components/mobile-nav";
+import { BottomNav } from "@/components/BottomNav";
 type AppLayoutProps = {
   children: React.ReactNode;
   container?: boolean;
@@ -10,21 +8,17 @@ type AppLayoutProps = {
 };
 export function AppLayout({ children, container = false, className, contentClassName }: AppLayoutProps): JSX.Element {
   return (
-    <SidebarProvider defaultOpen={false}>
-      <AppSidebar />
-      <SidebarInset className={className}>
-        <div className="absolute left-2 top-2 z-20 hidden md:flex">
-          <SidebarTrigger />
-        </div>
-        <div className="flex-1 pb-20 md:pb-0 min-h-dvh">
-            {container ? (
-            <div className={"max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10 lg:py-12" + (contentClassName ? ` ${contentClassName}` : "")}>{children}</div>
-            ) : (
-            children
-            )}
-        </div>
-        <MobileNav />
-      </SidebarInset>
-    </SidebarProvider>
+    <div className="min-h-dvh bg-background text-foreground flex flex-col">
+      <main className="flex-1 pb-24 md:pb-28">
+        {container ? (
+          <div className={"max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10 lg:py-12" + (contentClassName ? ` ${contentClassName}` : "")}>
+            {children}
+          </div>
+        ) : (
+          children
+        )}
+      </main>
+      <BottomNav />
+    </div>
   );
 }
