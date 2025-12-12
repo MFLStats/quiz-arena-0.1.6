@@ -111,13 +111,13 @@ export function AnswerButton({ text, index, selected, locked, correct, isLoading
       onClick={!locked && !isLoading ? onClick : undefined}
       disabled={locked || isLoading}
       className={cn(
-        "relative w-full p-5 md:p-6 text-left rounded-2xl border-2 transition-all duration-200 flex items-center justify-between group backdrop-blur-sm",
+        "relative w-full p-3 md:p-6 text-left rounded-2xl border-2 transition-all duration-200 flex items-center justify-between group backdrop-blur-sm",
         variantClass
       )}
     >
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3 md:gap-4">
         <span className={cn(
-          "flex items-center justify-center w-8 h-8 rounded-lg text-sm font-bold transition-colors relative",
+          "flex items-center justify-center w-6 h-6 md:w-8 md:h-8 rounded-lg text-xs md:text-sm font-bold transition-colors relative",
           selected || (locked && correct) || isLoading ? "bg-white/20 text-white" : "bg-white/10 text-white/60"
         )}>
           {String.fromCharCode(65 + index)}
@@ -126,7 +126,7 @@ export function AnswerButton({ text, index, selected, locked, correct, isLoading
             {shortcutKey}
           </span>
         </span>
-        <span className="text-lg md:text-xl font-medium leading-tight">{text}</span>
+        <span className="text-base md:text-xl font-medium leading-tight">{text}</span>
       </div>
       {icon}
     </motion.button>
@@ -269,7 +269,7 @@ interface EmotePickerProps {
   onSelect: (emoji: string) => void;
   disabled?: boolean;
 }
-const EMOJIS = ['😂', '👏', '��', '😱', '😎', '😭', '🤯', '🔥'];
+const EMOJIS = ['😂', '👏', '🤔', '😱', '😎', '😭', '🤯', '🔥'];
 export function EmotePicker({ onSelect, disabled }: EmotePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isCooldown, setIsCooldown] = useState(false);
@@ -322,7 +322,7 @@ export function EmoteFloater({ emoji, timestamp }: EmoteFloaterProps) {
       <motion.div
         key={`${timestamp}-${emoji}`} // Robust key to prevent collisions
         initial={{ opacity: 0, y: 20, scale: 0.5 }}
-        animate={{
+        animate={{ 
             opacity: [0, 1, 1, 0],
             y: [20, -40, -80, -120],
             scale: [0.5, 1.5, 1, 0.8],

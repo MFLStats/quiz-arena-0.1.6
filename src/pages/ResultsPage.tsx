@@ -140,9 +140,11 @@ export function ResultsPage() {
     loadData();
   }, [matchId, user, storeResult, storeQuestions]);
   const triggerConfetti = () => {
-    const count = 200;
+    // Reduced particle count and simplified burst for better visibility
+    const count = 100;
     const defaults = {
-      origin: { y: 0.7 }
+      origin: { y: 0.7 },
+      zIndex: 100
     };
     function fire(particleRatio: number, opts: any) {
       confetti({
@@ -151,6 +153,7 @@ export function ResultsPage() {
         particleCount: Math.floor(count * particleRatio)
       });
     }
+    // Single controlled burst sequence
     fire(0.25, {
       spread: 26,
       startVelocity: 55,
@@ -176,10 +179,11 @@ export function ResultsPage() {
   };
   const triggerLevelUpConfetti = () => {
       confetti({
-          particleCount: 100,
+          particleCount: 80,
           spread: 70,
           origin: { y: 0.6 },
-          colors: ['#fbbf24', '#f59e0b', '#d97706']
+          colors: ['#fbbf24', '#f59e0b', '#d97706'],
+          disableForReducedMotion: true
       });
   };
   const handleShare = () => {
@@ -215,7 +219,7 @@ export function ResultsPage() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4 relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/20 via-background to-background pointer-events-none" />
-      <motion.div
+      <motion.div 
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         className="relative z-10 max-w-4xl w-full bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6 md:p-12 text-center shadow-2xl overflow-y-auto max-h-[90vh]"
@@ -233,16 +237,16 @@ export function ResultsPage() {
         )}
         {/* Header */}
         <div className="mb-8 relative">
-          <Button
-            variant="ghost"
-            size="icon"
+          <Button 
+            variant="ghost" 
+            size="icon" 
             className="absolute right-0 top-0 text-muted-foreground hover:text-white"
             onClick={handleShare}
             title="Share Result"
           >
             <Share2 className="w-5 h-5" />
           </Button>
-          <motion.div
+          <motion.div 
             initial={{ y: -20 }}
             animate={{ y: 0 }}
             className="inline-flex p-4 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 shadow-lg mb-6"
@@ -272,7 +276,7 @@ export function ResultsPage() {
         {/* Rewards Grid */}
         {(result.xpEarned > 0 || result.coinsEarned > 0) && (
           <div className="grid grid-cols-2 gap-4 mb-8 max-w-lg mx-auto">
-            <motion.div
+            <motion.div 
               initial={{ x: -20, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               transition={{ delay: 0.2 }}
@@ -291,7 +295,7 @@ export function ResultsPage() {
                 ))}
               </div>
             </motion.div>
-            <motion.div
+            <motion.div 
               initial={{ x: 20, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               transition={{ delay: 0.3 }}
