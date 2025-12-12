@@ -3,7 +3,7 @@ import type { Env } from './core-utils';
 import { UserEntity } from "./entities";
 import { MatchEntity, QueueEntity, QuestionEntity, CategoryEntity, ReportEntity, CodeRegistryEntity, ConfigEntity, ShopEntity } from "./game-entities";
 import { ok, bad, notFound, isStr, Index } from './core-utils';
-import type { FinishMatchResponse, MatchHistoryItem, UpdateUserRequest, PurchaseItemRequest, EquipItemRequest, RegisterRequest, LoginEmailRequest, LoginRequest, User, RewardBreakdown, ShopItem, UserAchievement, Question, BulkImportRequest, Category, ClaimRewardRequest, UpgradeSeasonPassRequest, CreateReportRequest, Report, JoinMatchRequest, SystemConfig, SystemStats } from "@shared/types";
+import type { FinishMatchResponse, MatchHistoryItem, UpdateUserRequest, PurchaseItemRequest, EquipItemRequest, RegisterRequest, LoginEmailRequest, LoginRequest, User, RewardBreakdown, ShopItem, UserAchievement, Question, BulkImportRequest, Category, ClaimRewardRequest, UpgradeSeasonPassRequest, CreateReportRequest, Report, JoinMatchRequest, SystemConfig, SystemStats, ChallengeRequest, Notification, ClearNotificationsRequest } from "@shared/types";
 import { MOCK_CATEGORIES, MOCK_QUESTIONS } from "@shared/mock-data";
 import { PROGRESSION_CONSTANTS, getLevelFromXp, getXpRequiredForNextLevel } from "@shared/progression";
 import { SEASON_REWARDS_CONFIG as SHARED_SEASON_CONFIG, SEASON_COST } from "@shared/constants";
@@ -27,7 +27,7 @@ function sanitizeUser(user: User): User {
 }
 function publicSanitizeUser(user: User): Partial<User> {
   // Remove sensitive or private data for public viewing
-  const { passwordHash, email, inventory, friends, ...rest } = user;
+  const { passwordHash, email, inventory, friends, notifications, ...rest } = user;
   return rest;
 }
 async function isAdmin(env: Env, userId: string): Promise<boolean> {
@@ -83,7 +83,8 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
           isPremium: false,
           claimedRewards: []
         },
-        activityMap: {}
+        activityMap: {},
+        notifications: []
       };
       await UserEntity.create(c.env, newUser);
       console.log(`[AUTH] Registered new user: ${userId} (${normalizedEmail})`);
@@ -181,7 +182,8 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
         isPremium: false,
         claimedRewards: []
       },
-      activityMap: {}
+      activityMap: {},
+      notifications: []
     });
     return ok(c, sanitizeUser(user));
   });
@@ -591,6 +593,19 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       return bad(c, e.message || "Failed to join match");
     }
   });
+  app.post('/api/match/:id/join', async (c) => {
+    const matchId = c.req.param('id');
+    const { userId } = await c.req.json() as { userId: string };
+    if (!userId) return bad(c, 'userId required');
+    const matchEntity = new MatchEntity(c.env, matchId);
+    if (!await matchEntity.exists()) return notFound(c, 'Match not found');
+    try {
+      const matchState = await matchEntity.joinMatch(userId);
+      return ok(c, matchState);
+    } catch (e: any) {
+      return bad(c, e.message || "Failed to join match");
+    }
+  });
   app.post('/api/match/:id/answer', async (c) => {
     const matchId = c.req.param('id');
     const { userId, questionIndex, answerIndex, timeRemainingMs } = await c.req.json() as any;
@@ -797,6 +812,53 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     if (!await matchEntity.exists()) return notFound(c, 'Match not found');
     await matchEntity.processTurn();
     return ok(c, await matchEntity.getState());
+  });
+  // --- CHALLENGES ---
+  app.post('/api/challenge', async (c) => {
+    const { userId, opponentId, categoryId } = await c.req.json() as ChallengeRequest & { userId: string };
+    if (!userId || !opponentId || !categoryId) return bad(c, 'Missing fields');
+    // 1. Create Match
+    const matchId = crypto.randomUUID();
+    const matchEntity = new MatchEntity(c.env, matchId);
+    const matchState = await matchEntity.startMatch([userId], categoryId, 'ranked', true); // Private match
+    // Register code for consistency
+    const registry = new CodeRegistryEntity(c.env, 'global');
+    const code = await registry.register(matchId);
+    await matchEntity.mutate(s => ({ ...s, code }));
+    matchState.code = code;
+    // 2. Get User Info for Notification
+    const userEntity = new UserEntity(c.env, userId);
+    const user = await userEntity.getState();
+    // 3. Send Notification to Opponent
+    const opponentEntity = new UserEntity(c.env, opponentId);
+    if (!await opponentEntity.exists()) return notFound(c, 'Opponent not found');
+    const notification: Notification = {
+      id: crypto.randomUUID(),
+      type: 'challenge',
+      fromUserId: userId,
+      fromUserName: user.name,
+      matchId,
+      categoryId,
+      categoryName: categoryId, // Frontend can resolve this or we can fetch it
+      timestamp: Date.now()
+    };
+    await opponentEntity.addNotification(notification);
+    return ok(c, matchState);
+  });
+  app.get('/api/notifications', async (c) => {
+    const userId = c.req.query('userId');
+    if (!userId) return bad(c, 'userId required');
+    const userEntity = new UserEntity(c.env, userId);
+    if (!await userEntity.exists()) return ok(c, []);
+    const user = await userEntity.getState();
+    return ok(c, user.notifications || []);
+  });
+  app.post('/api/notifications/clear', async (c) => {
+    const { userId, notificationIds } = await c.req.json() as ClearNotificationsRequest & { userId: string };
+    if (!userId || !notificationIds) return bad(c, 'Missing fields');
+    const userEntity = new UserEntity(c.env, userId);
+    await userEntity.clearNotifications(notificationIds);
+    return ok(c, { success: true });
   });
   // --- ADMIN ROUTES ---
   app.post('/api/admin/questions', async (c) => {

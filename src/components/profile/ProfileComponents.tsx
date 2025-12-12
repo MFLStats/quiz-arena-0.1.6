@@ -70,6 +70,7 @@ import { AvatarCreator } from './AvatarCreator';
 import { toast } from 'sonner';
 import { eachDayOfInterval, subDays, format, isSameDay, startOfWeek, endOfWeek } from 'date-fns';
 import { api } from '@/lib/api-client';
+import { ChallengeModal } from '@/components/game/ChallengeModal';
 // --- Icon Map ---
 const ICON_MAP: Record<string, React.ElementType> = {
   Swords, Zap, Target, Shield, Coins, Flame, Users, Calendar
@@ -185,10 +186,10 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
                   </Avatar>
                   {/* Frame Overlay */}
                   {user.frame && isImageUrl(user.frame) && (
-                     <img 
-                       src={user.frame} 
-                       className="absolute inset-0 w-full h-full z-20 object-contain scale-110 pointer-events-none" 
-                       alt="frame" 
+                     <img
+                       src={user.frame}
+                       className="absolute inset-0 w-full h-full z-20 object-contain scale-110 pointer-events-none"
+                       alt="frame"
                      />
                   )}
                   {user.frame && !isImageUrl(user.frame) && (
@@ -197,7 +198,7 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
                 </div>
               </TooltipTrigger>
               <TooltipContent className="bg-zinc-900 border-white/10 text-xs font-medium">
-                Vector SVG • 1:1 Aspect Ratio
+                Vector SVG �� 1:1 Aspect Ratio
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -258,9 +259,9 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
                         <div className="space-y-4">
                           <div className="space-y-2">
                             <Label>Display Name</Label>
-                            <Input 
-                              value={name} 
-                              onChange={(e) => setName(e.target.value)} 
+                            <Input
+                              value={name}
+                              onChange={(e) => setName(e.target.value)}
                               className="bg-black/20 border-white/10"
                               placeholder="Enter your name"
                             />
@@ -301,7 +302,7 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
                       {/* APPEARANCE TAB */}
                       <TabsContent value="appearance" className="flex-1 overflow-hidden flex flex-col py-4">
                         {showCreator ? (
-                          <AvatarCreator 
+                          <AvatarCreator
                             initialUrl={avatar}
                             onSave={(url) => {
                               setAvatar(url);
@@ -327,7 +328,7 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
                                     className={cn(
                                       "aspect-square rounded-xl overflow-hidden border-2 transition-all",
                                       avatar === user.avatar && !ownedAvatars.find(a => a.assetUrl === user.avatar)
-                                        ? "border-indigo-500 ring-2 ring-indigo-500/30" 
+                                        ? "border-indigo-500 ring-2 ring-indigo-500/30"
                                         : "border-white/10 hover:border-white/30"
                                     )}
                                   >
@@ -401,7 +402,7 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
                                         banner === item.assetUrl ? "border-indigo-500 ring-2 ring-indigo-500/30" : "border-white/10 hover:border-white/30"
                                       )}
                                     >
-                                      <div 
+                                      <div
                                         className="absolute inset-0"
                                         style={getBackgroundStyle(item.assetUrl)}
                                       />
@@ -435,8 +436,8 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
                 // Public Profile Actions
                 <>
                   {!isFriend ? (
-                    <Button 
-                      size="sm" 
+                    <Button
+                      size="sm"
                       className="bg-indigo-600 hover:bg-indigo-500 text-white gap-2"
                       onClick={handleFriendAction}
                       disabled={isAddingFriend}
@@ -466,7 +467,7 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button 
+                  <button
                     onClick={() => {
                       navigator.clipboard.writeText(user.id);
                       toast.success("User ID copied to clipboard!");
@@ -495,7 +496,7 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
               <span>{progressPercent}%</span>
             </div>
             <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-              <div 
+              <div
                 className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-1000"
                 style={{ width: `${progressPercent}%` }}
               />
@@ -518,7 +519,7 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
                 <DialogDescription>Design your unique digital identity.</DialogDescription>
             </DialogHeader>
             <div className="flex-1 min-h-0 overflow-hidden">
-                <AvatarCreator 
+                <AvatarCreator
                     initialUrl={user.avatar}
                     onSave={handleQuickAvatarSave}
                     onCancel={() => setShowAvatarDialog(false)}
@@ -637,7 +638,7 @@ export function ActivityHeatmap({ activityMap = {} }: ActivityHeatmapProps) {
               return (
                 <Tooltip key={dateStr}>
                   <TooltipTrigger asChild>
-                    <div 
+                    <div
                       className={cn(
                         "w-3 h-3 md:w-4 md:h-4 rounded-sm transition-colors hover:ring-1 hover:ring-white/50",
                         getColor(count)
@@ -775,8 +776,8 @@ export function AchievementsGrid({ userAchievements }: AchievementsGridProps) {
                       transition={{ delay: 0.1 + (i * 0.05) }}
                       className={cn(
                         "aspect-square rounded-xl flex flex-col items-center justify-center p-3 text-center border transition-all duration-300 group cursor-default",
-                        isUnlocked 
-                          ? "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20" 
+                        isUnlocked
+                          ? "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"
                           : "bg-black/20 border-white/5 opacity-50 grayscale"
                       )}
                     >
@@ -826,9 +827,9 @@ export function MatchHistoryList({ history }: MatchHistoryListProps) {
       <CardContent className="space-y-2">
         {history.length > 0 ? (
           history.slice(0, 8).map((match, i) => (
-            <Link 
+            <Link
               // CRITICAL FIX: Use composite key to prevent collisions if matchId is duplicated in mock data
-              key={`${match.matchId}-${i}`} 
+              key={`${match.matchId}-${i}`}
               to={`/results/${match.matchId}`}
               className="block"
             >
@@ -887,6 +888,7 @@ export function FriendsList({ friends, onAddFriend }: FriendsListProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Partial<User>[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [challengeFriend, setChallengeFriend] = useState<{id: string, name: string} | null>(null);
   // CRITICAL FIX: Deduplicate friends list to prevent key collisions
   const uniqueFriends = useMemo(() => {
     const map = new Map();
@@ -947,7 +949,7 @@ export function FriendsList({ friends, onAddFriend }: FriendsListProps) {
             <div className="py-4 space-y-4">
               <div className="relative">
                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input 
+                <Input
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search users..."
@@ -973,9 +975,9 @@ export function FriendsList({ friends, onAddFriend }: FriendsListProps) {
                             <div className="text-xs text-muted-foreground">Lvl {user.level} • {getFlagEmoji(user.country)}</div>
                           </div>
                         </div>
-                        <Button 
-                          size="sm" 
-                          variant="ghost" 
+                        <Button
+                          size="sm"
+                          variant="ghost"
                           onClick={() => user.id && handleAdd(user.id)}
                           disabled={isAdding}
                         >
@@ -1013,11 +1015,15 @@ export function FriendsList({ friends, onAddFriend }: FriendsListProps) {
                   </div>
                 </div>
               </Link>
-              <Link to="/categories?mode=private">
-                <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-indigo-500/20 hover:text-indigo-400" title="Challenge Friend">
-                  <Swords className="w-3.5 h-3.5" />
-                </Button>
-              </Link>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-indigo-500/20 hover:text-indigo-400"
+                title="Challenge Friend"
+                onClick={() => setChallengeFriend({ id: friend.id, name: friend.name })}
+              >
+                <Swords className="w-3.5 h-3.5" />
+              </Button>
             </div>
           ))
         ) : (
@@ -1026,6 +1032,14 @@ export function FriendsList({ friends, onAddFriend }: FriendsListProps) {
           </div>
         )}
       </CardContent>
+      {challengeFriend && (
+        <ChallengeModal
+          isOpen={!!challengeFriend}
+          onClose={() => setChallengeFriend(null)}
+          friendId={challengeFriend.id}
+          friendName={challengeFriend.name}
+        />
+      )}
     </Card>
   );
 }

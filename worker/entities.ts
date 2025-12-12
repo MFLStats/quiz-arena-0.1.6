@@ -2,7 +2,7 @@
  * Minimal real-world demo: One Durable Object instance per entity (User, ChatBoard), with Indexes for listing.
  */
 import { IndexedEntity } from "./core-utils";
-import type { User } from "@shared/types";
+import type { User, Notification } from "@shared/types";
 import { MOCK_USERS as BASE_MOCK_USERS } from "@shared/mock-data";
 import { PROGRESSION_CONSTANTS } from "@shared/progression";
 // Extend mock users with countries for the seed
@@ -25,7 +25,8 @@ const MOCK_USERS_WITH_COUNTRIES: User[] = BASE_MOCK_USERS.map((u, i) => ({
     isPremium: false,
     claimedRewards: []
   },
-  activityMap: u.activityMap || {}
+  activityMap: u.activityMap || {},
+  notifications: []
 }));
 // USER ENTITY: one DO instance per user
 export class UserEntity extends IndexedEntity<User> {
@@ -53,7 +54,8 @@ export class UserEntity extends IndexedEntity<User> {
       isPremium: false,
       claimedRewards: []
     },
-    activityMap: {}
+    activityMap: {},
+    notifications: []
   };
   static seedData = MOCK_USERS_WITH_COUNTRIES;
   protected override async ensureState(): Promise<User> {
@@ -95,6 +97,10 @@ export class UserEntity extends IndexedEntity<User> {
       }
       if (!newState.activityMap) {
         newState.activityMap = {};
+        migrated = true;
+      }
+      if (!newState.notifications) {
+        newState.notifications = [];
         migrated = true;
       }
       if (migrated) {
@@ -144,5 +150,17 @@ export class UserEntity extends IndexedEntity<User> {
       currency: (u.currency || 0) + coinBonus
     }));
     return { xpBonus, coinBonus, streak: newStreak };
+  }
+  async addNotification(notification: Notification): Promise<void> {
+    await this.mutate(u => ({
+      ...u,
+      notifications: [...(u.notifications || []), notification]
+    }));
+  }
+  async clearNotifications(ids: string[]): Promise<void> {
+    await this.mutate(u => ({
+      ...u,
+      notifications: (u.notifications || []).filter(n => !ids.includes(n.id))
+    }));
   }
 }

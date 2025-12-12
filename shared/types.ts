@@ -27,6 +27,16 @@ export interface SeasonPassProgress {
   isPremium: boolean;
   claimedRewards: string[]; // Format: "level:type" e.g. "1:free", "5:premium"
 }
+export interface Notification {
+  id: string;
+  type: 'challenge';
+  fromUserId: string;
+  fromUserName: string;
+  matchId: string;
+  categoryId: string;
+  categoryName: string;
+  timestamp: number;
+}
 export interface User {
   id: string;
   name: string;
@@ -47,6 +57,7 @@ export interface User {
   title?: string; // Equipped player title
   country?: string; // ISO 2-letter code e.g., 'US', 'JP'
   friends?: string[]; // List of friend User IDs
+  notifications?: Notification[]; // Pending notifications
   // Economy
   currency?: number; // Coins for shop
   inventory?: string[]; // List of purchased Shop Item IDs
@@ -270,4 +281,12 @@ export interface SystemStats {
   questionCount: number;
   categoryCount: number;
   reportCount: number;
+}
+// Challenges
+export interface ChallengeRequest {
+  opponentId: string;
+  categoryId: string;
+}
+export interface ClearNotificationsRequest {
+  notificationIds: string[];
 }
