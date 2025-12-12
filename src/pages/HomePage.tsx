@@ -15,11 +15,11 @@ import { useCategories } from '@/hooks/use-categories';
 import type { SystemConfig, SystemStats } from '@shared/types';
 import { playSfx } from '@/lib/sound-fx';
 import { CATEGORY_ICONS } from '@/lib/icons';
+import { GlassCard } from '@/components/ui/glass-card';
 // Season Timer Component
 function SeasonTimer({ endDate }: { endDate?: string }) {
   const [timeLeft, setTimeLeft] = useState('');
   useEffect(() => {
-    // Set target date to 14 days from now (simulated season end) if not provided
     const targetDate = endDate ? new Date(endDate) : new Date();
     if (!endDate) targetDate.setDate(targetDate.getDate() + 14);
     const calculateTimeLeft = () => {
@@ -33,9 +33,7 @@ function SeasonTimer({ endDate }: { endDate?: string }) {
       }
       return 'Season Ending Soon';
     };
-    // Initial set
     setTimeLeft(calculateTimeLeft());
-    // Update every minute
     const timer = setInterval(() => {
       setTimeLeft(calculateTimeLeft());
     }, 60000);
@@ -63,9 +61,7 @@ export function HomePage() {
     api<SystemConfig>('/api/config').then(setConfig).catch(console.error);
     api<SystemStats>('/api/stats').then(setStats).catch(console.error);
   }, []);
-  // Onboarding Effect: Show How to Play for new users (excluding guests)
   useEffect(() => {
-    // Check if user exists, is NOT a guest (provider check + email check), and has 0 matches
     const isGuest = user?.provider === 'guest' || !user?.email;
     if (user && !isGuest && (user.stats?.matches === 0 || !user.stats)) {
       const hasSeenIntro = sessionStorage.getItem('hasSeenIntro');
@@ -75,7 +71,6 @@ export function HomePage() {
       }
     }
   }, [user]);
-  // --- Queue Logic (Duplicated from CategorySelectPage for direct access) ---
   const startMatch = useCallback(async (matchId: string) => {
     try {
       const match = await api<any>(`/api/match/${matchId}`);
@@ -122,7 +117,6 @@ export function HomePage() {
     }
     setJoiningId(categoryId);
     try {
-      // Join Ranked Queue
       const res = await api<{ matchId: string | null }>('/api/queue/join', {
         method: 'POST',
         body: JSON.stringify({ userId: user.id, categoryId })
@@ -158,7 +152,6 @@ export function HomePage() {
   useEffect(() => {
     return () => stopPolling();
   }, [stopPolling]);
-  // --- Daily Challenge ---
   const handleDailyChallenge = async () => {
     if (isStartingDaily || !user) return;
     setIsStartingDaily(true);
@@ -175,7 +168,6 @@ export function HomePage() {
       setIsStartingDaily(false);
     }
   };
-  // Streak Calculation
   const streak = user?.loginStreak || 0;
   const streakProgress = ((streak % 7) / 7) * 100;
   const today = new Date().toISOString().split('T')[0];
@@ -191,13 +183,11 @@ export function HomePage() {
           </div>
         )}
         {/* Hero Section */}
-        <section className="relative py-12 md:py-24 overflow-hidden">
-          {/* Animated Background - Darker & Subtler */}
+        <section className="relative py-12 md:py-20 overflow-hidden">
           <div className="absolute inset-0 bg-background">
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-indigo-600/10 blur-[120px] rounded-full animate-pulse" />
             <div className="absolute bottom-0 right-0 w-[800px] h-[600px] bg-purple-600/5 blur-[100px] rounded-full" />
           </div>
-          {/* How to Play Trigger */}
           <div className="absolute top-4 right-4 md:top-8 md:right-8 z-20">
             <Button
               variant="ghost"
@@ -209,7 +199,7 @@ export function HomePage() {
               <span className="hidden sm:inline">How to Play</span>
             </Button>
           </div>
-          <div className="relative z-10 container mx-auto px-4 text-center space-y-8">
+          <div className="relative z-10 max-w-7xl mx-auto px-4 text-center space-y-8">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -225,10 +215,10 @@ export function HomePage() {
                 <span className="text-white/90 mr-1">Season Ends In:</span>
                 <SeasonTimer endDate={config?.seasonEndDate} />
               </motion.div>
-              <h1 className="text-4xl sm:text-6xl md:text-8xl lg:text-9xl font-display font-bold tracking-tight text-white mb-4 md:mb-6 drop-shadow-2xl">
+              <h1 className="text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-display font-bold tracking-tight text-white mb-6 drop-shadow-2xl">
                 Quiz <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 animate-gradient-x">Arena</span>
               </h1>
-              <p className="text-base sm:text-lg md:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed font-light px-4">
+              <p className="text-lg sm:text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed font-light px-4">
                 The ultimate real-time PvP quiz battle. <br className="hidden md:block" />
                 Prove your intellect, climb the ranks, and claim glory.
               </p>
@@ -270,7 +260,6 @@ export function HomePage() {
                 </Button>
               </div>
             </motion.div>
-            {/* Live Stats */}
             {stats && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -290,15 +279,10 @@ export function HomePage() {
             )}
           </div>
         </section>
-        {/* Daily Streak Dashboard (Logged In Only) */}
+        {/* Daily Streak Dashboard */}
         {user && (
-          <section className="container mx-auto px-4 mb-12">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-              className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-orange-900/20 to-red-900/20 p-6 md:p-8 backdrop-blur-md shadow-xl"
-            >
+          <section className="max-w-7xl mx-auto px-4 mb-12 w-full">
+            <GlassCard className="p-6 md:p-8 bg-gradient-to-br from-orange-900/20 to-red-900/20">
               <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1485546246426-74dc88dec4d9?q=80&w=2069&auto=format&fit=crop')] bg-cover bg-center opacity-5 mix-blend-overlay" />
               <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
                 <div className="flex items-center gap-4">
@@ -349,11 +333,11 @@ export function HomePage() {
                   )}
                 </div>
               </div>
-            </motion.div>
+            </GlassCard>
           </section>
         )}
         {/* Featured Categories */}
-        <section className="py-12 md:py-20 container mx-auto px-4 relative z-10">
+        <section className="py-12 md:py-20 max-w-7xl mx-auto px-4 w-full relative z-10">
           <div className="flex items-center justify-between mb-6 md:mb-10">
             <h2 className="text-2xl md:text-3xl font-bold flex items-center gap-3">
               <Sparkles className="w-6 h-6 md:w-8 md:h-8 text-yellow-400 fill-yellow-400" /> Newest Categories
@@ -370,16 +354,16 @@ export function HomePage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8">
               {categories.slice().reverse().slice(0, 3).map((cat, i) => {
                 const Icon = CATEGORY_ICONS[cat.icon] || CATEGORY_ICONS.Atom;
-                // Calculate user-specific Elo for this category, fallback to base Elo
                 const userElo = user?.categoryElo?.[cat.id] ?? cat.baseElo;
                 const isJoining = joiningId === cat.id;
                 return (
-                  <motion.div
+                  <GlassCard
                     key={cat.id}
+                    variant="interactive"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.2 + (i * 0.1) }}
-                    className="group relative overflow-hidden rounded-3xl bg-white/[0.03] border border-white/10 p-6 md:p-8 hover:bg-white/[0.08] transition-all duration-500 cursor-pointer hover:-translate-y-2 hover:shadow-[0_10px_40px_rgba(0,0,0,0.5)]"
+                    className="p-6 md:p-8 group relative"
                     onClick={() => !isJoining && handleJoinQueue(cat.id, cat.name)}
                   >
                     <div className={`absolute inset-0 bg-gradient-to-br ${cat.color} opacity-0 group-hover:opacity-5 transition-opacity duration-500`} />
@@ -400,7 +384,7 @@ export function HomePage() {
                         <span className="text-indigo-300 font-mono text-xs md:text-sm bg-indigo-500/10 px-2 py-1 rounded">Elo {userElo}</span>
                       </div>
                     </div>
-                  </motion.div>
+                  </GlassCard>
                 );
               })}
             </div>

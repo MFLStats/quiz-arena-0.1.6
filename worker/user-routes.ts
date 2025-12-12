@@ -357,7 +357,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
             // Check if #1
             // We scan top 1000 users to check rank.
             const { items: allUsers } = await UserEntity.list(c.env, null, 1000);
-            const isNumberOne = !allUsers.some(u => 
+            const isNumberOne = !allUsers.some(u =>
                 u.id !== user.id && (u.categoryElo?.[bestCatId] || 1200) > maxElo
             );
             if (isNumberOne) {
@@ -1032,12 +1032,19 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     return ok(c, matchState);
   });
   app.get('/api/notifications', async (c) => {
-    const userId = c.req.query('userId');
-    if (!userId) return bad(c, 'userId required');
-    const userEntity = new UserEntity(c.env, userId);
-    if (!await userEntity.exists()) return ok(c, []);
-    const user = await userEntity.getState();
-    return ok(c, user.notifications || []);
+    try {
+      const userId = c.req.query('userId');
+      if (!userId) return bad(c, 'userId required');
+      const userEntity = new UserEntity(c.env, userId);
+      // Robust check: if entity doesn't exist or fails to load, return empty array
+      if (!await userEntity.exists()) return ok(c, []);
+      const user = await userEntity.getState();
+      return ok(c, user.notifications || []);
+    } catch (e) {
+      console.error(`[API] Error fetching notifications for user:`, e);
+      // Return empty list to prevent frontend crash loop
+      return ok(c, []);
+    }
   });
   app.post('/api/notifications/clear', async (c) => {
     const { userId, notificationIds } = await c.req.json() as ClearNotificationsRequest & { userId: string };
@@ -1160,8 +1167,8 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
         if (categoryId) {
             allQuestions = allQuestions.filter(q => q.categoryId === categoryId);
         }
-        const filtered = allQuestions.filter(q => 
-            q.text.toLowerCase().includes(search) || 
+        const filtered = allQuestions.filter(q =>
+            q.text.toLowerCase().includes(search) ||
             q.id.toLowerCase().includes(search) ||
             q.categoryId.toLowerCase().includes(search)
         );
@@ -1185,7 +1192,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     if (!cursor) {
         const questionMap = new Map<string, Question>();
         // Add relevant mocks
-        const relevantMocks = categoryId 
+        const relevantMocks = categoryId
             ? MOCK_QUESTIONS.filter(q => q.categoryId === categoryId)
             : MOCK_QUESTIONS;
         relevantMocks.forEach(q => questionMap.set(q.id, q));
@@ -1303,8 +1310,8 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     const { items } = await UserEntity.list(c.env, null, 100);
     let filtered = items.map(sanitizeUser);
     if (search) {
-      filtered = filtered.filter(u => 
-        u.name.toLowerCase().includes(search) || 
+      filtered = filtered.filter(u =>
+        u.name.toLowerCase().includes(search) ||
         u.id.toLowerCase().includes(search) ||
         (u.email && u.email.toLowerCase().includes(search))
       );

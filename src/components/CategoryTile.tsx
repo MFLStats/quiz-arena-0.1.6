@@ -29,29 +29,30 @@ export const CategoryTile = React.forwardRef<HTMLDivElement, CategoryTileProps>(
         className="group relative aspect-square h-full w-full"
         onClick={() => !isJoining && onJoin(cat.id, cat.name)}
       >
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 rounded-2xl blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-        <div className="relative h-full flex flex-col items-center justify-center bg-black/40 border border-white/[0.05] hover:border-white/20 backdrop-blur-sm rounded-2xl p-3 transition-all duration-200 hover:-translate-y-1 hover:bg-white/[0.03] cursor-pointer overflow-hidden">
+        {/* Glow Effect */}
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+        <div className="relative h-full flex flex-col items-center justify-center bg-zinc-900/40 border border-white/10 hover:border-white/20 backdrop-blur-md rounded-3xl p-3 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg cursor-pointer overflow-hidden">
           {/* Background Gradient */}
-          <div className={`absolute inset-0 bg-gradient-to-br ${cat.color} opacity-[0.05] group-hover:opacity-10 transition-opacity duration-300`} />
+          <div className={`absolute inset-0 bg-gradient-to-br ${cat.color} opacity-[0.03] group-hover:opacity-10 transition-opacity duration-500`} />
           {/* Badge */}
           {badge && (
             <div className={cn(
-              "absolute top-2 right-2 w-2 h-2 rounded-full shadow-lg z-20",
+              "absolute top-3 right-3 w-2 h-2 rounded-full shadow-lg z-20 animate-pulse",
               badge.color.replace('text-', 'bg-').split(' ')[0]
             )} title={badge.text} />
           )}
           {/* Level Badge (Top Left) - Only in Ranked */}
           {gameMode === 'ranked' && (
-             <div className="absolute top-2 left-2 z-20 flex items-center gap-0.5 bg-black/60 px-1.5 py-0.5 rounded-full border border-white/10 backdrop-blur-md shadow-sm">
+             <div className="absolute top-3 left-3 z-20 flex items-center gap-0.5 bg-black/60 px-1.5 py-0.5 rounded-full border border-white/10 backdrop-blur-md shadow-sm">
                 <Star className="w-2 h-2 text-yellow-400 fill-yellow-400" />
-                <span className="text-[8px] font-bold text-white leading-none">{level}</span>
+                <span className="text-[9px] font-bold text-white leading-none">{level}</span>
              </div>
           )}
           {/* Icon Container with Progress Ring */}
-          <div className="relative mb-3 group-hover:scale-110 transition-transform duration-300">
+          <div className="relative mb-3 group-hover:scale-110 transition-transform duration-500 ease-out">
              {/* Progress Ring SVG */}
              {gameMode === 'ranked' && (
-                <svg className="absolute inset-[-6px] w-[calc(100%+12px)] h-[calc(100%+12px)] transform -rotate-90 pointer-events-none">
+                <svg className="absolute inset-[-8px] w-[calc(100%+16px)] h-[calc(100%+16px)] transform -rotate-90 pointer-events-none">
                     {/* Track */}
                     <circle
                         cx="50%"
@@ -80,22 +81,22 @@ export const CategoryTile = React.forwardRef<HTMLDivElement, CategoryTileProps>(
              )}
              {/* Actual Icon Box */}
              <div className="relative w-12 h-12 md:w-14 md:h-14">
-                <div className={`w-full h-full rounded-xl bg-gradient-to-br ${cat.color} flex items-center justify-center shadow-lg relative z-10`}>
+                <div className={`w-full h-full rounded-2xl bg-gradient-to-br ${cat.color} flex items-center justify-center shadow-lg relative z-10`}>
                     {isJoining ? (
                     <Loader2 className="w-6 h-6 text-white animate-spin" />
                     ) : (
-                    <Icon className="w-6 h-6 md:w-7 md:h-7 text-white" />
+                    <Icon className="w-6 h-6 md:w-7 md:h-7 text-white drop-shadow-md" />
                     )}
                 </div>
              </div>
           </div>
           {/* Text */}
-          <div className="text-center relative z-10 w-full">
-            <h3 className="text-sm md:text-base font-bold text-white leading-tight truncate px-1 group-hover:text-indigo-300 transition-colors">
+          <div className="text-center relative z-10 w-full px-1">
+            <h3 className="text-sm md:text-base font-bold text-white leading-tight truncate group-hover:text-indigo-300 transition-colors">
               {cat.name}
             </h3>
             {gameMode === 'ranked' && (
-              <span className="text-[10px] font-mono text-indigo-300/80 mt-0.5 block">
+              <span className="text-[10px] font-mono text-indigo-300/60 mt-1 block group-hover:text-indigo-300/90 transition-colors">
                 Elo {userElo}
               </span>
             )}

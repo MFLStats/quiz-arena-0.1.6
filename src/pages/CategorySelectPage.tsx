@@ -15,6 +15,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { playSfx } from '@/lib/sound-fx';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { CategoryTile } from '@/components/CategoryTile';
+import { GlassCard } from '@/components/ui/glass-card';
 interface CategorySectionProps {
   title: string;
   categories: Category[];
@@ -36,7 +37,7 @@ function CategorySection({ title, categories, joiningId, onJoin, userRatings, ga
         <span className="w-1 h-5 bg-indigo-500 rounded-full" />
         {title}
       </h2>
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
         <AnimatePresence mode="popLayout">
           {categories.map((cat, i) => (
             <motion.div
@@ -89,17 +90,14 @@ export function CategorySelectPage() {
   const initMatch = useGameStore(s => s.initMatch);
   const user = useAuthStore(s => s.user);
   const { categories, loading: categoriesLoading } = useCategories();
-  // Memoize filtered categories
   const filtered = useMemo(() => {
     return categories.filter(c =>
       c.name.toLowerCase().includes(search.toLowerCase())
     );
   }, [categories, search]);
-  // Prioritize featured category
   const featuredCategory = useMemo(() => {
     return categories.find(c => c.isFeatured) || categories[0];
   }, [categories]);
-  // Group categories
   const groupedCategories = useMemo(() => ({
     'General': categories.filter(c => c.group === 'General'),
     'Education': categories.filter(c => c.group === 'Education'),
@@ -222,7 +220,7 @@ export function CategorySelectPage() {
   }
   return (
     <AppLayout>
-      <div className="container mx-auto px-4 py-6 min-h-screen">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 min-h-screen">
         {/* Compact Header */}
         <div className="flex flex-col gap-4 mb-8">
           <div className="flex items-center justify-between">
@@ -254,10 +252,11 @@ export function CategorySelectPage() {
         </div>
         {/* Featured Banner (Compact) */}
         {!search && featuredCategory && (
-          <motion.div
+          <GlassCard
+            variant="interactive"
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="mb-8 relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-indigo-900/20 to-purple-900/20 p-6 group cursor-pointer"
+            className="mb-8 relative p-6 group cursor-pointer bg-gradient-to-br from-indigo-900/20 to-purple-900/20"
             onClick={() => handleJoinQueue(featuredCategory.id, featuredCategory.name)}
           >
             <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1635070041078-e363dbe005cb?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-10 group-hover:scale-105 transition-transform duration-700" />
@@ -280,7 +279,7 @@ export function CategorySelectPage() {
                 )}
               </div>
             </div>
-          </motion.div>
+          </GlassCard>
         )}
         {/* Content Area */}
         {search ? (
@@ -289,7 +288,7 @@ export function CategorySelectPage() {
               <Search className="w-4 h-4" />
               Results
             </h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
               <AnimatePresence mode="popLayout">
                 {filtered.map((cat, i) => (
                   <motion.div
