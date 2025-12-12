@@ -27,6 +27,17 @@ import { SeasonPass } from '@/components/shop/SeasonPass';
 import { Link, useNavigate } from 'react-router-dom';
 import confetti from 'canvas-confetti';
 import { playSfx } from '@/lib/sound-fx';
+function EmptyShopState({ title, description }: { title: string, description: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 text-center border border-dashed border-white/10 rounded-xl bg-white/5">
+      <div className="p-4 rounded-full bg-white/5 mb-4">
+        <ShoppingBag className="w-8 h-8 text-muted-foreground" />
+      </div>
+      <h3 className="text-lg font-bold text-white mb-1">{title}</h3>
+      <p className="text-sm text-muted-foreground max-w-xs">{description}</p>
+    </div>
+  );
+}
 export function ShopPage() {
   const currentUser = useAuthStore(s => s.user);
   const currentUserId = useAuthStore(s => s.user?.id);
@@ -123,7 +134,7 @@ export function ShopPage() {
           if (awardedItem) {
             setMysteryBoxResult(awardedItem);
             // Play win sound for the reveal
-            playSfx('win'); 
+            playSfx('win');
           }
         } else {
           toast.success("Mystery Box opened! Check your inventory.");
@@ -256,72 +267,100 @@ export function ShopPage() {
             <SeasonPass user={currentUser} />
           </TabsContent>
           <TabsContent value="avatars" className="mt-0">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {avatars.map((item, i) => (
-                <ShopItemCard
-                  key={item.id}
-                  item={item}
-                  index={i}
-                  purchased={inventory.includes(item.id)}
-                  equipped={currentUser?.avatar === item.assetUrl}
-                  canAfford={userCurrency >= item.price}
-                  isProcessing={processingId === item.id}
-                  onBuy={() => initiatePurchase(item)}
-                  onEquip={() => handleEquip(item.id, 'avatar')}
-                />
-              ))}
-            </div>
+            {avatars.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {avatars.map((item, i) => (
+                  <ShopItemCard
+                    key={item.id}
+                    item={item}
+                    index={i}
+                    purchased={inventory.includes(item.id)}
+                    equipped={currentUser?.avatar === item.assetUrl}
+                    canAfford={userCurrency >= item.price}
+                    isProcessing={processingId === item.id}
+                    onBuy={() => initiatePurchase(item)}
+                    onEquip={() => handleEquip(item.id, 'avatar')}
+                  />
+                ))}
+              </div>
+            ) : (
+              <EmptyShopState 
+                title="No Avatars Available" 
+                description="Check back later for new avatar collections!" 
+              />
+            )}
           </TabsContent>
           <TabsContent value="banners" className="mt-0">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {banners.map((item, i) => (
-                <ShopItemCard
-                  key={item.id}
-                  item={item}
-                  index={i}
-                  purchased={inventory.includes(item.id)}
-                  equipped={currentUser?.banner === item.assetUrl}
-                  canAfford={userCurrency >= item.price}
-                  isProcessing={processingId === item.id}
-                  onBuy={() => initiatePurchase(item)}
-                  onEquip={() => handleEquip(item.id, 'banner')}
-                />
-              ))}
-            </div>
+            {banners.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {banners.map((item, i) => (
+                  <ShopItemCard
+                    key={item.id}
+                    item={item}
+                    index={i}
+                    purchased={inventory.includes(item.id)}
+                    equipped={currentUser?.banner === item.assetUrl}
+                    canAfford={userCurrency >= item.price}
+                    isProcessing={processingId === item.id}
+                    onBuy={() => initiatePurchase(item)}
+                    onEquip={() => handleEquip(item.id, 'banner')}
+                  />
+                ))}
+              </div>
+            ) : (
+              <EmptyShopState 
+                title="No Banners Available" 
+                description="Check back later for new profile banners!" 
+              />
+            )}
           </TabsContent>
           <TabsContent value="frames" className="mt-0">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {frames.map((item, i) => (
-                <ShopItemCard
-                  key={item.id}
-                  item={item}
-                  index={i}
-                  purchased={inventory.includes(item.id)}
-                  equipped={currentUser?.frame === item.assetUrl}
-                  canAfford={userCurrency >= item.price}
-                  isProcessing={processingId === item.id}
-                  onBuy={() => initiatePurchase(item)}
-                  onEquip={() => handleEquip(item.id, 'frame')}
-                />
-              ))}
-            </div>
+            {frames.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {frames.map((item, i) => (
+                  <ShopItemCard
+                    key={item.id}
+                    item={item}
+                    index={i}
+                    purchased={inventory.includes(item.id)}
+                    equipped={currentUser?.frame === item.assetUrl}
+                    canAfford={userCurrency >= item.price}
+                    isProcessing={processingId === item.id}
+                    onBuy={() => initiatePurchase(item)}
+                    onEquip={() => handleEquip(item.id, 'frame')}
+                  />
+                ))}
+              </div>
+            ) : (
+              <EmptyShopState 
+                title="No Frames Available" 
+                description="Check back later for new avatar frames!" 
+              />
+            )}
           </TabsContent>
           <TabsContent value="boxes" className="mt-0">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {boxes.map((item, i) => (
-                <ShopItemCard
-                  key={item.id}
-                  item={item}
-                  index={i}
-                  purchased={false}
-                  equipped={false}
-                  canAfford={userCurrency >= item.price}
-                  isProcessing={processingId === item.id}
-                  onBuy={() => initiatePurchase(item)}
-                  onEquip={() => {}}
-                />
-              ))}
-            </div>
+            {boxes.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {boxes.map((item, i) => (
+                  <ShopItemCard
+                    key={item.id}
+                    item={item}
+                    index={i}
+                    purchased={false}
+                    equipped={false}
+                    canAfford={userCurrency >= item.price}
+                    isProcessing={processingId === item.id}
+                    onBuy={() => initiatePurchase(item)}
+                    onEquip={() => {}}
+                  />
+                ))}
+              </div>
+            ) : (
+              <EmptyShopState 
+                title="No Mystery Boxes" 
+                description="Check back later for new mystery boxes!" 
+              />
+            )}
           </TabsContent>
         </Tabs>
         <AlertDialog open={!!itemToBuy} onOpenChange={(open) => !open && setItemToBuy(null)}>

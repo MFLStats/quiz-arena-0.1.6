@@ -64,6 +64,16 @@ export class ShopEntity extends IndexedEntity<ShopItem> {
     description: ""
   };
   static seedData = MOCK_SHOP_ITEMS;
+  /**
+   * Resets the shop database by deleting all items and re-seeding with default data.
+   * This is a destructive operation used for admin maintenance.
+   */
+  static async reset(env: Env): Promise<void> {
+    const idx = new Index<string>(env, this.indexName);
+    const ids = await idx.list();
+    await this.deleteMany(env, ids);
+    await this.ensureSeed(env);
+  }
 }
 // CATEGORY ENTITY: Stores dynamic categories created by admins
 export class CategoryEntity extends IndexedEntity<Category> {

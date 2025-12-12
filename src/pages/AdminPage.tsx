@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Shield, Plus, Save, Loader2, CheckCircle, Trash2, FileText, AlertCircle, Upload, Layers, Flag, XCircle, Star, Settings, Users, HelpCircle, Pencil, Download, Palette, Grid, ShoppingBag, Image as ImageIcon } from 'lucide-react';
+import { Shield, Plus, Save, Loader2, CheckCircle, Trash2, FileText, AlertCircle, Upload, Layers, Flag, XCircle, Star, Settings, Users, HelpCircle, Pencil, Download, Palette, Grid, ShoppingBag, Image as ImageIcon, Database } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -653,6 +653,18 @@ export function AdminPage() {
       setDeletingShopItemId(null);
     }
   };
+  const handleResetShop = async () => {
+    if (!user) return;
+    if (!confirm("Are you sure? This will DELETE ALL shop items and restore the default seed data. This cannot be undone.")) return;
+    try {
+      await api('/api/admin/reset-shop?userId=' + user.id, { method: 'POST' });
+      toast.success("Shop database reset to defaults");
+      await refreshShop();
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to reset shop");
+    }
+  };
   if (!isAuthorized) {
     return null;
   }
@@ -671,7 +683,7 @@ export function AdminPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-8 bg-white/5 mb-6">
+                <TabsList className="grid w-full grid-cols-9 bg-white/5 mb-6">
                     <TabsTrigger value="overview">Overview</TabsTrigger>
                     <TabsTrigger value="single">Single</TabsTrigger>
                     <TabsTrigger value="bulk">Bulk</TabsTrigger>
@@ -685,6 +697,7 @@ export function AdminPage() {
                     </TabsTrigger>
                     <TabsTrigger value="users">Users</TabsTrigger>
                     <TabsTrigger value="system">System</TabsTrigger>
+                    <TabsTrigger value="data">Data</TabsTrigger>
                 </TabsList>
                 <TabsContent value="overview">
                   <div className="grid grid-cols-2 gap-4">
@@ -1277,6 +1290,31 @@ export function AdminPage() {
                         {isSavingConfig ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
                         Save Configuration
                       </Button>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+                <TabsContent value="data">
+                  <Card className="bg-zinc-900/50 border-white/10 backdrop-blur-sm">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-red-400">
+                        <AlertCircle className="w-5 h-5" /> Danger Zone
+                      </CardTitle>
+                      <CardDescription>Destructive actions for data management.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center justify-between p-4 rounded-xl bg-red-500/10 border border-red-500/20">
+                        <div>
+                          <h4 className="font-bold text-white">Reset Shop Database</h4>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Deletes all current shop items and restores the initial seed data.
+                            Useful if the shop becomes cluttered or corrupted.
+                          </p>
+                        </div>
+                        <Button variant="destructive" onClick={handleResetShop}>
+                          <Database className="w-4 h-4 mr-2" />
+                          Reset Shop
+                        </Button>
+                      </div>
                     </CardContent>
                   </Card>
                 </TabsContent>

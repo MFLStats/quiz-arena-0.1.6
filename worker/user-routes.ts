@@ -342,6 +342,19 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     if (!existed) return notFound(c, 'Item not found');
     return ok(c, { success: true });
   });
+  app.post('/api/admin/reset-shop', async (c) => {
+    const userId = c.req.query('userId');
+    if (!userId || !await isAdmin(c.env, userId)) {
+      return c.json({ success: false, error: 'Unauthorized' }, 403);
+    }
+    try {
+      await ShopEntity.reset(c.env);
+      return ok(c, { success: true });
+    } catch (e) {
+      console.error('[API] Shop reset failed:', e);
+      return c.json({ success: false, error: 'Internal Server Error' }, 500);
+    }
+  });
   app.post('/api/shop/purchase', async (c) => {
     try {
       const { userId, itemId } = await c.req.json() as PurchaseItemRequest;
@@ -982,8 +995,8 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     const { items } = await UserEntity.list(c.env, null, 100);
     let filtered = items.map(sanitizeUser);
     if (search) {
-      filtered = filtered.filter(u =>
-        u.name.toLowerCase().includes(search) ||
+      filtered = filtered.filter(u => 
+        u.name.toLowerCase().includes(search) || 
         u.id.toLowerCase().includes(search) ||
         (u.email && u.email.toLowerCase().includes(search))
       );
