@@ -95,6 +95,7 @@ export interface PlayerStats {
   title?: string;
   avatar?: string;
   frame?: string;
+  banner?: string;
   lastEmote?: { emoji: string; timestamp: number; };
 }
 export interface MatchState {

@@ -319,6 +319,7 @@ export class MatchEntity extends IndexedEntity<MatchState> {
       let title: string | undefined = undefined;
       let avatar: string | undefined = undefined;
       let frame: string | undefined = undefined;
+      let banner: string | undefined = undefined;
       if (mode === 'daily') {
         name = 'Challenger';
       } else {
@@ -332,6 +333,7 @@ export class MatchEntity extends IndexedEntity<MatchState> {
             title = user.title;
             avatar = user.avatar;
             frame = user.frame;
+            banner = user.banner;
           }
         } catch (e) {
           console.error(`Failed to fetch user ${uid} for match snapshot`, e);
@@ -347,7 +349,8 @@ export class MatchEntity extends IndexedEntity<MatchState> {
         elo,
         title,
         avatar,
-        frame
+        frame,
+        banner
       };
     }
     const newState: MatchState = {
@@ -375,6 +378,7 @@ export class MatchEntity extends IndexedEntity<MatchState> {
     let title: string | undefined = undefined;
     let avatar: string | undefined = undefined;
     let frame: string | undefined = undefined;
+    let banner: string | undefined = undefined;
     try {
       const userEntity = new UserEntity(this.env, userId);
       if (await userEntity.exists()) {
@@ -385,6 +389,7 @@ export class MatchEntity extends IndexedEntity<MatchState> {
         title = user.title;
         avatar = user.avatar;
         frame = user.frame;
+        banner = user.banner;
       }
     } catch (e) {
       console.error(`Failed to fetch user ${userId} for match join`, e);
@@ -399,7 +404,8 @@ export class MatchEntity extends IndexedEntity<MatchState> {
       elo,
       title,
       avatar,
-      frame
+      frame,
+      banner
     };
     const updatedPlayers = { ...state.players, [userId]: newPlayer };
     const playerCount = Object.keys(updatedPlayers).length;
@@ -467,7 +473,7 @@ export class MatchEntity extends IndexedEntity<MatchState> {
     }));
     const updatedState = await this.getState();
     const currentQId = updatedState.questions[updatedState.currentQuestionIndex].id;
-    const allAnswered = Object.values(updatedState.players).every(p => 
+    const allAnswered = Object.values(updatedState.players).every(p =>
         p.answers.some(a => a.questionId === currentQId)
     );
     if (allAnswered) {
