@@ -161,7 +161,29 @@ export function ScoreBadge({ score, label, isOpponent }: ScoreBadgeProps) {
   );
 }
 // --- Opponent Avatar ---
-export function OpponentAvatar({ name, className, isOpponent, title, displayTitle, streak, avatar, frame, frameConfig }: { name: string, className?: string, isOpponent?: boolean, title?: string, displayTitle?: string, streak?: number, avatar?: string, frame?: string, frameConfig?: FrameConfig }) {
+export function OpponentAvatar({
+  name,
+  className,
+  isOpponent,
+  title,
+  displayTitle,
+  streak,
+  avatar,
+  frame,
+  frameConfig,
+  hasAnswered
+}: {
+  name: string,
+  className?: string,
+  isOpponent?: boolean,
+  title?: string,
+  displayTitle?: string,
+  streak?: number,
+  avatar?: string,
+  frame?: string,
+  frameConfig?: FrameConfig,
+  hasAnswered?: boolean
+}) {
   // Determine title styling based on content
   let titleClass = "text-amber-400 border-amber-500/20 bg-amber-500/10";
   let titleIcon = <Crown className="w-3 h-3 fill-amber-400" />;
@@ -212,6 +234,19 @@ export function OpponentAvatar({ name, className, isOpponent, title, displayTitl
           className="w-full h-full"
           isOpponent={isOpponent}
         />
+        {/* Has Answered Indicator */}
+        <AnimatePresence>
+          {hasAnswered && (
+            <motion.div
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0, opacity: 0 }}
+              className="absolute -bottom-1 -right-1 z-20 flex items-center justify-center w-6 h-6 bg-emerald-500 rounded-full border-2 border-zinc-900 shadow-lg"
+            >
+              <Check className="w-3.5 h-3.5 text-white stroke-[3]" />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
       <div className="flex flex-col items-center">
         <span className="text-xs font-bold text-white/90 tracking-wide bg-black/40 px-2 py-0.5 rounded-full backdrop-blur-sm border border-white/5">
@@ -234,7 +269,7 @@ interface EmotePickerProps {
   onSelect: (emoji: string) => void;
   disabled?: boolean;
 }
-const EMOJIS = ['��', '👏', '🤔', '😱', '😎', '😭', '🤯', '🔥'];
+const EMOJIS = ['😂', '👏', '��', '😱', '😎', '😭', '🤯', '🔥'];
 export function EmotePicker({ onSelect, disabled }: EmotePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isCooldown, setIsCooldown] = useState(false);

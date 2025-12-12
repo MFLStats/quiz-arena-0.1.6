@@ -2,6 +2,7 @@ import React from "react";
 import { BottomNav } from "@/components/BottomNav";
 import { TopNav } from "@/components/layout/TopNav";
 import { NotificationListener } from "@/components/notifications/NotificationListener";
+import { NetworkStatus } from "@/components/layout/NetworkStatus";
 type AppLayoutProps = {
   children: React.ReactNode;
   container?: boolean;
@@ -11,6 +12,7 @@ type AppLayoutProps = {
 export function AppLayout({ children, container = false, className, contentClassName }: AppLayoutProps): JSX.Element {
   return (
     <div className="min-h-dvh bg-background text-foreground flex flex-col">
+      <NetworkStatus />
       <NotificationListener />
       <TopNav />
       <main className="flex-1 pb-24 md:pb-28">

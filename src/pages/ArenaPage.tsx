@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@/lib/game-store';
@@ -392,6 +392,11 @@ export function ArenaPage() {
   const myTitle = myStats?.title || user.title;
   const myDisplayTitle = myStats?.displayTitle;
   const isDaily = matchData.mode === 'daily';
+  // Calculate if opponent has answered the current question
+  const opponentHasAnswered = useMemo(() => {
+    if (!opponentStats || !currentQuestion) return false;
+    return opponentStats.answers.some(a => a.questionId === currentQuestion.id);
+  }, [opponentStats, currentQuestion]);
   return (
     <div className="min-h-dvh flex flex-col bg-zinc-950 overflow-hidden relative font-sans selection:bg-indigo-500/30">
       {/* Background Ambience */}
@@ -602,6 +607,7 @@ export function ArenaPage() {
                   avatar={opponentStats?.avatar}
                   frame={opponentStats?.frame}
                   frameConfig={opponentFrameConfig}
+                  hasAnswered={opponentHasAnswered}
                 />
                 {opponentCountry && (
                   <div className="flex items-center gap-1 text-[10px] bg-black/40 px-2 py-0.5 rounded-full border border-white/5">

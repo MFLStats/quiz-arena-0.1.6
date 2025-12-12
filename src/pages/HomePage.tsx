@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Play, Sparkles, ArrowRight, Calendar, Loader2, HelpCircle, Timer, Users, Megaphone, Flame, Gift, CheckCircle, Zap } from 'lucide-react';
+import { Play, Sparkles, ArrowRight, Calendar, Loader2, HelpCircle, Timer, Users, Megaphone, Flame, Gift, CheckCircle, Zap, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { api } from '@/lib/api-client';
@@ -53,6 +53,7 @@ export function HomePage() {
   const [showJoinGame, setShowJoinGame] = useState(false);
   const [config, setConfig] = useState<SystemConfig | null>(null);
   const [stats, setStats] = useState<SystemStats | null>(null);
+  const [showGuestWarning, setShowGuestWarning] = useState(true);
   // Queue Logic State
   const [queueState, setQueueState] = useState<{ categoryId: string; categoryName: string; matchFound?: boolean } | null>(null);
   const [joiningId, setJoiningId] = useState<string | null>(null);
@@ -279,6 +280,30 @@ export function HomePage() {
             )}
           </div>
         </section>
+        {/* Guest Warning */}
+        {user?.provider === 'guest' && showGuestWarning && (
+          <div className="max-w-7xl mx-auto px-4 mb-8 w-full">
+            <GlassCard className="p-4 border-l-4 border-l-yellow-500 bg-yellow-500/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-yellow-500/10 rounded-lg text-yellow-500 shrink-0">
+                  <AlertTriangle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-white text-sm">Playing as Guest</h3>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Your progress is saved locally. Create an account to sync stats and keep your items forever.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <Button size="sm" variant="ghost" onClick={() => setShowGuestWarning(false)} className="text-muted-foreground hover:text-white">Dismiss</Button>
+                <Link to="/login">
+                  <Button size="sm" className="bg-yellow-500 text-black hover:bg-yellow-400 font-bold">Link Account</Button>
+                </Link>
+              </div>
+            </GlassCard>
+          </div>
+        )}
         {/* Daily Streak Dashboard */}
         {user && (
           <section className="max-w-7xl mx-auto px-4 mb-12 w-full">
