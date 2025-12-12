@@ -13,6 +13,7 @@ import {
   AchievementsGrid,
   ActivityHeatmap
 } from '@/components/profile/ProfileComponents';
+import { SkillRadar } from '@/components/profile/SkillRadar';
 import { Loader2, AlertCircle, RefreshCw, LogOut } from 'lucide-react';
 import { useCategories } from '@/hooks/use-categories';
 import { useShop } from '@/hooks/use-shop';
@@ -138,9 +139,6 @@ export function ProfilePage() {
   }
   if (!user) return null;
   // Check if the viewed user is already a friend of the current user
-  // We need the current user's friend list for this check.
-  // Since we don't have it in state here if viewing another profile, we rely on auth store or fetch it.
-  // Auth store has `user.friends` which is an array of IDs.
   const isFriend = currentUser?.friends?.includes(user.id) || false;
   return (
     <AppLayout>
@@ -163,6 +161,8 @@ export function ProfilePage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* Main Content: Mastery & Achievements (8 cols) */}
           <div className="lg:col-span-8 space-y-8">
+            {/* Skill Radar Chart */}
+            <SkillRadar categories={categories} categoryElo={user.categoryElo} />
             <TopicMastery
               categories={categories}
               categoryElo={user.categoryElo}
@@ -172,7 +172,6 @@ export function ProfilePage() {
           {/* Sidebar: History & Friends (4 cols) */}
           <div className="lg:col-span-4 space-y-8">
             {/* Only show match history if it's own profile or if we implement public history later */}
-            {/* For now, let's show it but maybe read-only (links work) */}
             <MatchHistoryList history={user.history || []} />
             {/* Only show friends management on own profile */}
             {isOwnProfile && (

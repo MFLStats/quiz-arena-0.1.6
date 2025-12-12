@@ -130,7 +130,6 @@ export const MOCK_USERS: User[] = [
     history: [],
     activityMap: generateActivityMap()
   },
-  // New Users for Country Leaderboard Testing
   {
     id: 'u5',
     name: 'Eagle Eye',
@@ -256,6 +255,33 @@ export const MOCK_CATEGORIES: Category[] = [
     color: 'from-indigo-500 to-blue-500',
     group: 'General'
   },
+  {
+    id: 'sports',
+    name: 'Sports',
+    icon: 'Dumbbell',
+    description: 'Athletes, teams, and records',
+    baseElo: 1150,
+    color: 'from-orange-500 to-red-500',
+    group: 'Sports'
+  },
+  {
+    id: 'gaming',
+    name: 'Gaming',
+    icon: 'Gamepad2',
+    description: 'Video games, consoles, and esports',
+    baseElo: 1250,
+    color: 'from-purple-600 to-indigo-600',
+    group: 'General'
+  },
+  {
+    id: 'music',
+    name: 'Music',
+    icon: 'Music',
+    description: 'Songs, artists, and instruments',
+    baseElo: 1200,
+    color: 'from-pink-500 to-rose-500',
+    group: 'TV & Movies'
+  }
 ];
 export const MOCK_QUESTIONS: Question[] = [
   // --- SCIENCE ---
@@ -694,6 +720,135 @@ export const MOCK_QUESTIONS: Question[] = [
     media: { type: 'image', content: 'https://flagcdn.com/w320/ch.png' }, // Switzerland
     options: ['Sweden', 'Switzerland', 'Denmark', 'Norway'],
     correctIndex: 1,
+  },
+  // --- SPORTS ---
+  {
+    id: 'q_sport_1',
+    categoryId: 'sports',
+    text: 'Which country won the 2018 FIFA World Cup?',
+    options: ['Croatia', 'Brazil', 'France', 'Germany'],
+    correctIndex: 2,
+  },
+  {
+    id: 'q_sport_2',
+    categoryId: 'sports',
+    text: 'Which sport is played at Wimbledon?',
+    options: ['Cricket', 'Tennis', 'Golf', 'Rugby'],
+    correctIndex: 1,
+  },
+  {
+    id: 'q_sport_3',
+    categoryId: 'sports',
+    text: 'Who is known as "The Great One" in ice hockey?',
+    options: ['Mario Lemieux', 'Gordie Howe', 'Wayne Gretzky', 'Bobby Orr'],
+    correctIndex: 2,
+  },
+  {
+    id: 'q_sport_4',
+    categoryId: 'sports',
+    text: 'In which sport would you perform a slam dunk?',
+    options: ['Basketball', 'Volleyball', 'Tennis', 'Baseball'],
+    correctIndex: 0,
+  },
+  {
+    id: 'q_sport_5',
+    categoryId: 'sports',
+    text: 'How many players are on a standard soccer team?',
+    options: ['9', '10', '11', '12'],
+    correctIndex: 2,
+  },
+  {
+    id: 'q_sport_6',
+    categoryId: 'sports',
+    text: 'Which country hosts the La Liga soccer league?',
+    options: ['Italy', 'France', 'Germany', 'Spain'],
+    correctIndex: 3,
+  },
+  // --- GAMING ---
+  {
+    id: 'q_game_1',
+    categoryId: 'gaming',
+    text: 'Who is the protagonist of "The Legend of Zelda"?',
+    options: ['Zelda', 'Link', 'Ganon', 'Epona'],
+    correctIndex: 1,
+  },
+  {
+    id: 'q_game_2',
+    categoryId: 'gaming',
+    text: 'What does FPS stand for in gaming?',
+    options: ['First Person Shooter', 'Frames Per Second', 'Free Play System', 'Fast Player Speed'],
+    correctIndex: 0,
+  },
+  {
+    id: 'q_game_3',
+    categoryId: 'gaming',
+    text: 'Which company created the PlayStation?',
+    options: ['Nintendo', 'Microsoft', 'Sega', 'Sony'],
+    correctIndex: 3,
+  },
+  {
+    id: 'q_game_4',
+    categoryId: 'gaming',
+    text: 'What is the best-selling video game of all time?',
+    options: ['Tetris', 'Minecraft', 'Grand Theft Auto V', 'Wii Sports'],
+    correctIndex: 1,
+  },
+  {
+    id: 'q_game_5',
+    categoryId: 'gaming',
+    text: 'Who is the mascot of Nintendo?',
+    options: ['Sonic', 'Pikachu', 'Mario', 'Kirby'],
+    correctIndex: 2,
+  },
+  {
+    id: 'q_game_6',
+    categoryId: 'gaming',
+    text: 'Which game features a "Battle Royale" mode?',
+    options: ['Fortnite', 'The Sims', 'Civilization', 'FIFA'],
+    correctIndex: 0,
+  },
+  // --- MUSIC ---
+  {
+    id: 'q_music_1',
+    categoryId: 'music',
+    text: 'Who is known as the "King of Pop"?',
+    options: ['Elvis Presley', 'Prince', 'Michael Jackson', 'Freddie Mercury'],
+    correctIndex: 2,
+  },
+  {
+    id: 'q_music_2',
+    categoryId: 'music',
+    text: 'How many members were in The Beatles?',
+    options: ['3', '4', '5', '6'],
+    correctIndex: 1,
+  },
+  {
+    id: 'q_music_3',
+    categoryId: 'music',
+    text: 'Which band performed "Bohemian Rhapsody"?',
+    options: ['Pink Floyd', 'Led Zeppelin', 'The Rolling Stones', 'Queen'],
+    correctIndex: 3,
+  },
+  {
+    id: 'q_music_4',
+    categoryId: 'music',
+    text: 'How many keys are on a standard piano?',
+    options: ['66', '77', '88', '99'],
+    correctIndex: 2,
+  },
+  {
+    id: 'q_music_5',
+    categoryId: 'music',
+    text: 'Which artist released the album "1989"?',
+    options: ['Adele', 'Katy Perry', 'Taylor Swift', 'Lady Gaga'],
+    correctIndex: 2,
+  },
+  {
+    id: 'q_music_6',
+    categoryId: 'music',
+    text: 'What instrument does a violinist play?',
+    options: ['Violin', 'Cello', 'Viola', 'Bass'],
+    correctIndex: 0,
   },
 ];
 export const MOCK_SHOP_ITEMS: ShopItem[] = [
