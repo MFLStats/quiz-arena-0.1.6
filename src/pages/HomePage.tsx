@@ -178,14 +178,6 @@ export function HomePage() {
   const streakProgress = ((streak % 7) / 7) * 100;
   const today = new Date().toISOString().split('T')[0];
   const isClaimedToday = user?.lastLogin === today;
-  // Helper for dynamic player count simulation
-  const getActivePlayers = (catId: string, baseElo: number) => {
-    // Stable pseudo-random number based on category ID and current hour
-    const hour = new Date().getHours();
-    const seed = catId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    const variance = (seed * (hour + 1)) % 300;
-    return Math.floor(baseElo * 0.5 + variance + 100);
-  };
   return (
     <AppLayout>
       <div className="min-h-screen flex flex-col">
@@ -376,7 +368,8 @@ export function HomePage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8">
               {categories.slice().reverse().slice(0, 3).map((cat, i) => {
                 const Icon = CATEGORY_ICONS[cat.icon] || CATEGORY_ICONS.Atom;
-                const activePlayers = getActivePlayers(cat.id, cat.baseElo);
+                // Calculate user-specific Elo for this category, fallback to base Elo
+                const userElo = user?.categoryElo?.[cat.id] ?? cat.baseElo;
                 const isJoining = joiningId === cat.id;
                 return (
                   <motion.div
@@ -401,12 +394,8 @@ export function HomePage() {
                       </div>
                       <h3 className="text-xl md:text-2xl font-bold mb-2 md:mb-3 group-hover:text-white transition-colors">{cat.name}</h3>
                       <p className="text-sm md:text-base text-muted-foreground mb-4 md:mb-6 leading-relaxed">{cat.description}</p>
-                      <div className="flex items-center justify-between pt-4 border-t border-white/5">
-                        <span className="text-indigo-300 font-mono text-xs md:text-sm bg-indigo-500/10 px-2 py-1 rounded">Elo {cat.baseElo}</span>
-                        <span className="text-muted-foreground text-xs md:text-sm flex items-center gap-1">
-                          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                          {activePlayers.toLocaleString()} playing
-                        </span>
+                      <div className="flex items-center justify-start pt-4 border-t border-white/5">
+                        <span className="text-indigo-300 font-mono text-xs md:text-sm bg-indigo-500/10 px-2 py-1 rounded">Elo {userElo}</span>
                       </div>
                     </div>
                   </motion.div>
