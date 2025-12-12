@@ -62,11 +62,10 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn, getFlagEmoji } from '@/lib/utils';
-import type { User, Category, MatchHistoryItem, UpdateUserRequest, UserAchievement } from '@shared/types';
+import type { User, Category, MatchHistoryItem, UpdateUserRequest, UserAchievement, ShopItem } from '@shared/types';
 import { getLevelFromXp } from '@shared/progression';
 import { ACHIEVEMENTS } from '@shared/achievements';
 import { COUNTRIES } from '@shared/constants';
-import { MOCK_SHOP_ITEMS } from '@shared/mock-data';
 import { AvatarCreator } from './AvatarCreator';
 import { toast } from 'sonner';
 import { eachDayOfInterval, subDays, format, isSameDay, startOfWeek, endOfWeek } from 'date-fns';
@@ -82,8 +81,9 @@ interface ProfileBannerProps {
   onUpdate: (data: UpdateUserRequest) => Promise<void>;
   onAddFriend?: () => Promise<void>;
   isFriend?: boolean;
+  shopItems: ShopItem[];
 }
-export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFriend }: ProfileBannerProps) {
+export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFriend, shopItems }: ProfileBannerProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showCreator, setShowCreator] = useState(false);
@@ -148,7 +148,7 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
     }
   };
   // Filter owned items
-  const ownedItems = MOCK_SHOP_ITEMS.filter(item => user.inventory?.includes(item.id));
+  const ownedItems = shopItems.filter(item => user.inventory?.includes(item.id));
   const ownedAvatars = ownedItems.filter(i => i.type === 'avatar');
   const ownedFrames = ownedItems.filter(i => i.type === 'frame');
   const ownedBanners = ownedItems.filter(i => i.type === 'banner');
@@ -462,7 +462,7 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button 
+                  <button
                     onClick={() => {
                       navigator.clipboard.writeText(user.id);
                       toast.success("User ID copied to clipboard!");

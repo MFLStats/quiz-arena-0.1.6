@@ -15,6 +15,7 @@ import {
 } from '@/components/profile/ProfileComponents';
 import { Loader2, AlertCircle, RefreshCw, LogOut } from 'lucide-react';
 import { useCategories } from '@/hooks/use-categories';
+import { useShop } from '@/hooks/use-shop';
 import { Button } from '@/components/ui/button';
 import { useNavigate, useParams } from 'react-router-dom';
 export function ProfilePage() {
@@ -24,6 +25,7 @@ export function ProfilePage() {
   const navigate = useNavigate();
   const { userId } = useParams();
   const { categories } = useCategories();
+  const { items: shopItems } = useShop();
   const [user, setUser] = useState<User | null>(null);
   const [friends, setFriends] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,7 +51,7 @@ export function ProfilePage() {
         // For public profiles, we might want to know if *we* are friends with them
         // But the friends list component is primarily for managing *my* friends.
         // So we'll skip fetching *their* friends list for now to keep it simple.
-        setFriends([]); 
+        setFriends([]);
       }
     } catch (err: any) {
       console.error(err);
@@ -94,7 +96,7 @@ export function ProfilePage() {
       toast.success('Friend added successfully!');
       // If we are on our own profile, refresh the list
       if (isOwnProfile) {
-        fetchData(); 
+        fetchData();
       }
     } catch (err) {
       console.error(err);
@@ -150,6 +152,7 @@ export function ProfilePage() {
           onUpdate={handleUpdateProfile}
           onAddFriend={() => handleAddFriend(user.id)}
           isFriend={isFriend}
+          shopItems={shopItems}
         />
         {/* Middle Section: Stats */}
         <StatGrid user={user} />

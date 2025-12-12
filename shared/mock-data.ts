@@ -826,5 +826,42 @@ export const MOCK_SHOP_ITEMS: ShopItem[] = [
     price: 700,
     assetUrl: 'https://api.dicebear.com/9.x/shapes/svg?seed=box3',
     description: 'High chance for Epic. Chance for Legendary.'
+  },
+  // Season Pass Exclusive Avatars
+  {
+    id: 'av_reindeer',
+    name: 'Reindeer',
+    type: 'avatar',
+    rarity: 'rare',
+    price: 500,
+    assetUrl: 'https://api.dicebear.com/9.x/avataaars/svg?seed=Reindeer&top=winterHat2&clothing=collarAndSweater&clothingColor=red',
+    description: 'Festive Reindeer avatar.'
+  },
+  {
+    id: 'av_gingerbread',
+    name: 'Gingerbread',
+    type: 'avatar',
+    rarity: 'epic',
+    price: 800,
+    assetUrl: 'https://api.dicebear.com/9.x/avataaars/svg?seed=Ginger&skinColor=d08b5b&top=none&clothing=collarAndSweater&clothingColor=green',
+    description: 'Sweet Gingerbread avatar.'
+  },
+  {
+    id: 'av_snowman_scarf',
+    name: 'Frosty',
+    type: 'avatar',
+    rarity: 'epic',
+    price: 800,
+    assetUrl: 'https://api.dicebear.com/9.x/avataaars/svg?seed=Snowman&skinColor=white&top=winterHat1&clothing=graphicShirt',
+    description: 'Cool Frosty avatar.'
+  },
+  {
+    id: 'av_santa',
+    name: 'Santa Claus',
+    type: 'avatar',
+    rarity: 'legendary',
+    price: 2000,
+    assetUrl: 'https://api.dicebear.com/9.x/avataaars/svg?seed=Santa&top=winterHat3&facialHair=beardMajestic&hairColor=white&clothing=collarAndSweater&clothingColor=red',
+    description: 'The one and only Santa Claus.'
   }
 ];
