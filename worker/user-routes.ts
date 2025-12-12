@@ -193,6 +193,8 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
   app.get('/api/auth/google/redirect', (c) => {
     const env = c.env as any;
     const clientId = env.GOOGLE_CLIENT_ID;
+    console.log('[Auth] Env keys:', Object.keys(env));
+    console.log('[Auth] GOOGLE_CLIENT_ID present:', !!clientId);
     // Graceful fallback for preview/dev environments
     if (!clientId) {
         return c.redirect('/login?error=missing_env&provider=google');

@@ -69,6 +69,25 @@ export function ArenaPage() {
   const [isReporting, setIsReporting] = useState(false);
   const currentQuestion = questions[currentIndex];
   const isFinalRound = questions.length > 0 && currentIndex === questions.length - 1;
+  // Derived Opponent Stats (Moved up to avoid conditional hook execution)
+  const opponentId = matchData && user ? Object.keys(matchData.players).find(id => id !== user.id) : null;
+  const opponentStats = opponentId && matchData ? matchData.players[opponentId] : null;
+  const opponentName = matchData?.mode === 'daily' ? 'The House' : (opponentStats?.name || 'Opponent');
+  const opponentCountry = opponentStats?.country;
+  const opponentElo = opponentStats?.elo;
+  const opponentTitle = opponentStats?.title;
+  const opponentDisplayTitle = opponentStats?.displayTitle;
+  const opponentStreak = opponentStats?.answers ? calculateStreak(opponentStats.answers) : 0;
+  const opponentFrameConfig = opponentStats?.frameConfig;
+  const myStats = matchData && user ? matchData.players[user.id] : null;
+  const myTitle = myStats?.title || user?.title;
+  const myDisplayTitle = myStats?.displayTitle;
+  const isDaily = matchData?.mode === 'daily';
+  // Calculate if opponent has answered the current question (Moved up)
+  const opponentHasAnswered = useMemo(() => {
+    if (!opponentStats || !currentQuestion) return false;
+    return opponentStats.answers.some(a => a.questionId === currentQuestion.id);
+  }, [opponentStats, currentQuestion]);
   // Force re-render for timer
   useInterval(() => {
     setNow(Date.now());
@@ -379,24 +398,6 @@ export function ArenaPage() {
       </div>
     );
   }
-  const opponentId = Object.keys(matchData.players).find(id => id !== user.id);
-  const opponentStats = opponentId ? matchData.players[opponentId] : null;
-  const opponentName = matchData.mode === 'daily' ? 'The House' : (opponentStats?.name || 'Opponent');
-  const opponentCountry = opponentStats?.country;
-  const opponentElo = opponentStats?.elo;
-  const opponentTitle = opponentStats?.title;
-  const opponentDisplayTitle = opponentStats?.displayTitle;
-  const opponentStreak = opponentStats?.answers ? calculateStreak(opponentStats.answers) : 0;
-  const opponentFrameConfig = opponentStats?.frameConfig;
-  const myStats = matchData.players[user.id];
-  const myTitle = myStats?.title || user.title;
-  const myDisplayTitle = myStats?.displayTitle;
-  const isDaily = matchData.mode === 'daily';
-  // Calculate if opponent has answered the current question
-  const opponentHasAnswered = useMemo(() => {
-    if (!opponentStats || !currentQuestion) return false;
-    return opponentStats.answers.some(a => a.questionId === currentQuestion.id);
-  }, [opponentStats, currentQuestion]);
   return (
     <div className="min-h-dvh flex flex-col bg-zinc-950 overflow-hidden relative font-sans selection:bg-indigo-500/30">
       {/* Background Ambience */}

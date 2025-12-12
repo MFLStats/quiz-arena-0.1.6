@@ -34,7 +34,8 @@ export function LoginPage() {
     if (error === 'missing_env' && (provider === 'google' || provider === 'apple')) {
       setSimProvider(provider as 'google' | 'apple');
       setShowSimulation(true);
-      toast.info("OAuth not configured. Using simulation mode.");
+      console.warn('OAuth missing_env detected. Redirecting to simulation.');
+      toast.info("OAuth not configured (Missing Client ID). Using simulation mode.");
       // Clear params to prevent reopening on refresh
       setSearchParams({}, { replace: true });
     }
