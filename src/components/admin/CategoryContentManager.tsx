@@ -58,8 +58,8 @@ export function CategoryContentManager({ category, isOpen, onClose }: CategoryCo
     if (!user || !isOpen) return;
     setIsLoading(true);
     try {
-      const data = await api<{ items: Question[], next: string | null }>(`/api/admin/questions?userId=${user.id}&categoryId=${category.id}&limit=1000`);
-      setQuestions(data.items);
+      const data = await api<Question[]>(`/api/admin/questions?userId=${user.id}&categoryId=${category.id}&limit=1000`);
+      setQuestions(data);
     } catch (err) {
       console.error(err);
       toast.error("Failed to load questions");

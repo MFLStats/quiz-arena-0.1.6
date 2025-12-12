@@ -44,7 +44,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
   // --- AUTH ---
   app.post('/api/auth/register', async (c) => {
     try {
-      const { name, email, password, avatar } = await c.req.json() as RegisterRequest;
+      const { name, email, password, avatar, country } = await c.req.json() as RegisterRequest;
       if (!name || !email || !password) return bad(c, 'Missing required fields');
       if (password.length < 6) return bad(c, 'Password must be at least 6 characters');
       const normalizedEmail = email.toLowerCase().trim();
@@ -65,7 +65,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
         passwordHash: hashedPassword,
         elo: 1200,
         categoryElo: {},
-        country: 'US',
+        country: country || 'US',
         friends: [],
         currency: 1000,
         inventory: [],
@@ -1090,6 +1090,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     const limitParam = c.req.query('limit');
     const limit = limitParam ? Math.min(1000, Math.max(1, parseInt(limitParam))) : 1000;
     const search = c.req.query('search')?.toLowerCase();
+    const categoryId = c.req.query('categoryId');
     // Fetch dynamic questions
     const { items: dynamicQuestions } = await QuestionEntity.list(c.env, null, limit);
     // Merge with Mocks (Dynamic overrides Mock)
@@ -1098,9 +1099,12 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     dynamicQuestions.forEach(q => questionMap.set(q.id, q));
     let allQuestions = Array.from(questionMap.values());
     // Filter
+    if (categoryId) {
+        allQuestions = allQuestions.filter(q => q.categoryId === categoryId);
+    }
     if (search) {
-        allQuestions = allQuestions.filter(q => 
-            q.text.toLowerCase().includes(search) || 
+        allQuestions = allQuestions.filter(q =>
+            q.text.toLowerCase().includes(search) ||
             q.id.toLowerCase().includes(search) ||
             q.categoryId.toLowerCase().includes(search)
         );
@@ -1215,9 +1219,9 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     const { items } = await UserEntity.list(c.env, null, 100);
     let filtered = items.map(sanitizeUser);
     if (search) {
-      filtered = filtered.filter(u => 
-        u.name.toLowerCase().includes(search) || 
-        u.id.toLowerCase().includes(search) || 
+      filtered = filtered.filter(u =>
+        u.name.toLowerCase().includes(search) ||
+        u.id.toLowerCase().includes(search) ||
         (u.email && u.email.toLowerCase().includes(search))
       );
     }

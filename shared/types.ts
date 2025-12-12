@@ -227,6 +227,7 @@ export interface RegisterRequest {
   email: string;
   password: string;
   avatar?: string; // Custom avatar URL
+  country?: string; // Optional country code
 }
 export interface LoginEmailRequest {
   email: string;
