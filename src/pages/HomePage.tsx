@@ -16,13 +16,13 @@ import type { SystemConfig, SystemStats } from '@shared/types';
 import { playSfx } from '@/lib/sound-fx';
 import { CATEGORY_ICONS } from '@/lib/icons';
 import { GlassCard } from '@/components/ui/glass-card';
+import { useInterval } from '@/hooks/use-interval';
 // Season Timer Component
 function SeasonTimer({ endDate }: { endDate?: string }) {
   const [timeLeft, setTimeLeft] = useState('');
-  useEffect(() => {
-    const targetDate = endDate ? new Date(endDate) : new Date();
-    if (!endDate) targetDate.setDate(targetDate.getDate() + 14);
-    const calculateTimeLeft = () => {
+  const calculateTimeLeft = useCallback(() => {
+      const targetDate = endDate ? new Date(endDate) : new Date();
+      if (!endDate) targetDate.setDate(targetDate.getDate() + 14);
       const now = new Date();
       const difference = targetDate.getTime() - now.getTime();
       if (difference > 0) {
@@ -32,13 +32,15 @@ function SeasonTimer({ endDate }: { endDate?: string }) {
         return `${days}d ${hours.toString().padStart(2, '0')}h ${minutes.toString().padStart(2, '0')}m`;
       }
       return 'Season Ending Soon';
-    };
-    setTimeLeft(calculateTimeLeft());
-    const timer = setInterval(() => {
-      setTimeLeft(calculateTimeLeft());
-    }, 60000);
-    return () => clearInterval(timer);
   }, [endDate]);
+  // Initial set
+  useEffect(() => {
+    setTimeLeft(calculateTimeLeft());
+  }, [calculateTimeLeft]);
+  // Interval update
+  useInterval(() => {
+    setTimeLeft(calculateTimeLeft());
+  }, 60000);
   return (
     <span className="font-mono font-bold tracking-wide">{timeLeft}</span>
   );

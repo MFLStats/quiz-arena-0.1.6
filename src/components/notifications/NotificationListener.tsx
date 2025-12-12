@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { useInterval } from 'react-use';
+import { useInterval } from '@/hooks/use-interval';
 import { toast } from 'sonner';
 import { Swords } from 'lucide-react';
 import { useNotificationStore } from '@/lib/notification-store';

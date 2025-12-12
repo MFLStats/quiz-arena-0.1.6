@@ -7,6 +7,13 @@ import type { FinishMatchResponse, MatchHistoryItem, UpdateUserRequest, Purchase
 import { MOCK_CATEGORIES, MOCK_QUESTIONS } from "@shared/mock-data";
 import { PROGRESSION_CONSTANTS, getLevelFromXp, getXpRequiredForNextLevel } from "@shared/progression";
 import { SEASON_REWARDS_CONFIG as SHARED_SEASON_CONFIG, SEASON_COST } from "@shared/constants";
+
+type AuthEnv = Env & {
+  GOOGLE_CLIENT_ID: string;
+  GOOGLE_CLIENT_SECRET: string;
+  APPLE_CLIENT_ID: string;
+};
+
 // --- Helpers ---
 async function generateUserId(email: string): Promise<string> {
   const msgBuffer = new TextEncoder().encode(email.toLowerCase().trim());
@@ -191,10 +198,8 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
   // --- REAL OAUTH ROUTES ---
   // Google
   app.get('/api/auth/google/redirect', (c) => {
-    const env = c.env as any;
+    const env = c.env as AuthEnv;
     const clientId = env.GOOGLE_CLIENT_ID;
-    console.log('[Auth] Env keys:', Object.keys(env));
-    console.log('[Auth] GOOGLE_CLIENT_ID present:', !!clientId);
     // Graceful fallback for preview/dev environments
     if (!clientId) {
         return c.redirect('/login?error=missing_env&provider=google');
@@ -209,7 +214,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     const error = c.req.query('error');
     if (error) return c.redirect(`/?error=${error}`);
     if (!code) return c.redirect(`/?error=no_code`);
-    const env = c.env as any;
+    const env = c.env as AuthEnv;
     const clientId = env.GOOGLE_CLIENT_ID;
     const clientSecret = env.GOOGLE_CLIENT_SECRET;
     const redirectUri = `${new URL(c.req.url).origin}/api/auth/google/callback`;
@@ -282,7 +287,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
   });
   // Apple
   app.get('/api/auth/apple/redirect', (c) => {
-    const env = c.env as any;
+    const env = c.env as AuthEnv;
     const clientId = env.APPLE_CLIENT_ID;
     // Graceful fallback for preview/dev environments
     if (!clientId) {
@@ -887,11 +892,9 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
         totalXp += PROGRESSION_CONSTANTS.XP_PER_CORRECT_ANSWER;
         totalCoins += PROGRESSION_CONSTANTS.COINS_PER_CORRECT_ANSWER;
         if (ans.timeMs < 5000) {
-           if (ans.timeMs < 5000) {
-             fastCount++;
-             totalXp += PROGRESSION_CONSTANTS.XP_PER_FAST_ANSWER;
-             totalCoins += PROGRESSION_CONSTANTS.COINS_PER_FASTEST_ANSWER;
-           }
+          fastCount++;
+          totalXp += PROGRESSION_CONSTANTS.XP_PER_FAST_ANSWER;
+          totalCoins += PROGRESSION_CONSTANTS.COINS_PER_FASTEST_ANSWER;
         }
       }
     });
