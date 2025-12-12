@@ -30,8 +30,7 @@ import {
   Share2,
   Activity,
   Search,
-  LogOut,
-  Move
+  LogOut
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -63,7 +62,6 @@ import {
 } from "@/components/ui/tooltip";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Slider } from '@/components/ui/slider';
 import { cn, getFlagEmoji, isImageUrl, getBackgroundStyle, shareContent } from '@/lib/utils';
 import type { User, Category, MatchHistoryItem, UpdateUserRequest, UserAchievement, ShopItem, FrameConfig } from '@shared/types';
 import { getLevelFromXp } from '@shared/progression';
@@ -102,7 +100,8 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
   const [frame, setFrame] = useState(user.frame);
   const [banner, setBanner] = useState(user.banner);
   const [title, setTitle] = useState(user.title);
-  const [frameConfig, setFrameConfig] = useState<FrameConfig>({ x: 0, y: 0, scale: 1.35 });
+  // Default frame config updated to x: -8, y: 0, scale: 1.35
+  const [frameConfig, setFrameConfig] = useState<FrameConfig>({ x: -8, y: 0, scale: 1.35 });
   // Reset state when dialog opens
   useEffect(() => {
     if (isEditing) {
@@ -112,7 +111,7 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
       setFrame(user.frame);
       setBanner(user.banner);
       setTitle(user.title);
-      setFrameConfig(user.frameConfig || { x: 0, y: 0, scale: 1.35 });
+      setFrameConfig(user.frameConfig || { x: -8, y: 0, scale: 1.35 });
       setShowCreator(false);
     }
   }, [isEditing, user]);
@@ -215,7 +214,8 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
               </Button>
             </div>
           )}
-          <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-zinc-900 text-white font-bold px-4 py-1 rounded-full text-sm shadow-xl border border-white/10 flex items-center gap-1.5 whitespace-nowrap z-10">
+          {/* Level Badge - Lowered position to avoid frame overlap */}
+          <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 bg-zinc-900 text-white font-bold px-4 py-1 rounded-full text-sm shadow-xl border border-white/10 flex items-center gap-1.5 whitespace-nowrap z-10">
             <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
             LVL {level}
           </div>
@@ -326,63 +326,7 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
                                       className="w-full h-full"
                                     />
                                   </div>
-                                  {/* Frame Adjustment Controls */}
-                                  {frame && isImageUrl(frame) && (
-                                    <div className="w-full space-y-4 pt-2 border-t border-white/5">
-                                      <div className="flex items-center justify-between">
-                                        <Label className="flex items-center gap-2 text-xs"><Move className="w-3 h-3" /> Frame Position</Label>
-                                        <Button 
-                                          size="sm" 
-                                          variant="ghost" 
-                                          className="h-6 text-[10px]"
-                                          onClick={() => setFrameConfig({ x: 0, y: 0, scale: 1.35 })}
-                                        >
-                                          Reset
-                                        </Button>
-                                      </div>
-                                      <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-1">
-                                          <div className="flex justify-between text-[10px] text-muted-foreground">
-                                            <span>Horizontal (X)</span>
-                                            <span>{frameConfig.x}%</span>
-                                          </div>
-                                          <Slider
-                                            value={[frameConfig.x]}
-                                            min={-50}
-                                            max={50}
-                                            step={1}
-                                            onValueChange={([val]) => setFrameConfig(prev => ({ ...prev, x: val }))}
-                                          />
-                                        </div>
-                                        <div className="space-y-1">
-                                          <div className="flex justify-between text-[10px] text-muted-foreground">
-                                            <span>Vertical (Y)</span>
-                                            <span>{frameConfig.y}%</span>
-                                          </div>
-                                          <Slider
-                                            value={[frameConfig.y]}
-                                            min={-50}
-                                            max={50}
-                                            step={1}
-                                            onValueChange={([val]) => setFrameConfig(prev => ({ ...prev, y: val }))}
-                                          />
-                                        </div>
-                                      </div>
-                                      <div className="space-y-1">
-                                        <div className="flex justify-between text-[10px] text-muted-foreground">
-                                          <span>Scale</span>
-                                          <span>{Math.round(frameConfig.scale * 100)}%</span>
-                                        </div>
-                                        <Slider
-                                          value={[frameConfig.scale]}
-                                          min={0.5}
-                                          max={2.0}
-                                          step={0.05}
-                                          onValueChange={([val]) => setFrameConfig(prev => ({ ...prev, scale: val }))}
-                                        />
-                                      </div>
-                                    </div>
-                                  )}
+                                  {/* Frame Adjustment Controls Removed as per client request */}
                                 </div>
                                 {/* Avatars */}
                                 <div className="space-y-3">

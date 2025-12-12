@@ -131,8 +131,6 @@ export function RegisterForm() {
       toast.success('Account created successfully!');
       navigate('/');
     } catch (err: unknown) {
-      // Enhanced Error Logging
-      console.error('Registration Error Details:', JSON.stringify(err, Object.getOwnPropertyNames(err)));
       let message = 'Registration failed';
       if (err instanceof Error) {
         message = err.message;
@@ -143,6 +141,10 @@ export function RegisterForm() {
       }
       if (message === '[object Object]' || !message) {
         message = 'An unexpected error occurred. Please try again.';
+      }
+      // Only log unexpected errors to console to prevent noise
+      if (!message.toLowerCase().includes('user already exists') && !message.toLowerCase().includes('email')) {
+         console.error('Registration Error Details:', JSON.stringify(err, Object.getOwnPropertyNames(err)));
       }
       toast.error(message);
     } finally {

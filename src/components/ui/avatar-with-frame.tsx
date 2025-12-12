@@ -18,8 +18,8 @@ export function AvatarWithFrame({
   className,
   isOpponent
 }: AvatarWithFrameProps) {
-  // Default values: centered (0,0) and 135% scale
-  const { x = 0, y = 0, scale = 1.35 } = frameConfig || {};
+  // Default values: centered (-8% x offset for visual balance) and 135% scale
+  const { x = -8, y = 0, scale = 1.35 } = frameConfig || {};
   return (
     <div className={cn("relative inline-block", className)}>
       <Avatar className="w-full h-full border-2 border-white/10">
