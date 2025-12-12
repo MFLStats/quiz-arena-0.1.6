@@ -239,14 +239,15 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     const updates = await c.req.json() as UpdateUserRequest;
     const userEntity = new UserEntity(c.env, id);
     if (!await userEntity.exists()) return notFound(c, 'User not found');
+    // Use explicit undefined checks to allow clearing fields (e.g. setting frame to "")
     await userEntity.mutate(user => ({
       ...user,
-      name: updates.name || user.name,
-      country: updates.country || user.country,
-      avatar: updates.avatar || user.avatar,
-      banner: updates.banner || user.banner,
-      title: updates.title || user.title,
-      frame: updates.frame || user.frame
+      name: updates.name !== undefined ? updates.name : user.name,
+      country: updates.country !== undefined ? updates.country : user.country,
+      avatar: updates.avatar !== undefined ? updates.avatar : user.avatar,
+      banner: updates.banner !== undefined ? updates.banner : user.banner,
+      title: updates.title !== undefined ? updates.title : user.title,
+      frame: updates.frame !== undefined ? updates.frame : user.frame
     }));
     return ok(c, sanitizeUser(await userEntity.getState()));
   });
@@ -1059,8 +1060,8 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     const { items } = await UserEntity.list(c.env, null, 100);
     let filtered = items.map(sanitizeUser);
     if (search) {
-      filtered = filtered.filter(u =>
-        u.name.toLowerCase().includes(search) ||
+      filtered = filtered.filter(u => 
+        u.name.toLowerCase().includes(search) || 
         u.id.toLowerCase().includes(search) ||
         (u.email && u.email.toLowerCase().includes(search))
       );

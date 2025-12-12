@@ -46,7 +46,7 @@ export function ResultsPage() {
     if (storeResult && storeResult.matchId === matchId) {
       syncUserData();
     }
-  }, [matchId, storeResult, user?.id, updateUser]);
+  }, [matchId, storeResult, user?.id, updateUser, user]);
   useEffect(() => {
     const loadData = async () => {
       // 1. Use store result if available and matches current ID (immediate post-game)

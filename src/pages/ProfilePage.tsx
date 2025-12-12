@@ -153,6 +153,7 @@ export function ProfilePage() {
           onAddFriend={() => handleAddFriend(user.id)}
           isFriend={isFriend}
           shopItems={shopItems}
+          onLogout={handleLogout}
         />
         {/* Middle Section: Stats */}
         <StatGrid user={user} />

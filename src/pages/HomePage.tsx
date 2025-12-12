@@ -63,9 +63,9 @@ export function HomePage() {
     api<SystemConfig>('/api/config').then(setConfig).catch(console.error);
     api<SystemStats>('/api/stats').then(setStats).catch(console.error);
   }, []);
-  // Onboarding Effect: Show How to Play for new users
+  // Onboarding Effect: Show How to Play for new users (excluding guests)
   useEffect(() => {
-    if (user && (user.stats?.matches === 0 || !user.stats)) {
+    if (user && user.provider !== 'guest' && (user.stats?.matches === 0 || !user.stats)) {
       const hasSeenIntro = sessionStorage.getItem('hasSeenIntro');
       if (!hasSeenIntro) {
         setShowHowToPlay(true);

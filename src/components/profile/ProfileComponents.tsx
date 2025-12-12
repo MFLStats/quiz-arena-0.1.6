@@ -29,7 +29,8 @@ import {
   Wand2,
   Share2,
   Activity,
-  Search
+  Search,
+  LogOut
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -83,8 +84,9 @@ interface ProfileBannerProps {
   onAddFriend?: () => Promise<void>;
   isFriend?: boolean;
   shopItems: ShopItem[];
+  onLogout?: () => void;
 }
-export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFriend, shopItems }: ProfileBannerProps) {
+export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFriend, shopItems, onLogout }: ProfileBannerProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showCreator, setShowCreator] = useState(false);
@@ -166,7 +168,7 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
     >
       {/* Banner Background */}
       <div className="absolute inset-0 h-56 md:h-80 overflow-hidden">
-        <div 
+        <div
           className="absolute inset-0 bg-cover bg-center opacity-60 transition-transform duration-1000 group-hover:scale-105"
           style={getBackgroundStyle(user.banner)}
         />
@@ -188,9 +190,9 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
                   </Avatar>
                   {/* Frame Overlay */}
                   {user.frame && isImageUrl(user.frame) && (
-                     <img 
-                       src={user.frame} 
-                       className="absolute inset-0 w-full h-full z-20 object-contain scale-110 pointer-events-none" 
+                     <img
+                       src={user.frame}
+                       className="absolute inset-0 w-full h-full z-20 object-contain scale-[1.35] pointer-events-none"
                        alt="frame"
                      />
                   )}
@@ -207,8 +209,8 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
           {/* Quick Edit Button */}
           {isOwnProfile && (
             <div className="absolute bottom-0 right-0 z-20 translate-x-1/4 translate-y-1/4">
-              <Button 
-                size="icon" 
+              <Button
+                size="icon"
                 className="h-10 w-10 rounded-full bg-indigo-600 hover:bg-indigo-500 border-4 border-zinc-900 shadow-lg transition-transform hover:scale-110"
                 onClick={() => setShowAvatarDialog(true)}
                 title="Customize Avatar"
@@ -230,9 +232,9 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
             </h1>
             {/* Actions */}
             <div className="flex items-center gap-2">
-              <Button 
-                size="icon" 
-                variant="ghost" 
+              <Button
+                size="icon"
+                variant="ghost"
                 className="h-9 w-9 rounded-full bg-white/5 hover:bg-white/10 text-white/70 hover:text-white backdrop-blur-sm border border-white/5"
                 onClick={handleShare}
                 title="Share Profile"
@@ -240,206 +242,219 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
                 <Share2 className="w-4 h-4" />
               </Button>
               {isOwnProfile ? (
-                <Dialog open={isEditing} onOpenChange={setIsEditing}>
-                  <DialogTrigger asChild>
-                    <Button size="icon" variant="ghost" className="h-9 w-9 rounded-full bg-white/5 hover:bg-white/10 text-white/70 hover:text-white backdrop-blur-sm border border-white/5">
-                      <Edit2 className="w-4 h-4" />
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="bg-zinc-950 border-white/10 max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-                    <DialogHeader>
-                      <DialogTitle>Edit Profile</DialogTitle>
-                      <DialogDescription>Customize your identity and appearance.</DialogDescription>
-                    </DialogHeader>
-                    <Tabs defaultValue="identity" className="flex-1 overflow-hidden flex flex-col mt-4">
-                      <TabsList className="grid w-full grid-cols-2 bg-white/5">
-                        <TabsTrigger value="identity">Identity</TabsTrigger>
-                        <TabsTrigger value="appearance">Appearance</TabsTrigger>
-                      </TabsList>
-                      {/* IDENTITY TAB */}
-                      <TabsContent value="identity" className="flex-1 space-y-6 py-4">
-                        <div className="space-y-4">
-                          <div className="space-y-2">
-                            <Label>Display Name</Label>
-                            <Input 
-                              value={name} 
-                              onChange={(e) => setName(e.target.value)} 
-                              className="bg-black/20 border-white/10"
-                              placeholder="Enter your name"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Country</Label>
-                            <Select value={country} onValueChange={setCountry}>
-                              <SelectTrigger className="bg-black/20 border-white/10">
-                                <SelectValue placeholder="Select a country" />
-                              </SelectTrigger>
-                              <SelectContent className="bg-zinc-900 border-white/10 max-h-[300px]">
-                                {COUNTRIES.map((c) => (
-                                  <SelectItem key={c.code} value={c.code}>
-                                    <span className="mr-2 text-lg">{c.flag}</span> {c.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Title</Label>
-                            <Select value={title || "none"} onValueChange={(val) => setTitle(val === "none" ? undefined : val)}>
-                              <SelectTrigger className="bg-black/20 border-white/10">
-                                <SelectValue placeholder="Select a title" />
-                              </SelectTrigger>
-                              <SelectContent className="bg-zinc-900 border-white/10">
-                                <SelectItem value="none">None</SelectItem>
-                                {ownedTitles.map((t) => (
-                                  <SelectItem key={t.id} value={t.name}>
-                                    {t.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                      </TabsContent>
-                      {/* APPEARANCE TAB */}
-                      <TabsContent value="appearance" className="flex-1 overflow-hidden flex flex-col py-4">
-                        {showCreator ? (
-                          <AvatarCreator 
-                            initialUrl={avatar}
-                            onSave={(url) => {
-                              setAvatar(url);
-                              setShowCreator(false);
-                            }}
-                            onCancel={() => setShowCreator(false)}
-                          />
-                        ) : (
-                          <ScrollArea className="flex-1 pr-4">
-                            <div className="space-y-8">
-                              {/* Avatars */}
-                              <div className="space-y-3">
-                                <div className="flex items-center justify-between">
-                                  <Label className="flex items-center gap-2"><UserIcon className="w-4 h-4" /> Avatars</Label>
-                                  <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => setShowCreator(true)}>
-                                    <Wand2 className="w-3 h-3" /> Create New
-                                  </Button>
-                                </div>
-                                <div className="grid grid-cols-4 sm:grid-cols-5 gap-3">
-                                  {/* Current/Default Option if not in owned list */}
-                                  <button
-                                    onClick={() => setAvatar(user.avatar)}
-                                    className={cn(
-                                      "aspect-square rounded-xl overflow-hidden border-2 transition-all",
-                                      avatar === user.avatar && !ownedAvatars.find(a => a.assetUrl === user.avatar)
-                                        ? "border-indigo-500 ring-2 ring-indigo-500/30"
-                                        : "border-white/10 hover:border-white/30"
-                                    )}
-                                  >
-                                    <img src={user.avatar} className="w-full h-full object-cover" alt="Current" />
-                                  </button>
-                                  {ownedAvatars.map((item) => (
-                                    <button
-                                      key={item.id}
-                                      onClick={() => setAvatar(item.assetUrl)}
-                                      className={cn(
-                                        "aspect-square rounded-xl overflow-hidden border-2 transition-all relative",
-                                        avatar === item.assetUrl ? "border-indigo-500 ring-2 ring-indigo-500/30" : "border-white/10 hover:border-white/30"
-                                      )}
-                                    >
-                                      <img src={item.assetUrl} className="w-full h-full object-cover" alt={item.name} />
-                                      {avatar === item.assetUrl && (
-                                        <div className="absolute inset-0 bg-indigo-500/20 flex items-center justify-center">
-                                          <Check className="w-6 h-6 text-white drop-shadow-md" />
-                                        </div>
-                                      )}
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-                              {/* Frames */}
-                              <div className="space-y-3">
-                                <Label className="flex items-center gap-2"><LayoutTemplate className="w-4 h-4" /> Frames</Label>
-                                <div className="grid grid-cols-4 sm:grid-cols-5 gap-3">
-                                  <button
-                                    onClick={() => setFrame(undefined)}
-                                    className={cn(
-                                      "aspect-square rounded-xl border-2 transition-all flex items-center justify-center bg-white/5",
-                                      !frame ? "border-indigo-500 ring-2 ring-indigo-500/30" : "border-white/10 hover:border-white/30"
-                                    )}
-                                  >
-                                    <span className="text-xs text-muted-foreground">None</span>
-                                  </button>
-                                  {ownedFrames.map((item) => (
-                                    <button
-                                      key={item.id}
-                                      onClick={() => setFrame(item.assetUrl)}
-                                      className={cn(
-                                        "aspect-square rounded-xl border-2 transition-all relative flex items-center justify-center bg-zinc-900",
-                                        frame === item.assetUrl ? "border-indigo-500 ring-2 ring-indigo-500/30" : "border-white/10 hover:border-white/30"
-                                      )}
-                                    >
-                                      {isImageUrl(item.assetUrl) ? (
-                                        <img src={item.assetUrl} className="w-full h-full object-contain scale-90" alt={item.name} />
-                                      ) : (
-                                        <div className={cn("w-12 h-12 rounded-full", item.assetUrl)} />
-                                      )}
-                                      {frame === item.assetUrl && (
-                                        <div className="absolute inset-0 bg-indigo-500/20 flex items-center justify-center rounded-xl">
-                                          <Check className="w-6 h-6 text-white drop-shadow-md" />
-                                        </div>
-                                      )}
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-                              {/* Banners */}
-                              <div className="space-y-3">
-                                <Label className="flex items-center gap-2"><Palette className="w-4 h-4" /> Banners</Label>
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                                  {ownedBanners.map((item) => (
-                                    <button
-                                      key={item.id}
-                                      onClick={() => setBanner(item.assetUrl)}
-                                      className={cn(
-                                        "h-20 rounded-xl border-2 transition-all relative overflow-hidden",
-                                        banner === item.assetUrl ? "border-indigo-500 ring-2 ring-indigo-500/30" : "border-white/10 hover:border-white/30"
-                                      )}
-                                    >
-                                      <div 
-                                        className="absolute inset-0"
-                                        style={getBackgroundStyle(item.assetUrl)}
-                                      />
-                                      {banner === item.assetUrl && (
-                                        <div className="absolute inset-0 bg-indigo-500/20 flex items-center justify-center">
-                                          <Check className="w-6 h-6 text-white drop-shadow-md" />
-                                        </div>
-                                      )}
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
+                <>
+                  <Dialog open={isEditing} onOpenChange={setIsEditing}>
+                    <DialogTrigger asChild>
+                      <Button size="icon" variant="ghost" className="h-9 w-9 rounded-full bg-white/5 hover:bg-white/10 text-white/70 hover:text-white backdrop-blur-sm border border-white/5">
+                        <Edit2 className="w-4 h-4" />
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="bg-zinc-950 border-white/10 max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+                      <DialogHeader>
+                        <DialogTitle>Edit Profile</DialogTitle>
+                        <DialogDescription>Customize your identity and appearance.</DialogDescription>
+                      </DialogHeader>
+                      <Tabs defaultValue="identity" className="flex-1 overflow-hidden flex flex-col mt-4">
+                        <TabsList className="grid w-full grid-cols-2 bg-white/5">
+                          <TabsTrigger value="identity">Identity</TabsTrigger>
+                          <TabsTrigger value="appearance">Appearance</TabsTrigger>
+                        </TabsList>
+                        {/* IDENTITY TAB */}
+                        <TabsContent value="identity" className="flex-1 space-y-6 py-4">
+                          <div className="space-y-4">
+                            <div className="space-y-2">
+                              <Label>Display Name</Label>
+                              <Input
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                className="bg-black/20 border-white/10"
+                                placeholder="Enter your name"
+                              />
                             </div>
-                          </ScrollArea>
+                            <div className="space-y-2">
+                              <Label>Country</Label>
+                              <Select value={country} onValueChange={setCountry}>
+                                <SelectTrigger className="bg-black/20 border-white/10">
+                                  <SelectValue placeholder="Select a country" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-zinc-900 border-white/10 max-h-[300px]">
+                                  {COUNTRIES.map((c) => (
+                                    <SelectItem key={c.code} value={c.code}>
+                                      <span className="mr-2 text-lg">{c.flag}</span> {c.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Title</Label>
+                              <Select value={title || "none"} onValueChange={(val) => setTitle(val === "none" ? "" : val)}>
+                                <SelectTrigger className="bg-black/20 border-white/10">
+                                  <SelectValue placeholder="Select a title" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-zinc-900 border-white/10">
+                                  <SelectItem value="none">None</SelectItem>
+                                  {ownedTitles.map((t) => (
+                                    <SelectItem key={t.id} value={t.name}>
+                                      {t.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                        </TabsContent>
+                        {/* APPEARANCE TAB */}
+                        <TabsContent value="appearance" className="flex-1 overflow-hidden flex flex-col py-4">
+                          {showCreator ? (
+                            <AvatarCreator
+                              initialUrl={avatar}
+                              onSave={(url) => {
+                                setAvatar(url);
+                                setShowCreator(false);
+                              }}
+                              onCancel={() => setShowCreator(false)}
+                            />
+                          ) : (
+                            <ScrollArea className="flex-1 pr-4">
+                              <div className="space-y-8">
+                                {/* Avatars */}
+                                <div className="space-y-3">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="flex items-center gap-2"><UserIcon className="w-4 h-4" /> Avatars</Label>
+                                    <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => setShowCreator(true)}>
+                                      <Wand2 className="w-3 h-3" /> Create New
+                                    </Button>
+                                  </div>
+                                  <div className="grid grid-cols-4 sm:grid-cols-5 gap-3">
+                                    {/* Current/Default Option if not in owned list */}
+                                    <button
+                                      onClick={() => setAvatar(user.avatar)}
+                                      className={cn(
+                                        "aspect-square rounded-xl overflow-hidden border-2 transition-all",
+                                        avatar === user.avatar && !ownedAvatars.find(a => a.assetUrl === user.avatar)
+                                          ? "border-indigo-500 ring-2 ring-indigo-500/30"
+                                          : "border-white/10 hover:border-white/30"
+                                      )}
+                                    >
+                                      <img src={user.avatar} className="w-full h-full object-cover" alt="Current" />
+                                    </button>
+                                    {ownedAvatars.map((item) => (
+                                      <button
+                                        key={item.id}
+                                        onClick={() => setAvatar(item.assetUrl)}
+                                        className={cn(
+                                          "aspect-square rounded-xl overflow-hidden border-2 transition-all relative",
+                                          avatar === item.assetUrl ? "border-indigo-500 ring-2 ring-indigo-500/30" : "border-white/10 hover:border-white/30"
+                                        )}
+                                      >
+                                        <img src={item.assetUrl} className="w-full h-full object-cover" alt={item.name} />
+                                        {avatar === item.assetUrl && (
+                                          <div className="absolute inset-0 bg-indigo-500/20 flex items-center justify-center">
+                                            <Check className="w-6 h-6 text-white drop-shadow-md" />
+                                          </div>
+                                        )}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                                {/* Frames */}
+                                <div className="space-y-3">
+                                  <Label className="flex items-center gap-2"><LayoutTemplate className="w-4 h-4" /> Frames</Label>
+                                  <div className="grid grid-cols-4 sm:grid-cols-5 gap-3">
+                                    <button
+                                      onClick={() => setFrame("")}
+                                      className={cn(
+                                        "aspect-square rounded-xl border-2 transition-all flex items-center justify-center bg-white/5",
+                                        !frame ? "border-indigo-500 ring-2 ring-indigo-500/30" : "border-white/10 hover:border-white/30"
+                                      )}
+                                    >
+                                      <span className="text-xs text-muted-foreground">None</span>
+                                    </button>
+                                    {ownedFrames.map((item) => (
+                                      <button
+                                        key={item.id}
+                                        onClick={() => setFrame(item.assetUrl)}
+                                        className={cn(
+                                          "aspect-square rounded-xl border-2 transition-all relative flex items-center justify-center bg-zinc-900",
+                                          frame === item.assetUrl ? "border-indigo-500 ring-2 ring-indigo-500/30" : "border-white/10 hover:border-white/30"
+                                        )}
+                                      >
+                                        {isImageUrl(item.assetUrl) ? (
+                                          <img src={item.assetUrl} className="w-full h-full object-contain scale-90" alt={item.name} />
+                                        ) : (
+                                          <div className={cn("w-12 h-12 rounded-full", item.assetUrl)} />
+                                        )}
+                                        {frame === item.assetUrl && (
+                                          <div className="absolute inset-0 bg-indigo-500/20 flex items-center justify-center rounded-xl">
+                                            <Check className="w-6 h-6 text-white drop-shadow-md" />
+                                          </div>
+                                        )}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                                {/* Banners */}
+                                <div className="space-y-3">
+                                  <Label className="flex items-center gap-2"><Palette className="w-4 h-4" /> Banners</Label>
+                                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                    {ownedBanners.map((item) => (
+                                      <button
+                                        key={item.id}
+                                        onClick={() => setBanner(item.assetUrl)}
+                                        className={cn(
+                                          "h-20 rounded-xl border-2 transition-all relative overflow-hidden",
+                                          banner === item.assetUrl ? "border-indigo-500 ring-2 ring-indigo-500/30" : "border-white/10 hover:border-white/30"
+                                        )}
+                                      >
+                                        <div
+                                          className="absolute inset-0"
+                                          style={getBackgroundStyle(item.assetUrl)}
+                                        />
+                                        {banner === item.assetUrl && (
+                                          <div className="absolute inset-0 bg-indigo-500/20 flex items-center justify-center">
+                                            <Check className="w-6 h-6 text-white drop-shadow-md" />
+                                          </div>
+                                        )}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            </ScrollArea>
+                          )}
+                        </TabsContent>
+                      </Tabs>
+                      <DialogFooter className="mt-4">
+                        {!showCreator && (
+                          <>
+                            <Button variant="ghost" onClick={() => setIsEditing(false)}>Cancel</Button>
+                            <Button onClick={handleSave} disabled={isSaving}>
+                              {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Changes'}
+                            </Button>
+                          </>
                         )}
-                      </TabsContent>
-                    </Tabs>
-                    <DialogFooter className="mt-4">
-                      {!showCreator && (
-                        <>
-                          <Button variant="ghost" onClick={() => setIsEditing(false)}>Cancel</Button>
-                          <Button onClick={handleSave} disabled={isSaving}>
-                            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Changes'}
-                          </Button>
-                        </>
-                      )}
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                  {onLogout && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-9 w-9 rounded-full bg-white/5 hover:bg-red-500/10 text-white/70 hover:text-red-400 backdrop-blur-sm border border-white/5"
+                      onClick={onLogout}
+                      title="Sign Out"
+                    >
+                      <LogOut className="w-4 h-4" />
+                    </Button>
+                  )}
+                </>
               ) : (
                 // Public Profile Actions
                 <>
                   {!isFriend ? (
-                    <Button 
-                      size="sm" 
+                    <Button
+                      size="sm"
                       className="bg-indigo-600 hover:bg-indigo-500 text-white gap-2"
                       onClick={handleFriendAction}
                       disabled={isAddingFriend}
@@ -469,7 +484,7 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button 
+                  <button
                     onClick={() => {
                       navigator.clipboard.writeText(user.id);
                       toast.success("User ID copied to clipboard!");
@@ -498,7 +513,7 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
               <span>{progressPercent}%</span>
             </div>
             <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-              <div 
+              <div
                 className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-1000"
                 style={{ width: `${progressPercent}%` }}
               />
@@ -521,7 +536,7 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
                 <DialogDescription>Design your unique digital identity.</DialogDescription>
             </DialogHeader>
             <div className="flex-1 min-h-0 overflow-hidden">
-                <AvatarCreator 
+                <AvatarCreator
                     initialUrl={user.avatar}
                     onSave={handleQuickAvatarSave}
                     onCancel={() => setShowAvatarDialog(false)}
@@ -540,36 +555,36 @@ export function StatGrid({ user }: StatGridProps) {
   const stats = user.stats || { wins: 0, losses: 0, matches: 0 };
   const winRate = stats.matches > 0 ? Math.round((stats.wins / stats.matches) * 100) : 0;
   const items = [
-    { 
-      label: 'Win Rate', 
-      value: `${winRate}%`, 
+    {
+      label: 'Win Rate',
+      value: `${winRate}%`,
       subtext: `${stats.wins}W - ${stats.losses}L`,
       icon: Trophy,
       color: 'text-yellow-400',
       bg: 'bg-yellow-400/10',
       border: 'border-yellow-400/20'
     },
-    { 
-      label: 'Total Matches', 
-      value: stats.matches, 
+    {
+      label: 'Total Matches',
+      value: stats.matches,
       subtext: 'Arena Veteran',
       icon: Swords,
       color: 'text-indigo-400',
       bg: 'bg-indigo-400/10',
       border: 'border-indigo-400/20'
     },
-    { 
-      label: 'Login Streak', 
-      value: user.loginStreak || 0, 
+    {
+      label: 'Login Streak',
+      value: user.loginStreak || 0,
       subtext: 'Daily Active',
       icon: Flame,
       color: 'text-orange-400',
       bg: 'bg-orange-400/10',
       border: 'border-orange-400/20'
     },
-    { 
-      label: 'Total XP', 
-      value: (user.xp || 0).toLocaleString(), 
+    {
+      label: 'Total XP',
+      value: (user.xp || 0).toLocaleString(),
       subtext: 'Lifetime Points',
       icon: Target,
       color: 'text-emerald-400',
@@ -640,7 +655,7 @@ export function ActivityHeatmap({ activityMap = {} }: ActivityHeatmapProps) {
               return (
                 <Tooltip key={dateStr}>
                   <TooltipTrigger asChild>
-                    <div 
+                    <div
                       className={cn(
                         "w-3 h-3 md:w-4 md:h-4 rounded-sm transition-colors hover:ring-1 hover:ring-white/50",
                         getColor(count)
@@ -778,14 +793,14 @@ export function AchievementsGrid({ userAchievements }: AchievementsGridProps) {
                       transition={{ delay: 0.1 + (i * 0.05) }}
                       className={cn(
                         "aspect-square rounded-xl flex flex-col items-center justify-center p-3 text-center border transition-all duration-300 group cursor-default",
-                        isUnlocked 
-                          ? "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20" 
+                        isUnlocked
+                          ? "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"
                           : "bg-black/20 border-white/5 opacity-50 grayscale"
                       )}
                     >
                       <div className={cn(
                         "w-10 h-10 rounded-full flex items-center justify-center mb-2 transition-transform group-hover:scale-110",
-                        isUnlocked 
+                        isUnlocked
                           ? achievement.rarity === 'legendary' ? "bg-yellow-500/20 text-yellow-400 shadow-[0_0_15px_rgba(234,179,8,0.3)]" :
                             achievement.rarity === 'epic' ? "bg-purple-500/20 text-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.3)]" :
                             achievement.rarity === 'rare' ? "bg-blue-500/20 text-blue-400" :
@@ -829,9 +844,9 @@ export function MatchHistoryList({ history }: MatchHistoryListProps) {
       <CardContent className="space-y-2">
         {history.length > 0 ? (
           history.slice(0, 8).map((match, i) => (
-            <Link 
+            <Link
               // CRITICAL FIX: Use composite key to prevent collisions if matchId is duplicated in mock data
-              key={`${match.matchId}-${i}`} 
+              key={`${match.matchId}-${i}`}
               to={`/results/${match.matchId}`}
               className="block"
             >
@@ -951,7 +966,7 @@ export function FriendsList({ friends, onAddFriend }: FriendsListProps) {
             <div className="py-4 space-y-4">
               <div className="relative">
                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input 
+                <Input
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search users..."
@@ -974,12 +989,12 @@ export function FriendsList({ friends, onAddFriend }: FriendsListProps) {
                           </Avatar>
                           <div>
                             <div className="text-sm font-medium text-white">{user.name}</div>
-                            <div className="text-xs text-muted-foreground">Lvl {user.level} �� {getFlagEmoji(user.country)}</div>
+                            <div className="text-xs text-muted-foreground">Lvl {user.level} • {getFlagEmoji(user.country)}</div>
                           </div>
                         </div>
-                        <Button 
-                          size="sm" 
-                          variant="ghost" 
+                        <Button
+                          size="sm"
+                          variant="ghost"
                           onClick={() => user.id && handleAdd(user.id)}
                           disabled={isAdding}
                         >
@@ -1017,9 +1032,9 @@ export function FriendsList({ friends, onAddFriend }: FriendsListProps) {
                   </div>
                 </div>
               </Link>
-              <Button 
-                size="icon" 
-                variant="ghost" 
+              <Button
+                size="icon"
+                variant="ghost"
                 className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-indigo-500/20 hover:text-indigo-400"
                 title="Challenge Friend"
                 onClick={() => setChallengeFriend({ id: friend.id, name: friend.name })}
