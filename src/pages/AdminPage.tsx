@@ -25,6 +25,7 @@ import { useCategories } from '@/hooks/use-categories';
 import { useShop } from '@/hooks/use-shop';
 import { CATEGORY_ICONS, ICON_KEYS } from '@/lib/icons';
 import { cn } from '@/lib/utils';
+import { CategoryContentManager } from '@/components/admin/CategoryContentManager';
 const questionSchema = z.object({
   text: z.string().min(5, "Question text must be at least 5 characters"),
   categoryId: z.string().min(1, "Category is required"),
@@ -155,6 +156,7 @@ export function AdminPage() {
   // Category Edit State
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [isUpdatingCategory, setIsUpdatingCategory] = useState(false);
+  const [managingCategory, setManagingCategory] = useState<Category | null>(null);
   // Shop Edit State
   const [editingShopItem, setEditingShopItem] = useState<Partial<ShopItem> | null>(null);
   const [isSavingShopItem, setIsSavingShopItem] = useState(false);
@@ -1038,6 +1040,15 @@ export function AdminPage() {
                                  >
                                    {togglingFeaturedId === cat.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Star className={`w-4 h-4 ${cat.isFeatured ? "fill-current" : ""}`} />}
                                  </Button>
+                                 <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => setManagingCategory(cat)}
+                                    className="text-muted-foreground hover:text-indigo-400 hover:bg-indigo-500/10"
+                                    title="Manage Content"
+                                 >
+                                    <FileText className="w-4 h-4" />
+                                 </Button>
                                  {cat.id.startsWith('cat_') && (
                                    <>
                                      <Button
@@ -1162,7 +1173,7 @@ export function AdminPage() {
                                         {report.reason.replace('_', ' ')}
                                       </Badge>
                                       <span className="text-xs text-muted-foreground">
-                                        Reported by {report.reporterName} • {new Date(report.timestamp).toLocaleDateString()}
+                                        Reported by {report.reporterName} �� {new Date(report.timestamp).toLocaleDateString()}
                                       </span>
                                     </div>
                                     <p className="font-medium text-white text-sm">{report.questionText}</p>
@@ -1575,6 +1586,14 @@ export function AdminPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        {/* Category Content Manager Dialog */}
+        {managingCategory && (
+            <CategoryContentManager
+                category={managingCategory}
+                isOpen={!!managingCategory}
+                onClose={() => setManagingCategory(null)}
+            />
+        )}
       </div>
     </AppLayout>
   );

@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import type { Env } from './core-utils';
 import { UserEntity } from "./entities";
-import { MatchEntity, QueueEntity, QuestionEntity, CategoryEntity, ReportEntity, CodeRegistryEntity, ConfigEntity, ShopEntity } from "./game-entities";
+import { MatchEntity, QueueEntity, QuestionEntity, CategoryEntity, ReportEntity, CodeRegistryEntity, ConfigEntity, ShopEntity, getCategoryQuestionIndex } from "./game-entities";
 import { ok, bad, notFound, isStr, Index } from './core-utils';
 import type { FinishMatchResponse, MatchHistoryItem, UpdateUserRequest, PurchaseItemRequest, EquipItemRequest, UnequipItemRequest, RegisterRequest, LoginEmailRequest, LoginRequest, User, RewardBreakdown, ShopItem, UserAchievement, Question, BulkImportRequest, Category, ClaimRewardRequest, UpgradeSeasonPassRequest, CreateReportRequest, Report, JoinMatchRequest, SystemConfig, SystemStats, ChallengeRequest, Notification, ClearNotificationsRequest } from "@shared/types";
 import { MOCK_CATEGORIES, MOCK_QUESTIONS } from "@shared/mock-data";
@@ -1097,8 +1097,18 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     const limit = limitParam ? Math.min(1000, Math.max(1, parseInt(limitParam))) : 1000;
     const search = c.req.query('search')?.toLowerCase();
     const categoryId = c.req.query('categoryId');
-    // Fetch dynamic questions
-    const { items: dynamicQuestions } = await QuestionEntity.list(c.env, null, limit);
+    let dynamicQuestions: Question[] = [];
+    if (categoryId) {
+        // Optimized fetch for specific category
+        const catIdx = getCategoryQuestionIndex(c.env, categoryId);
+        const { items: ids } = await catIdx.page(null, limit);
+        // Fetch entities in parallel
+        dynamicQuestions = await Promise.all(ids.map(id => new QuestionEntity(c.env, id).getState()));
+    } else {
+        // Global fetch
+        const { items } = await QuestionEntity.list(c.env, null, limit);
+        dynamicQuestions = items;
+    }
     // Merge with Mocks (Dynamic overrides Mock)
     const questionMap = new Map<string, Question>();
     MOCK_QUESTIONS.forEach(q => questionMap.set(q.id, q));
@@ -1225,9 +1235,9 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     const { items } = await UserEntity.list(c.env, null, 100);
     let filtered = items.map(sanitizeUser);
     if (search) {
-      filtered = filtered.filter(u =>
-        u.name.toLowerCase().includes(search) ||
-        u.id.toLowerCase().includes(search) ||
+      filtered = filtered.filter(u => 
+        u.name.toLowerCase().includes(search) || 
+        u.id.toLowerCase().includes(search) || 
         (u.email && u.email.toLowerCase().includes(search))
       );
     }
