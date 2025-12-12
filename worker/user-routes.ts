@@ -535,13 +535,18 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
   app.get('/api/categories', async (c) => {
     let dynamicCategories: Category[] = [];
     try {
-      const { items } = await CategoryEntity.list(c.env, null, 100);
+      const { items } = await CategoryEntity.list(c.env, null, 1000);
       dynamicCategories = items;
     } catch (e) {
       console.error("Failed to fetch dynamic categories", e);
     }
-    const allCategories = [...MOCK_CATEGORIES, ...dynamicCategories];
-    return ok(c, allCategories);
+    // Merge logic: Dynamic overrides Mock
+    const categoryMap = new Map<string, Category>();
+    // 1. Add Mocks
+    MOCK_CATEGORIES.forEach(cat => categoryMap.set(cat.id, cat));
+    // 2. Add/Override with Dynamic
+    dynamicCategories.forEach(cat => categoryMap.set(cat.id, cat));
+    return ok(c, Array.from(categoryMap.values()));
   });
   // --- MATCHMAKING & GAME ---
   app.post('/api/queue/join', async (c) => {
@@ -970,9 +975,24 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       return c.json({ success: false, error: 'Unauthorized' }, 403);
     }
     const limitParam = c.req.query('limit');
-    const limit = limitParam ? Math.min(1000, Math.max(1, parseInt(limitParam))) : 50;
-    const { items } = await QuestionEntity.list(c.env, null, limit);
-    return ok(c, items);
+    const limit = limitParam ? Math.min(1000, Math.max(1, parseInt(limitParam))) : 1000;
+    const search = c.req.query('search')?.toLowerCase();
+    // Fetch dynamic questions
+    const { items: dynamicQuestions } = await QuestionEntity.list(c.env, null, limit);
+    // Merge with Mocks (Dynamic overrides Mock)
+    const questionMap = new Map<string, Question>();
+    MOCK_QUESTIONS.forEach(q => questionMap.set(q.id, q));
+    dynamicQuestions.forEach(q => questionMap.set(q.id, q));
+    let allQuestions = Array.from(questionMap.values());
+    // Filter
+    if (search) {
+        allQuestions = allQuestions.filter(q => 
+            q.text.toLowerCase().includes(search) || 
+            q.id.toLowerCase().includes(search) ||
+            q.categoryId.toLowerCase().includes(search)
+        );
+    }
+    return ok(c, allQuestions.slice(0, limit));
   });
   app.delete('/api/admin/questions/:id', async (c) => {
     const userId = c.req.query('userId');
@@ -982,8 +1002,8 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       return c.json({ success: false, error: 'Unauthorized' }, 403);
     }
     const existed = await QuestionEntity.delete(c.env, questionId);
-    if (!existed) return notFound(c, 'Question not found');
-    return ok(c, { success: true });
+    // Return success even if it didn't exist as a dynamic entity (effectively resetting/deleting)
+    return ok(c, { success: true, wasOverridden: existed });
   });
   app.delete('/api/admin/categories/:id', async (c) => {
     const userId = c.req.query('userId');
@@ -992,12 +1012,8 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     if (!await isAdmin(c.env, userId)) {
       return c.json({ success: false, error: 'Unauthorized' }, 403);
     }
-    if (!categoryId.startsWith('cat_')) {
-        return bad(c, 'Cannot delete system categories');
-    }
     const existed = await CategoryEntity.delete(c.env, categoryId);
-    if (!existed) return notFound(c, 'Category not found');
-    return ok(c, { success: true });
+    return ok(c, { success: true, wasOverridden: existed });
   });
   app.put('/api/admin/categories/:id', async (c) => {
     const userId = c.req.query('userId');
@@ -1008,11 +1024,17 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       return c.json({ success: false, error: 'Unauthorized' }, 403);
     }
     const categoryEntity = new CategoryEntity(c.env, categoryId);
-    if (!await categoryEntity.exists()) return notFound(c, 'Category not found');
+    const exists = await categoryEntity.exists();
     await categoryEntity.mutate(cat => ({
       ...cat,
-      ...updates
+      ...updates,
+      id: categoryId // Ensure ID is set
     }));
+    if (!exists) {
+        // If it was a new override, ensure it's indexed
+        const idx = new Index<string>(c.env, CategoryEntity.indexName);
+        await idx.add(categoryId);
+    }
     return ok(c, await categoryEntity.getState());
   });
   app.post('/api/reports', async (c) => {
@@ -1080,9 +1102,9 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     const { items } = await UserEntity.list(c.env, null, 100);
     let filtered = items.map(sanitizeUser);
     if (search) {
-      filtered = filtered.filter(u =>
-        u.name.toLowerCase().includes(search) ||
-        u.id.toLowerCase().includes(search) ||
+      filtered = filtered.filter(u => 
+        u.name.toLowerCase().includes(search) || 
+        u.id.toLowerCase().includes(search) || 
         (u.email && u.email.toLowerCase().includes(search))
       );
     }

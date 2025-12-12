@@ -286,7 +286,7 @@ export class MatchEntity extends IndexedEntity<MatchState> {
             else if (rank === 3) results[uid] = { displayTitle: "3rd Daily Quiz Challenge" };
           }
         }
-      }
+      } 
       // 2. Ranked Mode Ranks
       else {
         // Overall Rank (Elo)
@@ -346,51 +346,53 @@ export class MatchEntity extends IndexedEntity<MatchState> {
     return "th";
   }
   async startMatch(userIds: string[], categoryId: string, mode: 'ranked' | 'daily' = 'ranked', isPrivate: boolean = false): Promise<MatchState> {
-    let dynamicQuestions: Question[] = [];
+    let selectedQuestions: Question[] = [];
+    let targetCategory = categoryId;
     try {
       if (mode === 'daily') {
+        targetCategory = 'daily';
+        // 1. Get all dynamic IDs
         const globalIdx = new Index<string>(this.env, QuestionEntity.indexName);
-        const { items: allIds } = await globalIdx.page(null, 2000);
-        if (allIds.length > 0) {
-            const today = new Date().toISOString().split('T')[0];
-            const shuffledIds = seededShuffle(allIds, today);
-            const selectedIds = shuffledIds.slice(0, 20);
-            const entities = await Promise.all(selectedIds.map(id => new QuestionEntity(this.env, id).getState()));
-            dynamicQuestions = entities.filter(q => q.id && q.text);
-        }
+        const { items: dynamicIds } = await globalIdx.page(null, 2000);
+        // 2. Get all Mock IDs
+        const mockIds = MOCK_QUESTIONS.map(q => q.id);
+        // 3. Merge IDs
+        const allIds = Array.from(new Set([...mockIds, ...dynamicIds]));
+        // 4. Seeded Shuffle
+        const today = new Date().toISOString().split('T')[0];
+        const shuffledIds = seededShuffle(allIds, today);
+        const selectedIds = shuffledIds.slice(0, 10); // Daily is 10 questions
+        // 5. Resolve
+        selectedQuestions = await this.resolveQuestions(selectedIds);
       } else {
+        // Ranked / Category
+        // 1. Mock IDs for category
+        const mockIds = MOCK_QUESTIONS.filter(q => q.categoryId === categoryId).map(q => q.id);
+        // 2. Dynamic IDs for category
         const catIdx = getCategoryQuestionIndex(this.env, categoryId);
-        const { items: ids } = await catIdx.page(null, 1000);
-        if (ids.length > 0) {
-            const shuffledIds = shuffle(ids);
-            const selectedIds = shuffledIds.slice(0, 10);
-            const entities = await Promise.all(selectedIds.map(id => new QuestionEntity(this.env, id).getState()));
-            dynamicQuestions = entities.filter(q => q.id && q.text);
+        const { items: dynamicIds } = await catIdx.page(null, 1000);
+        // 3. Merge
+        const allIds = Array.from(new Set([...mockIds, ...dynamicIds]));
+        if (allIds.length === 0) {
+             console.warn(`No questions for ${categoryId}, fallback to all`);
+             // Fallback to all mocks if category empty
+             const allMockIds = MOCK_QUESTIONS.map(q => q.id);
+             const shuffled = shuffle(allMockIds).slice(0, 5);
+             selectedQuestions = await this.resolveQuestions(shuffled);
+        } else {
+             // 4. Shuffle
+             const selectedIds = shuffle(allIds).slice(0, 5);
+             // 5. Resolve
+             selectedQuestions = await this.resolveQuestions(selectedIds);
         }
       }
     } catch (e) {
-      console.error("Failed to fetch dynamic questions", e);
+      console.error("Failed to fetch questions", e);
+      // Ultimate fallback
+      selectedQuestions = MOCK_QUESTIONS.slice(0, 5);
     }
-    const allQuestions = [...MOCK_QUESTIONS, ...dynamicQuestions];
-    let selectedQuestions: Question[] = [];
-    let targetCategory = categoryId;
-    if (mode === 'daily') {
-      const today = new Date().toISOString().split('T')[0];
-      const pool = allQuestions;
-      const shuffled = seededShuffle(pool, today);
-      selectedQuestions = shuffled.slice(0, 10);
-      targetCategory = 'daily';
-    } else {
-      const categoryQuestions = allQuestions.filter(q => q.categoryId === targetCategory);
-      let pool = categoryQuestions;
-      if (pool.length === 0) {
-        console.warn(`No questions found for category ${targetCategory}, falling back to full pool`);
-        pool = allQuestions;
-      }
-      selectedQuestions = shuffle(pool).slice(0, 5);
-      if (selectedQuestions.length === 0) {
+    if (selectedQuestions.length === 0) {
          console.error("CRITICAL: No questions available for match");
-      }
     }
     // Calculate Ranks & Titles
     const rankInfo = await this.calculateRanks(this.env, userIds, categoryId, mode);
@@ -461,6 +463,19 @@ export class MatchEntity extends IndexedEntity<MatchState> {
     };
     await this.save(newState);
     return newState;
+  }
+  // Helper to resolve IDs to Question objects (Dynamic > Mock)
+  private async resolveQuestions(ids: string[]): Promise<Question[]> {
+      const results = await Promise.all(ids.map(async (id) => {
+          // Try dynamic
+          const entity = new QuestionEntity(this.env, id);
+          if (await entity.exists()) {
+              return await entity.getState();
+          }
+          // Try mock
+          return MOCK_QUESTIONS.find(q => q.id === id);
+      }));
+      return results.filter((q): q is Question => !!q && !!q.text);
   }
   async joinMatch(userId: string): Promise<MatchState> {
     const state = await this.getState();
@@ -594,7 +609,7 @@ export class MatchEntity extends IndexedEntity<MatchState> {
     }));
     const updatedState = await this.getState();
     const currentQId = updatedState.questions[updatedState.currentQuestionIndex].id;
-    const allAnswered = Object.values(updatedState.players).every(p =>
+    const allAnswered = Object.values(updatedState.players).every(p => 
         p.answers.some(a => a.questionId === currentQId)
     );
     if (allAnswered) {
