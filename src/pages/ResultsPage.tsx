@@ -140,27 +140,39 @@ export function ResultsPage() {
     loadData();
   }, [matchId, user, storeResult, storeQuestions]);
   const triggerConfetti = () => {
-    const duration = 3000;
-    const end = Date.now() + duration;
-    (function frame() {
+    const count = 200;
+    const defaults = {
+      origin: { y: 0.7 }
+    };
+    function fire(particleRatio: number, opts: any) {
       confetti({
-        particleCount: 3,
-        angle: 60,
-        spread: 55,
-        origin: { x: 0 },
-        colors: ['#6366f1', '#8b5cf6', '#ec4899']
+        ...defaults,
+        ...opts,
+        particleCount: Math.floor(count * particleRatio)
       });
-      confetti({
-        particleCount: 3,
-        angle: 120,
-        spread: 55,
-        origin: { x: 1 },
-        colors: ['#6366f1', '#8b5cf6', '#ec4899']
-      });
-      if (Date.now() < end) {
-        requestAnimationFrame(frame);
-      }
-    }());
+    }
+    fire(0.25, {
+      spread: 26,
+      startVelocity: 55,
+    });
+    fire(0.2, {
+      spread: 60,
+    });
+    fire(0.35, {
+      spread: 100,
+      decay: 0.91,
+      scalar: 0.8
+    });
+    fire(0.1, {
+      spread: 120,
+      startVelocity: 25,
+      decay: 0.92,
+      scalar: 1.2
+    });
+    fire(0.1, {
+      spread: 120,
+      startVelocity: 45,
+    });
   };
   const triggerLevelUpConfetti = () => {
       confetti({
@@ -328,32 +340,32 @@ export function ResultsPage() {
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
-                  <XAxis
-                    dataKey="question"
-                    stroke="#ffffff50"
+                  <XAxis 
+                    dataKey="question" 
+                    stroke="#ffffff50" 
                     tick={{fill: '#ffffff50', fontSize: 12}}
                     tickLine={false}
                     axisLine={false}
                   />
-                  <YAxis
-                    stroke="#ffffff50"
+                  <YAxis 
+                    stroke="#ffffff50" 
                     tick={{fill: '#ffffff50', fontSize: 12}}
                     tickLine={false}
                     axisLine={false}
                     unit="s"
                   />
-                  <Tooltip
+                  <Tooltip 
                     contentStyle={{ backgroundColor: '#18181b', border: '1px solid #ffffff20', borderRadius: '8px' }}
                     itemStyle={{ color: '#fff' }}
                     labelStyle={{ color: '#a1a1aa' }}
                   />
-                  <Area
-                    type="monotone"
-                    dataKey="time"
-                    stroke="#818cf8"
-                    strokeWidth={3}
-                    fillOpacity={1}
-                    fill="url(#colorTime)"
+                  <Area 
+                    type="monotone" 
+                    dataKey="time" 
+                    stroke="#818cf8" 
+                    strokeWidth={3} 
+                    fillOpacity={1} 
+                    fill="url(#colorTime)" 
                   />
                 </AreaChart>
               </ResponsiveContainer>

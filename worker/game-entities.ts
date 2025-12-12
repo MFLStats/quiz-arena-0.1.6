@@ -290,7 +290,7 @@ export class MatchEntity extends IndexedEntity<MatchState> {
             else if (rank === 3) results[uid] = { displayTitle: "3rd Daily Quiz Challenge" };
           }
         }
-      } 
+      }
       // 2. Ranked Mode Ranks
       else {
         // Overall Rank (Elo)
@@ -322,19 +322,18 @@ export class MatchEntity extends IndexedEntity<MatchState> {
         for (const uid of userIds) {
           let displayTitle: string | undefined;
           let categoryRank: number | undefined;
-          // Check Overall Rank
-          const overallRank = sortedByElo.findIndex(u => u.id === uid) + 1;
-          if (overallRank === 1) displayTitle = "Gold";
-          else if (overallRank === 2) displayTitle = "Silver";
-          else if (overallRank === 3) displayTitle = "Bronze";
-          // Check Category Rank
+          // Check Category Rank FIRST
           const catRankIndex = sortedByCategory.findIndex(u => u.id === uid);
           if (catRankIndex !== -1) {
             categoryRank = catRankIndex + 1;
-            // If no overall title, use category rank title
-            if (!displayTitle) {
-               displayTitle = `${categoryRank}${this.getOrdinalSuffix(categoryRank)} in ${categoryName}`;
-            }
+            displayTitle = `${categoryRank}${this.getOrdinalSuffix(categoryRank)} in ${categoryName}`;
+          }
+          // If no category title (e.g. not ranked in category yet), try overall
+          if (!displayTitle) {
+              const overallRank = sortedByElo.findIndex(u => u.id === uid) + 1;
+              if (overallRank === 1) displayTitle = "Gold";
+              else if (overallRank === 2) displayTitle = "Silver";
+              else if (overallRank === 3) displayTitle = "Bronze";
           }
           results[uid] = { displayTitle, categoryRank };
         }
@@ -435,7 +434,7 @@ export class MatchEntity extends IndexedEntity<MatchState> {
       // Override title if dynamic rank title exists
       const dynamicInfo = rankInfo[uid];
       if (dynamicInfo?.displayTitle) {
-        // If it's a special rank title (Gold/Silver/Bronze/Daily), use it as displayTitle
+        // If it's a special rank title (Gold/Silver/Bronze/Daily/Category), use it as displayTitle
         // The frontend will prioritize displayTitle over title
       }
       players[uid] = {

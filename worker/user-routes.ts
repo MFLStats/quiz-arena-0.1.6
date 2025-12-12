@@ -239,19 +239,18 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       const userData: any = await userResponse.json();
       const email = userData.email;
       const name = userData.name || email.split('@')[0];
-      const picture = userData.picture;
+      // const picture = userData.picture; // Ignored for privacy/consistency
       const userId = await generateUserId(email);
       const userEntity = new UserEntity(c.env, userId);
       if (await userEntity.exists()) {
         await userEntity.processLogin();
-        // Update avatar if it's the default one or missing
+        // Update provider link only, preserve existing avatar
         await userEntity.mutate(u => ({
             ...u,
-            avatar: u.avatar && u.avatar.includes('dicebear') ? picture : u.avatar,
-            provider: 'google' // Link provider
+            provider: 'google'
         }));
       } else {
-        // Create new user
+        // Create new user with DiceBear avatar
         const newUser: User = {
             id: userId,
             name,
@@ -265,7 +264,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
             inventory: [],
             history: [],
             stats: { wins: 0, losses: 0, matches: 0 },
-            avatar: picture || `https://api.dicebear.com/9.x/avataaars/svg?seed=${userId}`,
+            avatar: `https://api.dicebear.com/9.x/avataaars/svg?seed=${userId}`,
             xp: 0,
             level: 1,
             loginStreak: 1,
@@ -364,7 +363,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
             // Check if #1
             // We scan top 1000 users to check rank.
             const { items: allUsers } = await UserEntity.list(c.env, null, 1000);
-            const isNumberOne = !allUsers.some(u =>
+            const isNumberOne = !allUsers.some(u => 
                 u.id !== user.id && (u.categoryElo?.[bestCatId] || 1200) > maxElo
             );
             if (isNumberOne) {
@@ -1218,8 +1217,8 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
         if (categoryId) {
             allQuestions = allQuestions.filter(q => q.categoryId === categoryId);
         }
-        const filtered = allQuestions.filter(q =>
-            q.text.toLowerCase().includes(search) ||
+        const filtered = allQuestions.filter(q => 
+            q.text.toLowerCase().includes(search) || 
             q.id.toLowerCase().includes(search) ||
             q.categoryId.toLowerCase().includes(search)
         );
@@ -1243,8 +1242,8 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     if (!cursor) {
         const questionMap = new Map<string, Question>();
         // Add relevant mocks
-        const relevantMocks = categoryId
-            ? MOCK_QUESTIONS.filter(q => q.categoryId === categoryId)
+        const relevantMocks = categoryId 
+            ? MOCK_QUESTIONS.filter(q => q.categoryId === categoryId) 
             : MOCK_QUESTIONS;
         relevantMocks.forEach(q => questionMap.set(q.id, q));
         // Add/Override with dynamic (dynamic takes precedence)
@@ -1365,8 +1364,8 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       // Search mode (scan larger batch, no cursor support for simplicity in this phase)
       const { items } = await UserEntity.list(c.env, null, 1000);
       let filtered = items.map(sanitizeUser);
-      filtered = filtered.filter(u =>
-        u.name.toLowerCase().includes(search) ||
+      filtered = filtered.filter(u => 
+        u.name.toLowerCase().includes(search) || 
         u.id.toLowerCase().includes(search) ||
         (u.email && u.email.toLowerCase().includes(search))
       );
