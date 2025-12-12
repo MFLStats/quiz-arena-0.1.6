@@ -1,8 +1,9 @@
+import type { BattlePassSeason } from './types';
 export const COUNTRIES = [
   { code: 'US', name: 'United States', flag: '🇺🇸' },
   { code: 'GB', name: 'United Kingdom', flag: '🇬🇧' },
   { code: 'CA', name: 'Canada', flag: '🇨🇦' },
-  { code: 'AU', name: 'Australia', flag: '��🇺' },
+  { code: 'AU', name: 'Australia', flag: '🇦🇺' },
   { code: 'DE', name: 'Germany', flag: '🇩🇪' },
   { code: 'FR', name: 'France', flag: '🇫🇷' },
   { code: 'JP', name: 'Japan', flag: '🇯🇵' },
@@ -111,8 +112,6 @@ export const COUNTRIES = [
 export const AVATAR_STYLES = [
   { id: 'avataaars', name: 'Classic' },
 ];
-// Split tops into Short (Type A) and Long (Type B) for better UX
-// Updated to match DiceBear v9 schema
 export const AVATAR_TOPS_SHORT = [
   'dreads01', 'dreads02', 'frizzle', 'shaggyMullet', 'shortCurly',
   'shortFlat', 'shortRound', 'shortWaved', 'sides', 'theCaesar',
@@ -124,9 +123,7 @@ export const AVATAR_TOPS_LONG = [
   'straight02', 'straightStrand', 'hijab'
 ];
 export const AVATAR_OPTIONS = {
-  // Combined list for validation
   top: [...new Set([...AVATAR_TOPS_SHORT, ...AVATAR_TOPS_LONG])],
-  // Removed 'none' as it is invalid in v9 API (use probability=0 instead)
   accessories: [
     'eyepatch', 'kurt', 'prescription01', 'prescription02', 'round',
     'sunglasses', 'wayfarers'
@@ -135,7 +132,6 @@ export const AVATAR_OPTIONS = {
     'auburn', 'black', 'blonde', 'blondeGolden', 'brown', 'brownDark',
     'pastelPink', 'platinum', 'red', 'silverGray'
   ],
-  // Removed 'none'
   facialHair: [
     'beardLight', 'beardMajestic', 'beardMedium', 'moustacheFancy',
     'moustacheMagnum'
@@ -166,52 +162,71 @@ export const AVATAR_OPTIONS = {
     'tanned', 'yellow', 'pale', 'light', 'brown', 'darkBrown', 'black'
   ]
 };
-// Season Pass Configuration
+// Legacy constants for backward compatibility (will be replaced by dynamic system)
 export const SEASON_NAME = "Holiday Season";
-export const SEASON_END_DATE = "2025-12-31"; // Using 2025 to ensure it's active for demo purposes
-export const SEASON_COST = 950;
-export const SEASON_LEVELS = 30;
-export const SEASON_REWARDS_CONFIG = Array.from({ length: SEASON_LEVELS }, (_, i) => {
-  const level = i + 1;
-  const isMilestone = level % 5 === 0;
-  // Default generation logic
-  let freeReward = {
-      type: isMilestone ? 'box' : (level % 2 !== 0 ? 'coins' : 'none'),
-      amount: isMilestone ? 1 : (level % 2 !== 0 ? 50 : 0),
-      label: isMilestone ? 'Mystery Box' : (level % 2 !== 0 ? '50 Coins' : ''),
-      itemId: isMilestone ? 'box_common' : undefined
-  };
-  let premiumReward = {
-      type: isMilestone ? (level === 30 ? 'title' : 'box') : 'coins',
-      amount: isMilestone ? 1 : 100,
-      label: level === 30 ? 'Legendary Title' : (isMilestone ? 'Epic Box' : '100 Coins'),
-      iconName: level === 30 ? 'Crown' : (isMilestone ? 'Box' : 'Coins'),
-      itemId: level === 30 ? 'title_legendary' : (isMilestone ? 'box_rare' : undefined)
-  };
-  // Overrides for Holiday Season
-  if (level === 5) {
-      premiumReward = { type: 'avatar', amount: 1, label: 'Reindeer Avatar', iconName: 'User', itemId: 'av_reindeer' };
-  }
-  if (level === 10) {
-      // Keep free frame
-      freeReward = { type: 'frame', amount: 1, label: 'Holiday Frame', itemId: 'fr_holiday' };
-      premiumReward = { type: 'avatar', amount: 1, label: 'Gingerbread Avatar', iconName: 'User', itemId: 'av_gingerbread' };
-  }
-  if (level === 15) {
-      premiumReward = { type: 'banner', amount: 1, label: 'Winter Banner', iconName: 'Image', itemId: 'bn_winter' };
-  }
-  if (level === 20) {
-      premiumReward = { type: 'avatar', amount: 1, label: 'Snowman Avatar', iconName: 'User', itemId: 'av_snowman_scarf' };
-  }
-  if (level === 25) {
-       premiumReward = { type: 'title', amount: 1, label: 'Santa\'s Helper', iconName: 'Crown', itemId: 'title_santa' };
-  }
-  if (level === 30) {
-      premiumReward = { type: 'avatar', amount: 1, label: 'Santa Avatar', iconName: 'User', itemId: 'av_santa' };
-  }
-  return {
-    level,
-    free: freeReward,
-    premium: premiumReward
-  };
-});
+export const SEASON_END_DATE = "2025-12-31";
+export const SEASON_COST = 15000;
+export const SEASON_LEVELS = 50;
+export const SEASON_REWARDS_CONFIG = []; // Deprecated, use dynamic data
+// --- CHRISTMAS BATTLE PASS SEED ---
+export const CHRISTMAS_BATTLE_PASS_SEED: BattlePassSeason = {
+  id: 'season_christmas_2025',
+  name: 'Christmas Battle Pass',
+  description: 'Celebrate the holidays with exclusive festive rewards!',
+  startDate: new Date().toISOString(),
+  endDate: '2025-12-31T23:59:59Z',
+  coinPrice: 15000,
+  isActive: true,
+  levels: [
+    { level: 1, xpRequired: 100, free: { type: 'coins', amount: 200, label: '200 Coins' }, premium: { type: 'avatar', label: 'Santa Hat Avatar', itemId: 'av_santa_hat', icon: 'User' } },
+    { level: 2, xpRequired: 200, premium: { type: 'coins', amount: 200, label: '200 Coins' } },
+    { level: 3, xpRequired: 300, premium: { type: 'banner', label: 'Animated Snowfall', itemId: 'bn_snowfall', icon: 'Image' } },
+    { level: 4, xpRequired: 400, free: { type: 'banner', label: 'Snowflake Banner', itemId: 'bn_snowflake', icon: 'Image' }, premium: { type: 'coins', amount: 300, label: '300 Coins' } },
+    { level: 5, xpRequired: 500, premium: { type: 'frame', label: 'Gold Holly Frame', itemId: 'fr_gold_holly', icon: 'LayoutTemplate' } },
+    { level: 6, xpRequired: 600, premium: { type: 'coins', amount: 300, label: '300 Coins' } },
+    { level: 7, xpRequired: 700, free: { type: 'coins', amount: 300, label: '300 Coins' }, premium: { type: 'title', label: 'Snow King', itemId: 'title_snow_king', icon: 'Crown' } },
+    { level: 8, xpRequired: 800, premium: { type: 'coins', amount: 400, label: '400 Coins' } },
+    { level: 9, xpRequired: 900, premium: { type: 'avatar', label: 'Reindeer Avatar', itemId: 'av_reindeer', icon: 'User' } },
+    { level: 10, xpRequired: 1000, free: { type: 'title', label: 'Festive Player', itemId: 'title_festive', icon: 'Crown' }, premium: { type: 'frame', label: 'Animated Ice Frame', itemId: 'fr_anim_ice', icon: 'LayoutTemplate' } },
+    { level: 11, xpRequired: 1100, premium: { type: 'coins', amount: 400, label: '400 Coins' } },
+    { level: 12, xpRequired: 1200, premium: { type: 'coins', amount: 500, label: '500 Coins' } },
+    { level: 13, xpRequired: 1300, free: { type: 'coins', amount: 400, label: '400 Coins' }, premium: { type: 'banner', label: 'Winter Glow', itemId: 'bn_winter_glow', icon: 'Image' } },
+    { level: 14, xpRequired: 1400, premium: { type: 'coins', amount: 500, label: '500 Coins' } },
+    { level: 15, xpRequired: 1500, premium: { type: 'avatar', label: 'Gift Box Avatar', itemId: 'av_gift_box', icon: 'User' } },
+    { level: 16, xpRequired: 1600, free: { type: 'avatar', label: 'Candy Cane Avatar', itemId: 'av_candy_cane', icon: 'User' }, premium: { type: 'coins', amount: 600, label: '600 Coins' } },
+    { level: 17, xpRequired: 1700, premium: { type: 'title', label: 'Holiday Champion', itemId: 'title_holiday_champ', icon: 'Crown' } },
+    { level: 18, xpRequired: 1800, premium: { type: 'coins', amount: 600, label: '600 Coins' } },
+    { level: 19, xpRequired: 1900, premium: { type: 'frame', label: 'Candy Cane Frame', itemId: 'fr_candy_cane', icon: 'LayoutTemplate' } },
+    { level: 20, xpRequired: 2000, free: { type: 'coins', amount: 500, label: '500 Coins' }, premium: { type: 'avatar', label: 'Snowman Avatar', itemId: 'av_snowman', icon: 'User' } },
+    { level: 21, xpRequired: 2100, premium: { type: 'coins', amount: 600, label: '600 Coins' } },
+    { level: 22, xpRequired: 2200, premium: { type: 'coins', amount: 700, label: '700 Coins' } },
+    { level: 23, xpRequired: 2300, premium: { type: 'banner', label: 'Xmas Lights', itemId: 'bn_xmas_lights', icon: 'Image' } },
+    { level: 24, xpRequired: 2400, free: { type: 'frame', label: 'Snowy Frame', itemId: 'fr_snowy', icon: 'LayoutTemplate' }, premium: { type: 'coins', amount: 700, label: '700 Coins' } },
+    { level: 25, xpRequired: 2500, premium: { type: 'xp_boost', label: 'XP Boost (7 Days)', icon: 'Zap' } },
+    { level: 26, xpRequired: 2600, premium: { type: 'coins', amount: 800, label: '800 Coins' } },
+    { level: 27, xpRequired: 2700, premium: { type: 'avatar', label: 'Nutcracker Avatar', itemId: 'av_nutcracker', icon: 'User' } },
+    { level: 28, xpRequired: 2800, free: { type: 'coins', amount: 600, label: '600 Coins' }, premium: { type: 'coins', amount: 800, label: '800 Coins' } },
+    { level: 29, xpRequired: 2900, premium: { type: 'frame', label: 'Frosted Gold Frame', itemId: 'fr_frosted_gold', icon: 'LayoutTemplate' } },
+    { level: 30, xpRequired: 3000, premium: { type: 'avatar', label: 'Xmas Tree Avatar', itemId: 'av_xmas_tree', icon: 'User' } },
+    { level: 31, xpRequired: 3100, premium: { type: 'coins', amount: 800, label: '800 Coins' } },
+    { level: 32, xpRequired: 3200, free: { type: 'title', label: 'Holiday Ready', itemId: 'title_holiday_ready', icon: 'Crown' }, premium: { type: 'coins', amount: 900, label: '900 Coins' } },
+    { level: 33, xpRequired: 3300, premium: { type: 'banner', label: 'Snowstorm Banner', itemId: 'bn_snowstorm', icon: 'Image' } },
+    { level: 34, xpRequired: 3400, premium: { type: 'coins', amount: 900, label: '900 Coins' } },
+    { level: 35, xpRequired: 3500, premium: { type: 'xp_boost', label: 'XP Boost (14 Days)', icon: 'Zap' } },
+    { level: 36, xpRequired: 3600, free: { type: 'coins', amount: 700, label: '700 Coins' }, premium: { type: 'coins', amount: 1000, label: '1000 Coins' } },
+    { level: 37, xpRequired: 3700, premium: { type: 'avatar', label: 'Polar Bear Avatar', itemId: 'av_polar_bear', icon: 'User' } },
+    { level: 38, xpRequired: 3800, premium: { type: 'coins', amount: 1000, label: '1000 Coins' } },
+    { level: 39, xpRequired: 3900, premium: { type: 'title', label: 'Winter Legend', itemId: 'title_winter_legend', icon: 'Crown' } },
+    { level: 40, xpRequired: 4000, free: { type: 'avatar', label: 'Gingerbread Avatar', itemId: 'av_gingerbread', icon: 'User' }, premium: { type: 'frame', label: 'Animated Bell Frame', itemId: 'fr_anim_bell', icon: 'LayoutTemplate' } },
+    { level: 41, xpRequired: 4100, premium: { type: 'coins', amount: 1000, label: '1000 Coins' } },
+    { level: 42, xpRequired: 4200, premium: { type: 'coins', amount: 1100, label: '1100 Coins' } },
+    { level: 43, xpRequired: 4300, premium: { type: 'banner', label: 'Golden Snowflake', itemId: 'bn_gold_snowflake', icon: 'Image' } },
+    { level: 44, xpRequired: 4400, premium: { type: 'coins', amount: 1100, label: '1100 Coins' } },
+    { level: 45, xpRequired: 4500, free: { type: 'coins', amount: 800, label: '800 Coins' }, premium: { type: 'xp_boost', label: 'XP Boost (Season)', icon: 'Zap' } },
+    { level: 46, xpRequired: 4600, premium: { type: 'coins', amount: 1200, label: '1200 Coins' } },
+    { level: 47, xpRequired: 4700, premium: { type: 'avatar', label: 'Elf King Avatar', itemId: 'av_elf_king', icon: 'User' } },
+    { level: 48, xpRequired: 4800, premium: { type: 'coins', amount: 1200, label: '1200 Coins' } },
+    { level: 49, xpRequired: 4900, premium: { type: 'frame', label: 'Ice Crown Frame', itemId: 'fr_ice_crown', icon: 'LayoutTemplate' } },
+    { level: 50, xpRequired: 5000, free: { type: 'badge', label: 'Xmas Badge', icon: 'Medal' }, premium: { type: 'avatar', label: 'MYTHIC Santa King', itemId: 'av_santa_king', icon: 'User' } },
+  ]
+};

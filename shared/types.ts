@@ -22,7 +22,8 @@ export interface UserAchievement {
   unlockedAt: number; // Timestamp
 }
 export interface SeasonPassProgress {
-  level: number; // Current season level (can be synced with main level or separate)
+  seasonId?: string; // Link to specific season
+  level: number; // Current season level
   xp: number; // Season specific XP
   isPremium: boolean;
   claimedRewards: string[]; // Format: "level:type" e.g. "1:free", "5:premium"
@@ -305,6 +306,7 @@ export interface SystemConfig {
   seasonEndDate?: string; // ISO Date string
   maintenance?: boolean;
   seasonName?: string; // Dynamic season name
+  activeSeasonId?: string; // ID of the currently active Battle Pass
 }
 // Analytics
 export interface SystemStats {
@@ -320,4 +322,29 @@ export interface ChallengeRequest {
 }
 export interface ClearNotificationsRequest {
   notificationIds: string[];
+}
+// --- Battle Pass Types ---
+export interface BattlePassReward {
+  type: 'coins' | 'item' | 'xp_boost' | 'badge' | 'box' | 'title' | 'frame' | 'avatar' | 'banner';
+  amount?: number;
+  itemId?: string; // If it links to a shop item
+  label: string;
+  icon?: string; // Lucide icon name
+  assetUrl?: string; // Optional override for display
+}
+export interface BattlePassLevel {
+  level: number;
+  xpRequired: number; // Cumulative XP needed for this level
+  free?: BattlePassReward;
+  premium?: BattlePassReward;
+}
+export interface BattlePassSeason {
+  id: string;
+  name: string;
+  description: string;
+  startDate: string;
+  endDate: string;
+  coinPrice: number;
+  levels: BattlePassLevel[];
+  isActive: boolean;
 }

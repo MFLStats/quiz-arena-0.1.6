@@ -14,12 +14,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Loader2, Plus, Save, Trash2, Pencil, Calendar, Coins, Crown, CheckCircle } from 'lucide-react';
+import { Loader2, Plus, Save, Trash2, Pencil, CheckCircle, Calendar, Coins, Crown } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/auth-store';
 import { toast } from 'sonner';
-import type { BattlePassSeason } from '@shared/types';
+import type { BattlePassSeason, BattlePassLevel, BattlePassReward } from '@shared/types';
 const seasonSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
   description: z.string().min(5, "Description must be at least 5 characters"),
@@ -35,7 +36,7 @@ export function BattlePassManager() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingSeason, setEditingSeason] = useState<BattlePassSeason | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<SeasonFormData>({
+  const { register, handleSubmit, setValue, reset, formState: { errors } } = useForm<SeasonFormData>({
     resolver: zodResolver(seasonSchema),
   });
   const fetchSeasons = useCallback(async () => {
@@ -102,17 +103,10 @@ export function BattlePassManager() {
     if (!user) return;
     setIsSubmitting(true);
     try {
-      // Ensure levels are initialized if creating new
-      const defaultLevels = Array.from({ length: 50 }, (_, i) => ({ 
-        level: i + 1, 
-        xpRequired: (i + 1) * 100,
-        free: { type: 'none', label: '' },
-        premium: { type: 'none', label: '' }
-      }));
       const payload: Partial<BattlePassSeason> = {
         ...data,
-        // Preserve existing levels if editing, otherwise use default
-        levels: editingSeason ? editingSeason.levels : defaultLevels,
+        // If creating new, initialize with empty levels or default structure
+        levels: editingSeason ? editingSeason.levels : Array.from({ length: 50 }, (_, i) => ({ level: i + 1, xpRequired: (i + 1) * 100 })),
         isActive: editingSeason ? editingSeason.isActive : false
       };
       if (editingSeason) {
@@ -155,17 +149,13 @@ export function BattlePassManager() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {seasons.map(season => (
-            <Card key={season.id} className={`bg-zinc-900/50 border-white/10 transition-all ${season.isActive ? 'border-indigo-500/50 ring-1 ring-indigo-500/20 shadow-[0_0_20px_rgba(99,102,241,0.1)]' : ''}`}>
+            <Card key={season.id} className={`bg-zinc-900/50 border-white/10 ${season.isActive ? 'border-indigo-500/50 ring-1 ring-indigo-500/20' : ''}`}>
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <div>
                     <CardTitle className="flex items-center gap-2">
                       {season.name}
-                      {season.isActive && (
-                        <span className="text-xs bg-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded-full border border-indigo-500/30 flex items-center gap-1">
-                          <CheckCircle className="w-3 h-3" /> Active
-                        </span>
-                      )}
+                      {season.isActive && <span className="text-xs bg-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded-full border border-indigo-500/30">Active</span>}
                     </CardTitle>
                     <CardDescription>{season.description}</CardDescription>
                   </div>
@@ -195,7 +185,7 @@ export function BattlePassManager() {
                   </div>
                 </div>
                 {!season.isActive && (
-                  <Button variant="outline" className="w-full mt-4 border-white/10 hover:bg-white/5" onClick={() => handleActivate(season.id)}>
+                  <Button variant="outline" className="w-full mt-4" onClick={() => handleActivate(season.id)}>
                     Set Active
                   </Button>
                 )}

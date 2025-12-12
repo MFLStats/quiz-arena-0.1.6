@@ -27,6 +27,7 @@ import { CATEGORY_ICONS, ICON_KEYS } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 import { CategoryContentManager } from '@/components/admin/CategoryContentManager';
 import { QuestionBank } from '@/components/admin/QuestionBank';
+import { BattlePassManager } from '@/components/admin/BattlePassManager';
 const questionSchema = z.object({
   text: z.string().min(5, "Question text must be at least 5 characters"),
   categoryId: z.string().min(1, "Category is required"),
@@ -734,6 +735,7 @@ export function AdminPage() {
                         <TabsTrigger value="bulk" className="px-4">Bulk</TabsTrigger>
                         <TabsTrigger value="categories" className="px-4">Cats</TabsTrigger>
                         <TabsTrigger value="shop" className="px-4">Shop</TabsTrigger>
+                        <TabsTrigger value="battlepass" className="px-4">Battle Pass</TabsTrigger>
                         <TabsTrigger value="reports" className="px-4 relative">
                         Reports
                         {reports.length > 0 && (
@@ -1190,6 +1192,13 @@ export function AdminPage() {
                           ))}
                         </div>
                       </ScrollArea>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+                <TabsContent value="battlepass">
+                  <Card className="bg-zinc-900/50 border-white/10 backdrop-blur-sm">
+                    <CardContent className="p-6">
+                      <BattlePassManager />
                     </CardContent>
                   </Card>
                 </TabsContent>

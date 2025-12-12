@@ -1,7 +1,8 @@
 import { IndexedEntity, Entity, Env, Index } from "./core-utils";
 import { UserEntity } from "./entities";
-import type { MatchState, Question, PlayerStats, SubmitAnswerResponse, Category, Report, SystemConfig, ShopItem, User } from "@shared/types";
+import type { MatchState, Question, PlayerStats, SubmitAnswerResponse, Category, Report, SystemConfig, ShopItem, User, BattlePassSeason } from "@shared/types";
 import { MOCK_QUESTIONS, MOCK_SHOP_ITEMS, MOCK_CATEGORIES } from "@shared/mock-data";
+import { CHRISTMAS_BATTLE_PASS_SEED } from "@shared/constants";
 // --- Randomization Helpers ---
 function simpleHash(str: string): number {
   let hash = 0;
@@ -48,8 +49,40 @@ export class ConfigEntity extends Entity<SystemConfig> {
     motd: "",
     maintenance: false,
     seasonEndDate: '2025-12-31',
-    seasonName: 'Holiday Season'
+    seasonName: 'Holiday Season',
+    activeSeasonId: CHRISTMAS_BATTLE_PASS_SEED.id
   };
+}
+// BATTLE PASS ENTITY: Stores season definitions
+export class BattlePassEntity extends IndexedEntity<BattlePassSeason> {
+  static readonly entityName = "battle_pass";
+  static readonly indexName = "battle_passes";
+  static readonly initialState: BattlePassSeason = CHRISTMAS_BATTLE_PASS_SEED;
+  static seedData = [CHRISTMAS_BATTLE_PASS_SEED];
+  static async setActive(env: Env, seasonId: string): Promise<void> {
+    const config = new ConfigEntity(env, 'global');
+    await config.mutate(s => ({ ...s, activeSeasonId: seasonId }));
+    // Update isActive flag on all seasons for consistency (optional but good for UI)
+    const { items } = await BattlePassEntity.list(env, null, 100);
+    await Promise.all(items.map(async (season) => {
+      const entity = new BattlePassEntity(env, season.id);
+      await entity.mutate(s => ({ ...s, isActive: s.id === seasonId }));
+    }));
+  }
+  static async getActive(env: Env): Promise<BattlePassSeason | null> {
+    const config = new ConfigEntity(env, 'global');
+    const state = await config.getState();
+    if (state.activeSeasonId) {
+      const entity = new BattlePassEntity(env, state.activeSeasonId);
+      if (await entity.exists()) {
+        return await entity.getState();
+      }
+    }
+    // Fallback: Find first active or just first
+    const { items } = await BattlePassEntity.list(env, null, 1);
+    if (items.length > 0) return items[0];
+    return null;
+  }
 }
 // SHOP ENTITY: Stores dynamic shop items individually
 export class ShopEntity extends IndexedEntity<ShopItem> {
@@ -65,10 +98,6 @@ export class ShopEntity extends IndexedEntity<ShopItem> {
     description: ""
   };
   static seedData = MOCK_SHOP_ITEMS;
-  /**
-   * Resets the shop database by deleting all items and re-seeding with default data.
-   * This is a destructive operation used for admin maintenance.
-   */
   static async reset(env: Env): Promise<void> {
     const idx = new Index<string>(env, this.indexName);
     const ids = await idx.list();
@@ -76,10 +105,7 @@ export class ShopEntity extends IndexedEntity<ShopItem> {
     await this.ensureSeed(env);
   }
 }
-// CATEGORY ENTITY: Stores dynamic categories created by admins
-// PERSISTENCE NOTE: This entity stores user-generated categories.
-// The seedData logic in IndexedEntity only runs if the index is completely empty.
-// Existing dynamic categories are NEVER overwritten by deployments.
+// CATEGORY ENTITY
 export class CategoryEntity extends IndexedEntity<Category> {
   static readonly entityName = "category";
   static readonly indexName = "categories";
@@ -97,9 +123,7 @@ export class CategoryEntity extends IndexedEntity<Category> {
 export function getCategoryQuestionIndex(env: Env, categoryId: string): Index<string> {
   return new Index<string>(env, `idx_cat_questions:${categoryId}`);
 }
-// QUESTION ENTITY: Stores dynamic questions created by admins
-// PERSISTENCE NOTE: User-generated questions are stored in Durable Objects.
-// They persist across deployments and are NOT reset unless explicitly deleted via Admin API.
+// QUESTION ENTITY
 export class QuestionEntity extends IndexedEntity<Question> {
   static readonly entityName = "question";
   static readonly indexName = "questions";
@@ -195,7 +219,7 @@ export class QuestionEntity extends IndexedEntity<Question> {
     return true;
   }
 }
-// REPORT ENTITY: Stores user reports for questions
+// REPORT ENTITY
 export class ReportEntity extends IndexedEntity<Report> {
   static readonly entityName = "report";
   static readonly indexName = "reports";
@@ -209,7 +233,7 @@ export class ReportEntity extends IndexedEntity<Report> {
     timestamp: 0
   };
 }
-// CODE REGISTRY ENTITY: Manages private room codes
+// CODE REGISTRY ENTITY
 export class CodeRegistryEntity extends Entity<{ codes: Record<string, string> }> {
   static readonly entityName = "code_registry";
   static readonly initialState = { codes: {} };
@@ -237,6 +261,7 @@ export class CodeRegistryEntity extends Entity<{ codes: Record<string, string> }
     return state.codes[code.toUpperCase()] || null;
   }
 }
+// MATCH ENTITY
 export class MatchEntity extends IndexedEntity<MatchState> {
   static readonly entityName = "match";
   static readonly indexName = "matches";
@@ -291,7 +316,7 @@ export class MatchEntity extends IndexedEntity<MatchState> {
             else if (rank === 3) results[uid] = { displayTitle: "3rd Daily Quiz Challenge" };
           }
         }
-      }
+      } 
       // 2. Ranked Mode Ranks
       else {
         // Overall Rank (Elo)
@@ -655,7 +680,7 @@ export class MatchEntity extends IndexedEntity<MatchState> {
     }));
     const updatedState = await this.getState();
     const currentQId = updatedState.questions[updatedState.currentQuestionIndex].id;
-    const allAnswered = Object.values(updatedState.players).every(p =>
+    const allAnswered = Object.values(updatedState.players).every(p => 
         p.answers.some(a => a.questionId === currentQId)
     );
     if (allAnswered) {

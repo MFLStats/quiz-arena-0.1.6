@@ -1,9 +1,9 @@
 import { Hono } from "hono";
 import type { Env } from './core-utils';
 import { UserEntity } from "./entities";
-import { MatchEntity, QueueEntity, QuestionEntity, CategoryEntity, ReportEntity, CodeRegistryEntity, ConfigEntity, ShopEntity, getCategoryQuestionIndex } from "./game-entities";
+import { MatchEntity, QueueEntity, QuestionEntity, CategoryEntity, ReportEntity, CodeRegistryEntity, ConfigEntity, ShopEntity, BattlePassEntity, getCategoryQuestionIndex } from "./game-entities";
 import { ok, bad, notFound, isStr, Index } from './core-utils';
-import type { FinishMatchResponse, MatchHistoryItem, UpdateUserRequest, PurchaseItemRequest, EquipItemRequest, UnequipItemRequest, RegisterRequest, LoginEmailRequest, LoginRequest, User, RewardBreakdown, ShopItem, UserAchievement, Question, BulkImportRequest, Category, ClaimRewardRequest, ClaimRewardResponse, UpgradeSeasonPassRequest, CreateReportRequest, Report, JoinMatchRequest, SystemConfig, SystemStats, ChallengeRequest, Notification, ClearNotificationsRequest, SetAdminRoleRequest } from "@shared/types";
+import type { FinishMatchResponse, MatchHistoryItem, UpdateUserRequest, PurchaseItemRequest, EquipItemRequest, UnequipItemRequest, RegisterRequest, LoginEmailRequest, LoginRequest, User, RewardBreakdown, ShopItem, UserAchievement, Question, BulkImportRequest, Category, ClaimRewardRequest, ClaimRewardResponse, UpgradeSeasonPassRequest, CreateReportRequest, Report, JoinMatchRequest, SystemConfig, SystemStats, ChallengeRequest, Notification, ClearNotificationsRequest, SetAdminRoleRequest, BattlePassSeason } from "@shared/types";
 import { MOCK_CATEGORIES, MOCK_QUESTIONS } from "@shared/mock-data";
 import { PROGRESSION_CONSTANTS, getLevelFromXp, getXpRequiredForNextLevel } from "@shared/progression";
 import { SEASON_REWARDS_CONFIG as SHARED_SEASON_CONFIG, SEASON_COST } from "@shared/constants";
@@ -363,7 +363,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
             // Check if #1
             // We scan top 1000 users to check rank.
             const { items: allUsers } = await UserEntity.list(c.env, null, 1000);
-            const isNumberOne = !allUsers.some(u =>
+            const isNumberOne = !allUsers.some(u => 
                 u.id !== user.id && (u.categoryElo?.[bestCatId] || 1200) > maxElo
             );
             if (isNumberOne) {
@@ -612,7 +612,54 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       return c.json({ success: false, error: 'Internal Server Error' }, 500);
     }
   });
-  // --- SEASON PASS ---
+  // --- BATTLE PASS & SEASON ---
+  app.get('/api/battle-pass/active', async (c) => {
+    await BattlePassEntity.ensureSeed(c.env);
+    const activeSeason = await BattlePassEntity.getActive(c.env);
+    if (!activeSeason) return notFound(c, 'No active season');
+    return ok(c, activeSeason);
+  });
+  app.get('/api/admin/battle-pass', async (c) => {
+    const userId = c.req.query('userId');
+    if (!userId || !await isAdmin(c.env, userId)) return c.json({ success: false, error: 'Unauthorized' }, 403);
+    await BattlePassEntity.ensureSeed(c.env);
+    const { items } = await BattlePassEntity.list(c.env, null, 100);
+    return ok(c, items);
+  });
+  app.post('/api/admin/battle-pass', async (c) => {
+    const userId = c.req.query('userId');
+    if (!userId || !await isAdmin(c.env, userId)) return c.json({ success: false, error: 'Unauthorized' }, 403);
+    const season = await c.req.json() as BattlePassSeason;
+    if (!season.name || !season.levels) return bad(c, 'Invalid season data');
+    const id = season.id || crypto.randomUUID();
+    await BattlePassEntity.create(c.env, { ...season, id });
+    return ok(c, { success: true });
+  });
+  app.put('/api/admin/battle-pass/:id', async (c) => {
+    const userId = c.req.query('userId');
+    const seasonId = c.req.param('id');
+    if (!userId || !await isAdmin(c.env, userId)) return c.json({ success: false, error: 'Unauthorized' }, 403);
+    const updates = await c.req.json() as Partial<BattlePassSeason>;
+    const entity = new BattlePassEntity(c.env, seasonId);
+    if (!await entity.exists()) return notFound(c, 'Season not found');
+    await entity.patch(updates);
+    return ok(c, { success: true });
+  });
+  app.delete('/api/admin/battle-pass/:id', async (c) => {
+    const userId = c.req.query('userId');
+    const seasonId = c.req.param('id');
+    if (!userId || !await isAdmin(c.env, userId)) return c.json({ success: false, error: 'Unauthorized' }, 403);
+    const existed = await BattlePassEntity.delete(c.env, seasonId);
+    if (!existed) return notFound(c, 'Season not found');
+    return ok(c, { success: true });
+  });
+  app.post('/api/admin/battle-pass/:id/activate', async (c) => {
+    const userId = c.req.query('userId');
+    const seasonId = c.req.param('id');
+    if (!userId || !await isAdmin(c.env, userId)) return c.json({ success: false, error: 'Unauthorized' }, 403);
+    await BattlePassEntity.setActive(c.env, seasonId);
+    return ok(c, { success: true });
+  });
   app.post('/api/shop/season/claim', async (c) => {
     try {
       const { userId, level, track } = await c.req.json() as ClaimRewardRequest;
@@ -620,8 +667,24 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       const userEntity = new UserEntity(c.env, userId);
       if (!await userEntity.exists()) return notFound(c, 'User not found');
       const user = await userEntity.getState();
-      const seasonPass = user.seasonPass || { level: 1, xp: 0, isPremium: false, claimedRewards: [] };
-      if ((user.level || 1) < level) {
+      // Get Active Season
+      const activeSeason = await BattlePassEntity.getActive(c.env);
+      if (!activeSeason) return bad(c, 'No active season');
+      // Check Season ID match - Reset if new season
+      let seasonPass = user.seasonPass || { level: 1, xp: 0, isPremium: false, claimedRewards: [] };
+      if (seasonPass.seasonId !== activeSeason.id) {
+          seasonPass = {
+              seasonId: activeSeason.id,
+              level: 1,
+              xp: 0,
+              isPremium: false,
+              claimedRewards: []
+          };
+          // Note: We don't save here, we save in the mutate block below
+      }
+      // Validate Level
+      // Use seasonPass.level (driven by season XP) instead of user.level (global)
+      if (seasonPass.level < level) {
         return bad(c, 'Level requirement not met');
       }
       if (track === 'premium' && !seasonPass.isPremium) {
@@ -631,10 +694,11 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       if (seasonPass.claimedRewards.includes(claimKey)) {
         return bad(c, 'Reward already claimed');
       }
-      const rewardConfig = SHARED_SEASON_CONFIG.find(r => r.level === level);
-      if (!rewardConfig) return bad(c, 'Invalid level');
-      const reward = track === 'free' ? rewardConfig.free : rewardConfig.premium;
-      if (reward.type === 'none') return bad(c, 'No reward at this level');
+      // Find Reward Config from Active Season
+      const levelConfig = activeSeason.levels.find(l => l.level === level);
+      if (!levelConfig) return bad(c, 'Invalid level');
+      const reward = track === 'free' ? levelConfig.free : levelConfig.premium;
+      if (!reward) return bad(c, 'No reward at this level');
       let currencyToAdd = 0;
       const inventoryToAdd: string[] = [];
       let awardedItem: ShopItem | undefined;
@@ -642,41 +706,28 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       if (reward.type === 'coins') {
         currencyToAdd = reward.amount || 0;
         rewardType = 'coins';
-      } else if (reward.type === 'box' && reward.itemId) {
-        // Logic to open box and award random item
-        const { items: allItems } = await ShopEntity.list(c.env, null, 1000);
-        // Determine rarity pool based on box type (heuristic or fetch)
-        const boxEntity = new ShopEntity(c.env, reward.itemId);
-        let boxRarity = 'common';
-        if (await boxEntity.exists()) {
-            const box = await boxEntity.getState();
-            boxRarity = box.rarity;
-        }
-        let pool: ShopItem[] = [];
-        if (boxRarity === 'common') {
-            pool = allItems.filter(i => i.type !== 'box' && (i.rarity === 'common' || i.rarity === 'rare'));
-        } else if (boxRarity === 'rare') {
-            pool = allItems.filter(i => i.type !== 'box' && (i.rarity === 'rare' || i.rarity === 'epic'));
-        } else {
-            pool = allItems.filter(i => i.type !== 'box' && (i.rarity === 'epic' || i.rarity === 'legendary'));
-        }
-        const unowned = pool.filter(i => !user.inventory?.includes(i.id));
-        const targetPool = unowned.length > 0 ? unowned : pool;
-        if (targetPool.length > 0) {
-            awardedItem = targetPool[Math.floor(Math.random() * targetPool.length)];
-            inventoryToAdd.push(awardedItem.id);
-            rewardType = 'item';
-        } else {
-            // Fallback if pool empty (owned everything)
-            currencyToAdd = 100; // Fallback coins
-            rewardType = 'coins';
-        }
+      } else if (reward.type === 'xp_boost') {
+          // Logic for XP boost (not fully implemented in user model yet, just consume)
+          // Could add to user.activeBoosts
+          rewardType = 'item'; // Treat as item for UI
       } else if (reward.itemId) {
         // Direct item reward
         inventoryToAdd.push(reward.itemId);
+        // Try to fetch item details for response
         const itemEntity = new ShopEntity(c.env, reward.itemId);
         if (await itemEntity.exists()) {
             awardedItem = await itemEntity.getState();
+        } else {
+            // Create mock item for display if missing in shop
+            awardedItem = {
+                id: reward.itemId,
+                name: reward.label,
+                type: reward.type as any,
+                rarity: 'common',
+                price: 0,
+                assetUrl: reward.assetUrl || '',
+                description: 'Season Reward'
+            };
         }
         rewardType = 'item';
       }
@@ -710,16 +761,30 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       const userEntity = new UserEntity(c.env, userId);
       if (!await userEntity.exists()) return notFound(c, 'User not found');
       const user = await userEntity.getState();
-      const seasonPass = user.seasonPass || { level: 1, xp: 0, isPremium: false, claimedRewards: [] };
+      // Get Active Season
+      const activeSeason = await BattlePassEntity.getActive(c.env);
+      if (!activeSeason) return bad(c, 'No active season');
+      let seasonPass = user.seasonPass || { level: 1, xp: 0, isPremium: false, claimedRewards: [] };
+      // Reset if new season
+      if (seasonPass.seasonId !== activeSeason.id) {
+          seasonPass = {
+              seasonId: activeSeason.id,
+              level: 1,
+              xp: 0,
+              isPremium: false,
+              claimedRewards: []
+          };
+      }
       if (seasonPass.isPremium) {
         return bad(c, 'Already premium');
       }
-      if ((user.currency || 0) < SEASON_COST) {
+      const cost = activeSeason.coinPrice;
+      if ((user.currency || 0) < cost) {
         return bad(c, 'Insufficient funds');
       }
       await userEntity.mutate(u => ({
         ...u,
-        currency: (u.currency || 0) - SEASON_COST,
+        currency: (u.currency || 0) - cost,
         seasonPass: {
           ...seasonPass,
           isPremium: true
@@ -983,7 +1048,6 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
         if (!dailyStats || dailyStats.date !== today || myStats.score > dailyStats.score) {
           dailyStats = { date: today, score: myStats.score };
         }
-        // Removed automatic title assignment logic here to ensure exclusivity
       }
       const activityMap = user.activityMap || {};
       const newActivityCount = (activityMap[today] || 0) + 1;
@@ -1008,6 +1072,12 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
           addAchievement('streaker');
         }
       }
+      // Update Season Pass XP
+      // We use the same XP amount for season pass progress
+      const seasonPass = user.seasonPass || { level: 1, xp: 0, isPremium: false, claimedRewards: [] };
+      const newSeasonXp = (seasonPass.xp || 0) + totalXp;
+      // Calculate season level based on season XP (using same formula for simplicity)
+      const { level: newSeasonLevel } = getLevelFromXp(newSeasonXp);
       return {
         ...user,
         elo: newElo,
@@ -1022,9 +1092,9 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
         achievements: currentAchievements,
         activityMap: newActivityMap,
         seasonPass: {
-          ...(user.seasonPass || { isPremium: false, claimedRewards: [] }),
-          level: newLevel,
-          xp: updatedXp
+          ...seasonPass,
+          level: newSeasonLevel,
+          xp: newSeasonXp
         }
       };
     });
@@ -1225,8 +1295,8 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
         if (categoryId) {
             allQuestions = allQuestions.filter(q => q.categoryId === categoryId);
         }
-        const filtered = allQuestions.filter(q =>
-            q.text.toLowerCase().includes(search) ||
+        const filtered = allQuestions.filter(q => 
+            q.text.toLowerCase().includes(search) || 
             q.id.toLowerCase().includes(search) ||
             q.categoryId.toLowerCase().includes(search)
         );
@@ -1250,8 +1320,8 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     if (!cursor) {
         const questionMap = new Map<string, Question>();
         // Add relevant mocks
-        const relevantMocks = categoryId
-            ? MOCK_QUESTIONS.filter(q => q.categoryId === categoryId)
+        const relevantMocks = categoryId 
+            ? MOCK_QUESTIONS.filter(q => q.categoryId === categoryId) 
             : MOCK_QUESTIONS;
         relevantMocks.forEach(q => questionMap.set(q.id, q));
         // Add/Override with dynamic (dynamic takes precedence)
@@ -1372,8 +1442,8 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       // Search mode (scan larger batch, no cursor support for simplicity in this phase)
       const { items } = await UserEntity.list(c.env, null, 1000);
       let filtered = items.map(sanitizeUser);
-      filtered = filtered.filter(u =>
-        u.name.toLowerCase().includes(search) ||
+      filtered = filtered.filter(u => 
+        u.name.toLowerCase().includes(search) || 
         u.id.toLowerCase().includes(search) ||
         (u.email && u.email.toLowerCase().includes(search))
       );
