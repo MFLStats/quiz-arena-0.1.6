@@ -65,7 +65,9 @@ export function HomePage() {
   }, []);
   // Onboarding Effect: Show How to Play for new users (excluding guests)
   useEffect(() => {
-    if (user && user.provider !== 'guest' && (user.stats?.matches === 0 || !user.stats)) {
+    // Check if user exists, is NOT a guest (provider check + email check), and has 0 matches
+    const isGuest = user?.provider === 'guest' || !user?.email;
+    if (user && !isGuest && (user.stats?.matches === 0 || !user.stats)) {
       const hasSeenIntro = sessionStorage.getItem('hasSeenIntro');
       if (!hasSeenIntro) {
         setShowHowToPlay(true);

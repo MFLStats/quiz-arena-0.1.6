@@ -192,7 +192,7 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
                   {user.frame && isImageUrl(user.frame) && (
                      <img
                        src={user.frame}
-                       className="absolute inset-0 w-full h-full z-20 object-contain scale-[1.35] pointer-events-none"
+                       className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[135%] h-[135%] z-20 object-contain pointer-events-none"
                        alt="frame"
                      />
                   )}
@@ -439,13 +439,13 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
                   </Dialog>
                   {onLogout && (
                     <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-9 w-9 rounded-full bg-white/5 hover:bg-red-500/10 text-white/70 hover:text-red-400 backdrop-blur-sm border border-white/5"
+                      variant="destructive"
+                      className="gap-2 border border-red-500/20 bg-red-500/10 text-red-400 hover:bg-red-500/20"
                       onClick={onLogout}
                       title="Sign Out"
                     >
                       <LogOut className="w-4 h-4" />
+                      <span className="hidden sm:inline">Sign Out</span>
                     </Button>
                   )}
                 </>

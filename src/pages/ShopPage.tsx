@@ -20,7 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { api } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/auth-store';
 import { useShop } from '@/hooks/use-shop';
-import type { User, PurchaseItemRequest, EquipItemRequest, ShopItem } from '@shared/types';
+import type { User, PurchaseItemRequest, EquipItemRequest, ShopItem, UnequipItemRequest } from '@shared/types';
 import { toast } from 'sonner';
 import { cn, isImageUrl, getBackgroundStyle } from '@/lib/utils';
 import { SeasonPass } from '@/components/shop/SeasonPass';
@@ -162,6 +162,24 @@ export function ShopPage() {
       setProcessingId(null);
     }
   };
+  const handleUnequip = async (itemId: string, type: 'frame' | 'banner' | 'title') => {
+    if (!currentUser) return;
+    setProcessingId(itemId);
+    try {
+      const req: UnequipItemRequest = { userId: currentUser.id, type };
+      const updatedUser = await api<User>('/api/shop/unequip', {
+        method: 'POST',
+        body: JSON.stringify(req)
+      });
+      updateUser(updatedUser);
+      toast.success(`${type} unequipped!`);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to unequip item");
+    } finally {
+      setProcessingId(null);
+    }
+  };
   const loading = shopLoading || userLoading;
   const error = shopError || userError;
   if (loading) {
@@ -276,6 +294,7 @@ export function ShopPage() {
                     isProcessing={processingId === item.id}
                     onBuy={() => initiatePurchase(item)}
                     onEquip={() => handleEquip(item.id, 'avatar')}
+                    // Avatar cannot be unequipped to "nothing", so no unequip handler
                   />
                 ))}
               </div>
@@ -297,6 +316,7 @@ export function ShopPage() {
                     isProcessing={processingId === item.id}
                     onBuy={() => initiatePurchase(item)}
                     onEquip={() => handleEquip(item.id, 'banner')}
+                    onUnequip={() => handleUnequip(item.id, 'banner')}
                   />
                 ))}
               </div>
@@ -318,6 +338,7 @@ export function ShopPage() {
                     isProcessing={processingId === item.id}
                     onBuy={() => initiatePurchase(item)}
                     onEquip={() => handleEquip(item.id, 'frame')}
+                    onUnequip={() => handleUnequip(item.id, 'frame')}
                   />
                 ))}
               </div>
@@ -403,7 +424,7 @@ export function ShopPage() {
     </AppLayout>
   );
 }
-function ShopItemCard({ item, index, purchased, equipped, canAfford, isProcessing, onBuy, onEquip }: any) {
+function ShopItemCard({ item, index, purchased, equipped, canAfford, isProcessing, onBuy, onEquip, onUnequip }: any) {
   const rarityColors = {
     common: "border-white/10",
     rare: "border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.1)]",
@@ -467,23 +488,29 @@ function ShopItemCard({ item, index, purchased, equipped, canAfford, isProcessin
         </CardHeader>
         <CardFooter className="p-3 md:p-4 pt-0">
           {purchased && item.type !== 'box' ? (
-            <Button
-              className={cn(
-                "w-full font-bold h-8 md:h-10 text-xs md:text-sm",
-                equipped ? "bg-emerald-500/20 text-emerald-500 hover:bg-emerald-500/30" : "bg-indigo-600 hover:bg-indigo-500"
-              )}
-              variant={equipped ? "ghost" : "default"}
-              disabled={equipped || isProcessing}
-              onClick={onEquip}
-            >
-              {isProcessing ? (
-                <Loader2 className="w-3 h-3 md:w-4 md:h-4 animate-spin" />
-              ) : equipped ? (
-                "Equipped"
-              ) : (
-                "Equip"
-              )}
-            </Button>
+            equipped ? (
+               <Button
+                  className="w-full font-bold h-8 md:h-10 text-xs md:text-sm bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20"
+                  variant="outline"
+                  disabled={isProcessing}
+                  onClick={onUnequip}
+                >
+                  {isProcessing ? <Loader2 className="w-3 h-3 md:w-4 md:h-4 animate-spin" /> : "Unequip"}
+                </Button>
+            ) : (
+              <Button
+                className="w-full font-bold h-8 md:h-10 text-xs md:text-sm bg-indigo-600 hover:bg-indigo-500"
+                variant="default"
+                disabled={isProcessing}
+                onClick={onEquip}
+              >
+                {isProcessing ? (
+                  <Loader2 className="w-3 h-3 md:w-4 md:h-4 animate-spin" />
+                ) : (
+                  "Equip"
+                )}
+              </Button>
+            )
           ) : (
             <Button
               className="w-full font-bold h-8 md:h-10 text-xs md:text-sm"

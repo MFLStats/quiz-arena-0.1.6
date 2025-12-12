@@ -3,7 +3,7 @@ import type { Env } from './core-utils';
 import { UserEntity } from "./entities";
 import { MatchEntity, QueueEntity, QuestionEntity, CategoryEntity, ReportEntity, CodeRegistryEntity, ConfigEntity, ShopEntity } from "./game-entities";
 import { ok, bad, notFound, isStr, Index } from './core-utils';
-import type { FinishMatchResponse, MatchHistoryItem, UpdateUserRequest, PurchaseItemRequest, EquipItemRequest, RegisterRequest, LoginEmailRequest, LoginRequest, User, RewardBreakdown, ShopItem, UserAchievement, Question, BulkImportRequest, Category, ClaimRewardRequest, UpgradeSeasonPassRequest, CreateReportRequest, Report, JoinMatchRequest, SystemConfig, SystemStats, ChallengeRequest, Notification, ClearNotificationsRequest } from "@shared/types";
+import type { FinishMatchResponse, MatchHistoryItem, UpdateUserRequest, PurchaseItemRequest, EquipItemRequest, UnequipItemRequest, RegisterRequest, LoginEmailRequest, LoginRequest, User, RewardBreakdown, ShopItem, UserAchievement, Question, BulkImportRequest, Category, ClaimRewardRequest, UpgradeSeasonPassRequest, CreateReportRequest, Report, JoinMatchRequest, SystemConfig, SystemStats, ChallengeRequest, Notification, ClearNotificationsRequest } from "@shared/types";
 import { MOCK_CATEGORIES, MOCK_QUESTIONS } from "@shared/mock-data";
 import { PROGRESSION_CONSTANTS, getLevelFromXp, getXpRequiredForNextLevel } from "@shared/progression";
 import { SEASON_REWARDS_CONFIG as SHARED_SEASON_CONFIG, SEASON_COST } from "@shared/constants";
@@ -423,6 +423,25 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       return ok(c, sanitizeUser(await userEntity.getState()));
     } catch (e) {
       console.error('[API] Equip error:', e);
+      return c.json({ success: false, error: 'Internal Server Error' }, 500);
+    }
+  });
+  app.post('/api/shop/unequip', async (c) => {
+    try {
+      const { userId, type } = await c.req.json() as UnequipItemRequest;
+      if (!userId || !type) return bad(c, 'Missing required fields');
+      const userEntity = new UserEntity(c.env, userId);
+      if (!await userEntity.exists()) return notFound(c, 'User not found');
+      await userEntity.mutate(u => {
+        const updates: Partial<User> = {};
+        if (type === 'frame') updates.frame = undefined;
+        if (type === 'banner') updates.banner = undefined;
+        if (type === 'title') updates.title = undefined;
+        return { ...u, ...updates };
+      });
+      return ok(c, sanitizeUser(await userEntity.getState()));
+    } catch (e) {
+      console.error('[API] Unequip error:', e);
       return c.json({ success: false, error: 'Internal Server Error' }, 500);
     }
   });
@@ -1060,8 +1079,8 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     const { items } = await UserEntity.list(c.env, null, 100);
     let filtered = items.map(sanitizeUser);
     if (search) {
-      filtered = filtered.filter(u => 
-        u.name.toLowerCase().includes(search) || 
+      filtered = filtered.filter(u =>
+        u.name.toLowerCase().includes(search) ||
         u.id.toLowerCase().includes(search) ||
         (u.email && u.email.toLowerCase().includes(search))
       );

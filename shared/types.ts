@@ -209,6 +209,10 @@ export interface EquipItemRequest {
   itemId: string;
   type: ItemType;
 }
+export interface UnequipItemRequest {
+  userId: string;
+  type: 'frame' | 'banner' | 'title';
+}
 // Auth Requests
 export interface RegisterRequest {
   name: string;
