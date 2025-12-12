@@ -21,21 +21,25 @@ export function QuestionBank({ user, onEdit }: QuestionBankProps) {
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  // Fetch First Page (Search/Filter)
-  const fetchFirstPage = useCallback(async () => {
+  const fetchQuestions = useCallback(async (reset = false) => {
     if (!user) return;
     setIsLoading(true);
     try {
       let url = `/api/admin/questions?userId=${user.id}`;
       if (search) {
         url += `&search=${encodeURIComponent(search)}`;
+      } else if (!reset && nextCursor) {
+        url += `&cursor=${nextCursor}`;
       }
       if (categoryFilter && categoryFilter !== 'all') {
         url += `&categoryId=${categoryFilter}`;
       }
-      // No cursor for first page
       const data = await api<{ items: Question[], next: string | null }>(url);
-      setQuestions(data.items);
+      if (reset || search) {
+        setQuestions(data.items);
+      } else {
+        setQuestions(prev => [...prev, ...data.items]);
+      }
       setNextCursor(data.next);
     } catch (err) {
       console.error(err);
@@ -43,39 +47,15 @@ export function QuestionBank({ user, onEdit }: QuestionBankProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [user, search, categoryFilter]);
-  // Fetch Next Page (Pagination)
-  const fetchNextPage = useCallback(async () => {
-    if (!user || !nextCursor) return;
-    setIsLoading(true);
-    try {
-      let url = `/api/admin/questions?userId=${user.id}`;
-      if (search) {
-         // If search is active, we shouldn't really be here if nextCursor is null, but just in case
-         url += `&search=${encodeURIComponent(search)}`;
-      } else {
-         url += `&cursor=${nextCursor}`;
-      }
-      if (categoryFilter && categoryFilter !== 'all') {
-        url += `&categoryId=${categoryFilter}`;
-      }
-      const data = await api<{ items: Question[], next: string | null }>(url);
-      setQuestions(prev => [...prev, ...data.items]);
-      setNextCursor(data.next);
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to load more questions");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [user, nextCursor, search, categoryFilter]);
-  // Effect for Search/Filter changes
+  }, [user, search, categoryFilter, nextCursor]);
+  // Initial fetch and filter changes
   useEffect(() => {
+    // Debounce search
     const timer = setTimeout(() => {
-      fetchFirstPage();
+      fetchQuestions(true);
     }, 500);
     return () => clearTimeout(timer);
-  }, [fetchFirstPage]);
+  }, [search, categoryFilter]);
   const handleDelete = async (questionId: string) => {
     if (!user || deletingId) return;
     if (!confirm("Are you sure you want to delete this question?")) return;
@@ -122,10 +102,10 @@ export function QuestionBank({ user, onEdit }: QuestionBankProps) {
             </SelectContent>
           </Select>
         </div>
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => fetchFirstPage()}
+        <Button 
+          variant="outline" 
+          size="icon" 
+          onClick={() => fetchQuestions(true)}
           className="border-white/10 hover:bg-white/5"
           title="Refresh"
         >
@@ -191,7 +171,7 @@ export function QuestionBank({ user, onEdit }: QuestionBankProps) {
                 <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
               ) : (
                 nextCursor && !search && (
-                  <Button variant="outline" onClick={() => fetchNextPage()} className="border-white/10 hover:bg-white/5">
+                  <Button variant="outline" onClick={() => fetchQuestions(false)} className="border-white/10 hover:bg-white/5">
                     Load More
                   </Button>
                 )

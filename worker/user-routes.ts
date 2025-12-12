@@ -1094,38 +1094,65 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       return c.json({ success: false, error: 'Unauthorized' }, 403);
     }
     const limitParam = c.req.query('limit');
-    const limit = limitParam ? Math.min(1000, Math.max(1, parseInt(limitParam))) : 1000;
+    const limit = limitParam ? Math.min(1000, Math.max(1, parseInt(limitParam))) : 50;
+    const cursor = c.req.query('cursor') || null;
     const search = c.req.query('search')?.toLowerCase();
     const categoryId = c.req.query('categoryId');
-    let dynamicQuestions: Question[] = [];
-    if (categoryId) {
-        // Optimized fetch for specific category
-        const catIdx = getCategoryQuestionIndex(c.env, categoryId);
-        const { items: ids } = await catIdx.page(null, limit);
-        // Fetch entities in parallel
-        dynamicQuestions = await Promise.all(ids.map(id => new QuestionEntity(c.env, id).getState()));
-    } else {
-        // Global fetch
-        const { items } = await QuestionEntity.list(c.env, null, limit);
-        dynamicQuestions = items;
-    }
-    // Merge with Mocks (Dynamic overrides Mock)
-    const questionMap = new Map<string, Question>();
-    MOCK_QUESTIONS.forEach(q => questionMap.set(q.id, q));
-    dynamicQuestions.forEach(q => questionMap.set(q.id, q));
-    let allQuestions = Array.from(questionMap.values());
-    // Filter
-    if (categoryId) {
-        allQuestions = allQuestions.filter(q => q.categoryId === categoryId);
-    }
+    // Search Mode (High limit, no cursor)
     if (search) {
-        allQuestions = allQuestions.filter(q =>
+        const searchLimit = 1000;
+        let dynamicQuestions: Question[] = [];
+        if (categoryId) {
+            const catIdx = getCategoryQuestionIndex(c.env, categoryId);
+            const { items: ids } = await catIdx.page(null, searchLimit);
+            dynamicQuestions = await Promise.all(ids.map(id => new QuestionEntity(c.env, id).getState()));
+        } else {
+            const { items } = await QuestionEntity.list(c.env, null, searchLimit);
+            dynamicQuestions = items;
+        }
+        // Merge with Mocks
+        const questionMap = new Map<string, Question>();
+        MOCK_QUESTIONS.forEach(q => questionMap.set(q.id, q));
+        dynamicQuestions.forEach(q => questionMap.set(q.id, q));
+        let allQuestions = Array.from(questionMap.values());
+        // Filter
+        if (categoryId) {
+            allQuestions = allQuestions.filter(q => q.categoryId === categoryId);
+        }
+        const filtered = allQuestions.filter(q =>
             q.text.toLowerCase().includes(search) ||
             q.id.toLowerCase().includes(search) ||
             q.categoryId.toLowerCase().includes(search)
         );
+        return ok(c, { items: filtered.slice(0, searchLimit), next: null });
     }
-    return ok(c, allQuestions.slice(0, limit));
+    // Pagination Mode
+    let dynamicQuestions: Question[] = [];
+    let nextCursor: string | null = null;
+    if (categoryId) {
+        const catIdx = getCategoryQuestionIndex(c.env, categoryId);
+        const { items: ids, next } = await catIdx.page(cursor, limit);
+        nextCursor = next;
+        dynamicQuestions = await Promise.all(ids.map(id => new QuestionEntity(c.env, id).getState()));
+    } else {
+        const { items, next } = await QuestionEntity.list(c.env, cursor, limit);
+        dynamicQuestions = items;
+        nextCursor = next;
+    }
+    // If first page (no cursor), include mocks
+    // Note: If categoryId is present, we should only include mocks for that category
+    if (!cursor) {
+        const questionMap = new Map<string, Question>();
+        // Add relevant mocks
+        const relevantMocks = categoryId 
+            ? MOCK_QUESTIONS.filter(q => q.categoryId === categoryId)
+            : MOCK_QUESTIONS;
+        relevantMocks.forEach(q => questionMap.set(q.id, q));
+        // Add/Override with dynamic (dynamic takes precedence)
+        dynamicQuestions.forEach(q => questionMap.set(q.id, q));
+        return ok(c, { items: Array.from(questionMap.values()), next: nextCursor });
+    }
+    return ok(c, { items: dynamicQuestions, next: nextCursor });
   });
   app.delete('/api/admin/questions/:id', async (c) => {
     const userId = c.req.query('userId');
@@ -1235,9 +1262,9 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     const { items } = await UserEntity.list(c.env, null, 100);
     let filtered = items.map(sanitizeUser);
     if (search) {
-      filtered = filtered.filter(u => 
-        u.name.toLowerCase().includes(search) || 
-        u.id.toLowerCase().includes(search) || 
+      filtered = filtered.filter(u =>
+        u.name.toLowerCase().includes(search) ||
+        u.id.toLowerCase().includes(search) ||
         (u.email && u.email.toLowerCase().includes(search))
       );
     }

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Shield, Plus, Save, Loader2, CheckCircle, Trash2, FileText, AlertCircle, Upload, Layers, Flag, XCircle, Star, Settings, Users, HelpCircle, Pencil, Download, Palette, Grid, ShoppingBag, Image as ImageIcon, Database } from 'lucide-react';
+import { Shield, Plus, Save, Loader2, CheckCircle, Trash2, FileText, AlertCircle, Upload, Layers, Flag, XCircle, Star, Settings, Users, HelpCircle, Pencil, Download, Palette, Grid, ShoppingBag, Image as ImageIcon, Database, List } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,6 +26,7 @@ import { useShop } from '@/hooks/use-shop';
 import { CATEGORY_ICONS, ICON_KEYS } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 import { CategoryContentManager } from '@/components/admin/CategoryContentManager';
+import { QuestionBank } from '@/components/admin/QuestionBank';
 const questionSchema = z.object({
   text: z.string().min(5, "Question text must be at least 5 characters"),
   categoryId: z.string().min(1, "Category is required"),
@@ -193,8 +194,8 @@ export function AdminPage() {
   }, [user, navigate, isAuthorized]);
   const fetchRecentQuestions = useCallback(() => {
     if (isAuthorized && user) {
-      api<Question[]>(`/api/admin/questions?userId=${user.id}`)
-        .then(setRecentQuestions)
+      api<{ items: Question[], next: string | null }>(`/api/admin/questions?userId=${user.id}&limit=10`)
+        .then(res => setRecentQuestions(res.items))
         .catch(console.error);
     }
   }, [user, isAuthorized]);
@@ -504,15 +505,15 @@ export function AdminPage() {
   const handleExport = async () => {
     if (!user) return;
     try {
-      const questions = await api<Question[]>(`/api/admin/questions?userId=${user.id}&limit=1000`);
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(questions, null, 2));
+      const res = await api<{ items: Question[] }>(`/api/admin/questions?userId=${user.id}&limit=1000`);
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(res.items, null, 2));
       const downloadAnchorNode = document.createElement('a');
       downloadAnchorNode.setAttribute("href", dataStr);
       downloadAnchorNode.setAttribute("download", `questions_export_${new Date().toISOString().split('T')[0]}.json`);
       document.body.appendChild(downloadAnchorNode);
       downloadAnchorNode.click();
       downloadAnchorNode.remove();
-      toast.success(`Exported ${questions.length} questions`);
+      toast.success(`Exported ${res.items.length} questions`);
     } catch (err) {
       console.error(err);
       toast.error("Failed to export questions");
@@ -688,6 +689,7 @@ export function AdminPage() {
                 <div className="w-full overflow-x-auto pb-2 mb-4 scrollbar-hide">
                     <TabsList className="flex w-max bg-white/5 p-1">
                         <TabsTrigger value="overview" className="px-4">Overview</TabsTrigger>
+                        <TabsTrigger value="questions" className="px-4">Question Bank</TabsTrigger>
                         <TabsTrigger value="single" className="px-4">Single</TabsTrigger>
                         <TabsTrigger value="bulk" className="px-4">Bulk</TabsTrigger>
                         <TabsTrigger value="categories" className="px-4">Cats</TabsTrigger>
@@ -750,6 +752,9 @@ export function AdminPage() {
                       </CardContent>
                     </Card>
                   </div>
+                </TabsContent>
+                <TabsContent value="questions">
+                  <QuestionBank user={user} onEdit={handleEdit} />
                 </TabsContent>
                 <TabsContent value="single">
                     <Card className="bg-zinc-900/50 border-white/10 backdrop-blur-sm">
@@ -1173,7 +1178,7 @@ export function AdminPage() {
                                         {report.reason.replace('_', ' ')}
                                       </Badge>
                                       <span className="text-xs text-muted-foreground">
-                                        Reported by {report.reporterName} �� {new Date(report.timestamp).toLocaleDateString()}
+                                        Reported by {report.reporterName}  {new Date(report.timestamp).toLocaleDateString()}
                                       </span>
                                     </div>
                                     <p className="font-medium text-white text-sm">{report.questionText}</p>
@@ -1242,7 +1247,7 @@ export function AdminPage() {
                                     {u.name}
                                     {u.id === 'Crushed' && <Badge variant="secondary" className="text-[10px]">Admin</Badge>}
                                   </div>
-                                  <div className="text-xs text-muted-foreground font-mono">{u.email || 'No Email'} • {u.id}</div>
+                                  <div className="text-xs text-muted-foreground font-mono">{u.email || 'No Email'} ��� {u.id}</div>
                                 </div>
                                 <Button
                                   variant="destructive"
