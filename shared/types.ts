@@ -48,6 +48,7 @@ export interface User {
   email?: string;
   provider?: 'email' | 'google' | 'apple' | 'guest';
   passwordHash?: string; // Internal use, should be stripped in API responses
+  isAdmin?: boolean; // Administrative privileges
   // Progression
   elo: number;
   categoryElo?: Record<string, number>; // Per-category Elo ratings
@@ -236,6 +237,10 @@ export interface LoginEmailRequest {
 export interface LoginRequest {
   provider: 'google' | 'apple' | 'guest';
   email?: string; // Optional email for simulated OAuth
+}
+// Admin Requests
+export interface SetAdminRoleRequest {
+  isAdmin: boolean;
 }
 // Achievements
 export interface Achievement {

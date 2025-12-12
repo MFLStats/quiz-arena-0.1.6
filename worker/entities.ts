@@ -26,7 +26,8 @@ const MOCK_USERS_WITH_COUNTRIES: User[] = BASE_MOCK_USERS.map((u, i) => ({
     claimedRewards: []
   },
   activityMap: u.activityMap || {},
-  notifications: []
+  notifications: [],
+  isAdmin: false
 }));
 // USER ENTITY: one DO instance per user
 export class UserEntity extends IndexedEntity<User> {
@@ -55,7 +56,8 @@ export class UserEntity extends IndexedEntity<User> {
       claimedRewards: []
     },
     activityMap: {},
-    notifications: []
+    notifications: [],
+    isAdmin: false
   };
   static seedData = MOCK_USERS_WITH_COUNTRIES;
   protected override async ensureState(): Promise<User> {
@@ -105,6 +107,17 @@ export class UserEntity extends IndexedEntity<User> {
       }
       if (newState.frameConfig === undefined) {
         newState.frameConfig = undefined; // Explicitly set to undefined to signify defaults
+        migrated = true;
+      }
+      // Admin Migration: Persist legacy hardcoded admins
+      if (newState.isAdmin === undefined) {
+        const legacyAdmins = ['Crushed', 'Greeky'];
+        // Check ID or Name for legacy admin status
+        if (legacyAdmins.includes(this.id) || legacyAdmins.includes(newState.name)) {
+            newState.isAdmin = true;
+        } else {
+            newState.isAdmin = false;
+        }
         migrated = true;
       }
       if (migrated) {

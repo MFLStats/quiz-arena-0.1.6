@@ -3,7 +3,7 @@ import type { Env } from './core-utils';
 import { UserEntity } from "./entities";
 import { MatchEntity, QueueEntity, QuestionEntity, CategoryEntity, ReportEntity, CodeRegistryEntity, ConfigEntity, ShopEntity, getCategoryQuestionIndex } from "./game-entities";
 import { ok, bad, notFound, isStr, Index } from './core-utils';
-import type { FinishMatchResponse, MatchHistoryItem, UpdateUserRequest, PurchaseItemRequest, EquipItemRequest, UnequipItemRequest, RegisterRequest, LoginEmailRequest, LoginRequest, User, RewardBreakdown, ShopItem, UserAchievement, Question, BulkImportRequest, Category, ClaimRewardRequest, ClaimRewardResponse, UpgradeSeasonPassRequest, CreateReportRequest, Report, JoinMatchRequest, SystemConfig, SystemStats, ChallengeRequest, Notification, ClearNotificationsRequest } from "@shared/types";
+import type { FinishMatchResponse, MatchHistoryItem, UpdateUserRequest, PurchaseItemRequest, EquipItemRequest, UnequipItemRequest, RegisterRequest, LoginEmailRequest, LoginRequest, User, RewardBreakdown, ShopItem, UserAchievement, Question, BulkImportRequest, Category, ClaimRewardRequest, ClaimRewardResponse, UpgradeSeasonPassRequest, CreateReportRequest, Report, JoinMatchRequest, SystemConfig, SystemStats, ChallengeRequest, Notification, ClearNotificationsRequest, SetAdminRoleRequest } from "@shared/types";
 import { MOCK_CATEGORIES, MOCK_QUESTIONS } from "@shared/mock-data";
 import { PROGRESSION_CONSTANTS, getLevelFromXp, getXpRequiredForNextLevel } from "@shared/progression";
 import { SEASON_REWARDS_CONFIG as SHARED_SEASON_CONFIG, SEASON_COST } from "@shared/constants";
@@ -36,11 +36,10 @@ function publicSanitizeUser(user: User): Partial<User> {
   return rest;
 }
 async function isAdmin(env: Env, userId: string): Promise<boolean> {
-  if (userId === 'Crushed' || userId === 'Greeky') return true;
   const userEntity = new UserEntity(env, userId);
   if (await userEntity.exists()) {
     const user = await userEntity.getState();
-    return user.name === 'Crushed' || user.name === 'Greeky';
+    return !!user.isAdmin;
   }
   return false;
 }
@@ -89,7 +88,8 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
           claimedRewards: []
         },
         activityMap: {},
-        notifications: []
+        notifications: [],
+        isAdmin: false
       };
       await UserEntity.create(c.env, newUser);
       console.log(`[AUTH] Registered new user: ${userId} (${normalizedEmail})`);
@@ -189,7 +189,8 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
         claimedRewards: []
       },
       activityMap: {},
-      notifications: []
+      notifications: [],
+      isAdmin: false
     });
     return ok(c, sanitizeUser(user));
   });
@@ -272,7 +273,8 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
             achievements: [],
             seasonPass: { level: 1, xp: 0, isPremium: false, claimedRewards: [] },
             activityMap: {},
-            notifications: []
+            notifications: [],
+            isAdmin: false
         };
         await UserEntity.create(c.env, newUser);
       }
@@ -1376,6 +1378,22 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       const sanitized = items.map(sanitizeUser);
       return ok(c, { items: sanitized, next });
     }
+  });
+  app.put('/api/admin/users/:id/role', async (c) => {
+    const requesterId = c.req.query('userId');
+    const targetId = c.req.param('id');
+    const { isAdmin: shouldBeAdmin } = await c.req.json() as SetAdminRoleRequest;
+    if (!requesterId) return bad(c, 'userId required');
+    if (!await isAdmin(c.env, requesterId)) {
+        return c.json({ success: false, error: 'Unauthorized' }, 403);
+    }
+    if (requesterId === targetId && !shouldBeAdmin) {
+        return bad(c, 'Cannot revoke your own admin privileges');
+    }
+    const userEntity = new UserEntity(c.env, targetId);
+    if (!await userEntity.exists()) return notFound(c, 'User not found');
+    await userEntity.mutate(u => ({ ...u, isAdmin: shouldBeAdmin }));
+    return ok(c, sanitizeUser(await userEntity.getState()));
   });
   app.get('/api/stats', async (c) => {
     const userIdx = new Index<string>(c.env, UserEntity.indexName);

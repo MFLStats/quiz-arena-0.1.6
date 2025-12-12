@@ -7,12 +7,7 @@ export function BottomNav() {
   const location = useLocation();
   const pathname = location.pathname;
   const user = useAuthStore(s => s.user);
-  const isAdmin = user && (
-    user.id === 'Crushed' ||
-    user.name === 'Crushed' ||
-    user.id === 'Greeky' ||
-    user.name === 'Greeky'
-  );
+  const isAdmin = user?.isAdmin;
   const navItems = [
     { icon: Home, label: 'Home', path: '/' },
     { icon: Layers, label: 'Play', path: '/categories' },

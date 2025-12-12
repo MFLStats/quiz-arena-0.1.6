@@ -183,7 +183,7 @@ export function AdminPage() {
       correctIndex: "0"
     }
   });
-  const isAuthorized = user && (user.id === 'Crushed' || user.name === 'Crushed' || user.id === 'Greeky' || user.name === 'Greeky');
+  const isAuthorized = user?.isAdmin;
   useEffect(() => {
     if (!user) {
       navigate('/login');
@@ -604,6 +604,27 @@ export function AdminPage() {
       toast.error("Failed to delete user");
     } finally {
       setDeletingUserId(null);
+    }
+  };
+  const handleToggleAdmin = async (targetUser: User) => {
+    if (!user) return;
+    if (targetUser.id === user.id) {
+        toast.error("You cannot change your own admin status.");
+        return;
+    }
+    const newStatus = !targetUser.isAdmin;
+    const action = newStatus ? "promote" : "revoke";
+    if (!confirm(`Are you sure you want to ${action} admin privileges for ${targetUser.name}?`)) return;
+    try {
+        const updatedUser = await api<User>(`/api/admin/users/${targetUser.id}/role`, {
+            method: 'PUT',
+            body: JSON.stringify({ isAdmin: newStatus })
+        });
+        setUsers(prev => prev.map(u => u.id === targetUser.id ? updatedUser : u));
+        toast.success(`User ${action}d successfully`);
+    } catch (err) {
+        console.error(err);
+        toast.error(`Failed to ${action} user`);
     }
   };
   // --- Shop Management Handlers ---
@@ -1264,19 +1285,31 @@ export function AdminPage() {
                                 <div>
                                   <div className="font-bold text-white flex items-center gap-2">
                                     {u.name}
-                                    {u.id === 'Crushed' && <Badge variant="secondary" className="text-[10px]">Admin</Badge>}
+                                    {u.isAdmin && <Badge variant="default" className="bg-indigo-500 hover:bg-indigo-600 text-[10px] gap-1"><Shield className="w-3 h-3" /> Admin</Badge>}
                                   </div>
-                                  <div className="text-xs text-muted-foreground font-mono">{u.email || 'No Email'} • {u.id}</div>
+                                  <div className="text-xs text-muted-foreground font-mono">{u.email || 'No Email'} �� {u.id}</div>
                                 </div>
-                                <Button
-                                  variant="destructive"
-                                  size="sm"
-                                  onClick={() => handleDeleteUser(u.id)}
-                                  disabled={deletingUserId === u.id || u.id === 'Crushed' || u.id === user.id}
-                                  title="Delete User"
-                                >
-                                  {deletingUserId === u.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                                </Button>
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleToggleAdmin(u)}
+                                        disabled={u.id === user.id}
+                                        title={u.isAdmin ? "Revoke Admin" : "Promote to Admin"}
+                                        className={u.isAdmin ? "text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10" : "text-muted-foreground hover:text-white"}
+                                    >
+                                        <Shield className="w-4 h-4" />
+                                    </Button>
+                                    <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => handleDeleteUser(u.id)}
+                                    disabled={deletingUserId === u.id || u.id === user.id}
+                                    title="Delete User"
+                                    >
+                                    {deletingUserId === u.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                                    </Button>
+                                </div>
                               </div>
                             ))}
                             {userCursor && !userSearch && (
