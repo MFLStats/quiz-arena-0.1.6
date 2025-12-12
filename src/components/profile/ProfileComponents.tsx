@@ -61,7 +61,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { cn, getFlagEmoji, isImageUrl, getBackgroundStyle } from '@/lib/utils';
+import { cn, getFlagEmoji, isImageUrl, getBackgroundStyle, shareContent } from '@/lib/utils';
 import type { User, Category, MatchHistoryItem, UpdateUserRequest, UserAchievement, ShopItem } from '@shared/types';
 import { getLevelFromXp } from '@shared/progression';
 import { ACHIEVEMENTS } from '@shared/achievements';
@@ -135,9 +135,11 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
     }
   };
   const handleShare = () => {
-    const url = window.location.href;
-    navigator.clipboard.writeText(url);
-    toast.success("Profile link copied!");
+    shareContent({
+      title: `Quiz Arena Profile: ${user.name}`,
+      text: `Check out ${user.name}'s profile on Quiz Arena! Level ${getLevelFromXp(user.xp || 0).level} with ${user.elo} Elo.`,
+      url: window.location.href
+    });
   };
   const handleFriendAction = async () => {
     if (!onAddFriend) return;
@@ -164,7 +166,7 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
     >
       {/* Banner Background */}
       <div className="absolute inset-0 h-56 md:h-80 overflow-hidden">
-        <div
+        <div 
           className="absolute inset-0 bg-cover bg-center opacity-60 transition-transform duration-1000 group-hover:scale-105"
           style={getBackgroundStyle(user.banner)}
         />
@@ -205,8 +207,8 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
           {/* Quick Edit Button */}
           {isOwnProfile && (
             <div className="absolute bottom-0 right-0 z-20 translate-x-1/4 translate-y-1/4">
-              <Button
-                size="icon"
+              <Button 
+                size="icon" 
                 className="h-10 w-10 rounded-full bg-indigo-600 hover:bg-indigo-500 border-4 border-zinc-900 shadow-lg transition-transform hover:scale-110"
                 onClick={() => setShowAvatarDialog(true)}
                 title="Customize Avatar"
@@ -538,36 +540,36 @@ export function StatGrid({ user }: StatGridProps) {
   const stats = user.stats || { wins: 0, losses: 0, matches: 0 };
   const winRate = stats.matches > 0 ? Math.round((stats.wins / stats.matches) * 100) : 0;
   const items = [
-    {
-      label: 'Win Rate',
-      value: `${winRate}%`,
+    { 
+      label: 'Win Rate', 
+      value: `${winRate}%`, 
       subtext: `${stats.wins}W - ${stats.losses}L`,
       icon: Trophy,
       color: 'text-yellow-400',
       bg: 'bg-yellow-400/10',
       border: 'border-yellow-400/20'
     },
-    {
-      label: 'Total Matches',
-      value: stats.matches,
+    { 
+      label: 'Total Matches', 
+      value: stats.matches, 
       subtext: 'Arena Veteran',
       icon: Swords,
       color: 'text-indigo-400',
       bg: 'bg-indigo-400/10',
       border: 'border-indigo-400/20'
     },
-    {
-      label: 'Login Streak',
-      value: user.loginStreak || 0,
+    { 
+      label: 'Login Streak', 
+      value: user.loginStreak || 0, 
       subtext: 'Daily Active',
       icon: Flame,
       color: 'text-orange-400',
       bg: 'bg-orange-400/10',
       border: 'border-orange-400/20'
     },
-    {
-      label: 'Total XP',
-      value: (user.xp || 0).toLocaleString(),
+    { 
+      label: 'Total XP', 
+      value: (user.xp || 0).toLocaleString(), 
       subtext: 'Lifetime Points',
       icon: Target,
       color: 'text-emerald-400',
@@ -638,7 +640,7 @@ export function ActivityHeatmap({ activityMap = {} }: ActivityHeatmapProps) {
               return (
                 <Tooltip key={dateStr}>
                   <TooltipTrigger asChild>
-                    <div
+                    <div 
                       className={cn(
                         "w-3 h-3 md:w-4 md:h-4 rounded-sm transition-colors hover:ring-1 hover:ring-white/50",
                         getColor(count)
@@ -776,14 +778,14 @@ export function AchievementsGrid({ userAchievements }: AchievementsGridProps) {
                       transition={{ delay: 0.1 + (i * 0.05) }}
                       className={cn(
                         "aspect-square rounded-xl flex flex-col items-center justify-center p-3 text-center border transition-all duration-300 group cursor-default",
-                        isUnlocked
-                          ? "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"
+                        isUnlocked 
+                          ? "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20" 
                           : "bg-black/20 border-white/5 opacity-50 grayscale"
                       )}
                     >
                       <div className={cn(
                         "w-10 h-10 rounded-full flex items-center justify-center mb-2 transition-transform group-hover:scale-110",
-                        isUnlocked
+                        isUnlocked 
                           ? achievement.rarity === 'legendary' ? "bg-yellow-500/20 text-yellow-400 shadow-[0_0_15px_rgba(234,179,8,0.3)]" :
                             achievement.rarity === 'epic' ? "bg-purple-500/20 text-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.3)]" :
                             achievement.rarity === 'rare' ? "bg-blue-500/20 text-blue-400" :
@@ -972,12 +974,12 @@ export function FriendsList({ friends, onAddFriend }: FriendsListProps) {
                           </Avatar>
                           <div>
                             <div className="text-sm font-medium text-white">{user.name}</div>
-                            <div className="text-xs text-muted-foreground">Lvl {user.level} • {getFlagEmoji(user.country)}</div>
+                            <div className="text-xs text-muted-foreground">Lvl {user.level} �� {getFlagEmoji(user.country)}</div>
                           </div>
                         </div>
                         <Button 
                           size="sm" 
-                          variant="ghost"
+                          variant="ghost" 
                           onClick={() => user.id && handleAdd(user.id)}
                           disabled={isAdding}
                         >

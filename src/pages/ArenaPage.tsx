@@ -12,6 +12,7 @@ import { cn, getFlagEmoji, getBackgroundStyle } from '@/lib/utils';
 import type { FinishMatchResponse, MatchState, ReportReason } from '@shared/types';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { playSfx } from '@/lib/sound-fx';
+import { triggerHaptic } from '@/lib/haptics';
 import { useInterval } from 'react-use';
 import {
   Dialog,
@@ -84,11 +85,12 @@ export function ArenaPage() {
         playSfx('emote');
     }
   }, [opponentLastEmote]);
-  // Audio: Double Points (Final Round)
+  // Audio & Haptics: Double Points (Final Round)
   useEffect(() => {
     if (isFinalRound && !isIntermission && !showIntro && gameStatus === 'playing') {
         // Play sound only once per round transition
         playSfx('double_points');
+        triggerHaptic('medium');
     }
   }, [isFinalRound, isIntermission, showIntro, gameStatus]);
   // Confetti for High Streaks
@@ -191,10 +193,11 @@ export function ArenaPage() {
       return () => clearTimeout(timer);
     }
   }, [showIntro, gameStatus]);
-  // Timer Tick Sound
+  // Timer Tick Sound & Haptics
   useEffect(() => {
     if (timeLeft <= 3 && timeLeft > 0 && !isLocked && !showIntro && !isIntermission) {
       playSfx('tick');
+      triggerHaptic('light');
     }
   }, [timeLeft, isLocked, showIntro, isIntermission]);
   const handleSubmit = useCallback(async (index: number) => {
@@ -215,6 +218,7 @@ export function ArenaPage() {
       });
       if (res.correct) {
         playSfx('correct');
+        triggerHaptic('success');
         setStreak(s => {
             const next = s + 1;
             if (next > 1) playSfx('streak');
@@ -222,6 +226,7 @@ export function ArenaPage() {
         });
       } else {
         playSfx('wrong');
+        triggerHaptic('error');
         setStreak(0);
       }
       lockAnswer(res.correct, res.correctIndex, res.scoreDelta, res.opponentScore);
@@ -389,7 +394,7 @@ export function ArenaPage() {
           >
             {/* Split Backgrounds with Banners */}
             <div className="absolute inset-0 flex flex-col md:flex-row pointer-events-none">
-              <motion.div
+              <motion.div 
                 initial={isMobile ? { y: "-100%" } : { x: "-100%" }}
                 animate={isMobile ? { y: 0 } : { x: 0 }}
                 exit={isMobile ? { y: "-100%" } : { x: "-100%" }}
@@ -399,7 +404,7 @@ export function ArenaPage() {
               >
                 <div className="absolute inset-0 bg-indigo-950/60 backdrop-blur-sm" />
               </motion.div>
-              <motion.div
+              <motion.div 
                 initial={isMobile ? { y: "100%" } : { x: "100%" }}
                 animate={isMobile ? { y: 0 } : { x: 0 }}
                 exit={isMobile ? { y: "100%" } : { x: "100%" }}
@@ -520,8 +525,8 @@ export function ArenaPage() {
             </div>
             <div className="relative">
                 <TimerCircle 
-                  key={currentQuestion?.id}
-                  duration={10}
+                  key={currentQuestion?.id} 
+                  duration={10} 
                   isRunning={!isLocked && !showIntro && gameStatus === 'playing' && !isIntermission}
                   className={cn(
                     "scale-75 md:scale-100",
@@ -580,8 +585,8 @@ export function ArenaPage() {
             {isIntermission && !showIntro && (
                <RoundIntermission 
                  key="intermission"
-                 roundNumber={Math.min(currentIndex + 1, questions.length)}
-                 totalRounds={questions.length}
+                 roundNumber={Math.min(currentIndex + 1, questions.length)} 
+                 totalRounds={questions.length} 
                />
             )}
             {!isIntermission && currentQuestion && (
@@ -598,9 +603,9 @@ export function ArenaPage() {
                   <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-indigo-500 to-transparent opacity-50" />
                   {/* Report Button */}
                   <div className="absolute top-3 left-3 md:top-6 md:left-6">
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       className="h-6 w-6 md:h-8 md:w-8 rounded-full text-muted-foreground hover:text-red-400 hover:bg-red-500/10"
                       onClick={() => setIsReportOpen(true)}
                       title="Report Issue"

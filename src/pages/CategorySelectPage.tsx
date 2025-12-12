@@ -30,19 +30,14 @@ interface CategoryTileProps {
     icon: React.ElementType;
   };
 }
-// Compact Tile Component
+// Compact Tile Component - No longer a motion component to avoid ref conflicts with Tooltip
 const CategoryTile = React.forwardRef<HTMLDivElement, CategoryTileProps>(
   ({ cat, userRating, isJoining, onJoin, index, gameMode, badge }, ref) => {
     const Icon = CATEGORY_ICONS[cat.icon] || Atom;
     return (
-      <motion.div
+      <div
         ref={ref}
-        layout
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.9 }}
-        transition={{ delay: index * 0.03 }}
-        className="group relative aspect-square"
+        className="group relative aspect-square h-full w-full"
         onClick={() => !isJoining && onJoin(cat.id, cat.name)}
       >
         <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 rounded-2xl blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -76,7 +71,7 @@ const CategoryTile = React.forwardRef<HTMLDivElement, CategoryTileProps>(
             )}
           </div>
         </div>
-      </motion.div>
+      </div>
     );
   }
 );
@@ -105,28 +100,37 @@ function CategorySection({ title, categories, joiningId, onJoin, userRatings, ga
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-4">
         <AnimatePresence mode="popLayout">
           {categories.map((cat, i) => (
-            <TooltipProvider key={cat.id}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <CategoryTile
-                    cat={cat}
-                    index={i}
-                    isJoining={joiningId === cat.id}
-                    onJoin={onJoin}
-                    userRating={userRatings?.[cat.id]}
-                    gameMode={gameMode}
-                    badge={getBadge(cat)}
-                  />
-                </TooltipTrigger>
-                <TooltipContent className="bg-zinc-900 border-white/10 text-xs max-w-[200px]">
-                  <p className="font-bold mb-1">{cat.name}</p>
-                  <p className="text-muted-foreground">{cat.description}</p>
-                  <div className="mt-2 pt-2 border-t border-white/10 flex justify-between">
-                    <span>Base Elo: {cat.baseElo}</span>
-                  </div>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <motion.div
+              key={cat.id}
+              layout
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={{ delay: i * 0.03 }}
+            >
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <CategoryTile
+                      cat={cat}
+                      index={i}
+                      isJoining={joiningId === cat.id}
+                      onJoin={onJoin}
+                      userRating={userRatings?.[cat.id]}
+                      gameMode={gameMode}
+                      badge={getBadge(cat)}
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent className="bg-zinc-900 border-white/10 text-xs max-w-[200px]">
+                    <p className="font-bold mb-1">{cat.name}</p>
+                    <p className="text-muted-foreground">{cat.description}</p>
+                    <div className="mt-2 pt-2 border-t border-white/10 flex justify-between">
+                      <span>Base Elo: {cat.baseElo}</span>
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </motion.div>
           ))}
         </AnimatePresence>
       </div>
@@ -311,7 +315,7 @@ export function CategorySelectPage() {
         </div>
         {/* Featured Banner (Compact) */}
         {!search && featuredCategory && (
-          <motion.div
+          <motion.div 
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
             className="mb-8 relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-indigo-900/20 to-purple-900/20 p-6 group cursor-pointer"
@@ -347,25 +351,34 @@ export function CategorySelectPage() {
               Results
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-4">
-              <AnimatePresence>
+              <AnimatePresence mode="popLayout">
                 {filtered.map((cat, i) => (
-                  <TooltipProvider key={cat.id}>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <CategoryTile
-                          cat={cat}
-                          index={i}
-                          isJoining={joiningId === cat.id}
-                          onJoin={handleJoinQueue}
-                          userRating={user?.categoryElo?.[cat.id]}
-                          gameMode={gameMode}
-                        />
-                      </TooltipTrigger>
-                      <TooltipContent className="bg-zinc-900 border-white/10 text-xs">
-                        {cat.description}
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  <motion.div
+                    key={cat.id}
+                    layout
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    transition={{ delay: i * 0.03 }}
+                  >
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <CategoryTile
+                            cat={cat}
+                            index={i}
+                            isJoining={joiningId === cat.id}
+                            onJoin={handleJoinQueue}
+                            userRating={user?.categoryElo?.[cat.id]}
+                            gameMode={gameMode}
+                          />
+                        </TooltipTrigger>
+                        <TooltipContent className="bg-zinc-900 border-white/10 text-xs">
+                          {cat.description}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </motion.div>
                 ))}
               </AnimatePresence>
             </div>
@@ -377,24 +390,24 @@ export function CategorySelectPage() {
           </div>
         ) : (
           <div className="space-y-2">
-            <CategorySection
-              title="General Knowledge"
+            <CategorySection 
+              title="General Knowledge" 
               categories={groupedCategories['General']}
               joiningId={joiningId}
               onJoin={handleJoinQueue}
               userRatings={user?.categoryElo}
               gameMode={gameMode}
             />
-            <CategorySection
-              title="Education & Science"
+            <CategorySection 
+              title="Education & Science" 
               categories={groupedCategories['Education']}
               joiningId={joiningId}
               onJoin={handleJoinQueue}
               userRatings={user?.categoryElo}
               gameMode={gameMode}
             />
-            <CategorySection
-              title="Entertainment"
+            <CategorySection 
+              title="Entertainment" 
               categories={groupedCategories['TV & Movies']}
               joiningId={joiningId}
               onJoin={handleJoinQueue}
@@ -402,8 +415,8 @@ export function CategorySelectPage() {
               gameMode={gameMode}
             />
              {groupedCategories['Sports'].length > 0 && (
-              <CategorySection
-                title="Sports"
+              <CategorySection 
+                title="Sports" 
                 categories={groupedCategories['Sports']}
                 joiningId={joiningId}
                 onJoin={handleJoinQueue}
@@ -413,9 +426,9 @@ export function CategorySelectPage() {
             )}
           </div>
         )}
-        <QueueModal
-          isOpen={!!queueState}
-          onCancel={handleCancelQueue}
+        <QueueModal 
+          isOpen={!!queueState} 
+          onCancel={handleCancelQueue} 
           categoryName={queueState?.categoryName || ''}
           matchFound={queueState?.matchFound}
         />

@@ -1,6 +1,7 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import React from "react"
+import { toast } from "sonner"
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
@@ -26,14 +27,44 @@ export function isImageUrl(value?: string): boolean {
 export function getBackgroundStyle(value?: string): React.CSSProperties {
   if (!value) return {};
   if (isImageUrl(value)) {
-    return { 
-      backgroundImage: `url(${value})`, 
-      backgroundSize: 'cover', 
-      backgroundPosition: 'center' 
+    return {
+      backgroundImage: `url(${value})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center'
     };
   }
   if (value.startsWith('linear') || value.startsWith('radial')) {
     return { background: value };
   }
   return {};
+}
+/**
+ * Shares content using the native Web Share API if available,
+ * otherwise falls back to copying to clipboard.
+ */
+export async function shareContent(data: { title?: string; text?: string; url?: string }) {
+  const shareData = {
+    title: data.title || 'Trivium Arena',
+    text: data.text,
+    url: data.url || window.location.href,
+  };
+  if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+    try {
+      await navigator.share(shareData);
+      return;
+    } catch (err) {
+      if ((err as Error).name !== 'AbortError') {
+        console.error('Share failed:', err);
+      }
+      // If share fails (not aborted), fall through to clipboard
+    }
+  }
+  // Fallback to clipboard
+  try {
+    await navigator.clipboard.writeText(shareData.url);
+    toast.success('Link copied to clipboard!');
+  } catch (err) {
+    console.error('Clipboard write failed:', err);
+    toast.error('Failed to copy link');
+  }
 }
