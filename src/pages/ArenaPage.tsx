@@ -309,7 +309,7 @@ export function ArenaPage() {
       <div className="min-h-dvh flex flex-col items-center justify-center bg-zinc-950 relative overflow-hidden p-4">
         {/* ... (Lobby UI remains same) ... */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-indigo-900/20 via-zinc-950 to-zinc-950 pointer-events-none" />
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           className="relative z-10 w-full max-w-4xl flex flex-col items-center"
@@ -341,8 +341,8 @@ export function ArenaPage() {
                   {roomCode}
                 </div>
                 <div className="flex gap-3 justify-center">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     className="border-white/10 hover:bg-white/5 gap-2"
                     onClick={copyCode}
                   >
@@ -378,7 +378,11 @@ export function ArenaPage() {
   const opponentCountry = opponentStats?.country;
   const opponentElo = opponentStats?.elo;
   const opponentTitle = opponentStats?.title;
-  const myTitle = matchData.players[user.id]?.title || user.title;
+  const opponentDisplayTitle = opponentStats?.displayTitle;
+  const myStats = matchData.players[user.id];
+  const myTitle = myStats?.title || user.title;
+  const myDisplayTitle = myStats?.displayTitle;
+  const isDaily = matchData.mode === 'daily';
   return (
     <div className="min-h-dvh flex flex-col bg-zinc-950 overflow-hidden relative font-sans selection:bg-indigo-500/30">
       {/* Background Ambience */}
@@ -394,7 +398,7 @@ export function ArenaPage() {
           >
             {/* Split Backgrounds with Banners */}
             <div className="absolute inset-0 flex flex-col md:flex-row pointer-events-none">
-              <motion.div 
+              <motion.div
                 initial={isMobile ? { y: "-100%" } : { x: "-100%" }}
                 animate={isMobile ? { y: 0 } : { x: 0 }}
                 exit={isMobile ? { y: "-100%" } : { x: "-100%" }}
@@ -404,16 +408,18 @@ export function ArenaPage() {
               >
                 <div className="absolute inset-0 bg-indigo-950/60 backdrop-blur-sm" />
               </motion.div>
-              <motion.div 
-                initial={isMobile ? { y: "100%" } : { x: "100%" }}
-                animate={isMobile ? { y: 0 } : { x: 0 }}
-                exit={isMobile ? { y: "100%" } : { x: "100%" }}
-                transition={{ duration: 0.5, ease: "circOut" }}
-                className={cn("relative w-full h-1/2 md:w-1/2 md:h-full border-t md:border-t-0 md:border-l border-rose-500/20", !opponentStats?.banner && "bg-rose-950/30")}
-                style={getBackgroundStyle(opponentStats?.banner)}
-              >
-                <div className="absolute inset-0 bg-rose-950/60 backdrop-blur-sm" />
-              </motion.div>
+              {!isDaily && (
+                <motion.div
+                  initial={isMobile ? { y: "100%" } : { x: "100%" }}
+                  animate={isMobile ? { y: 0 } : { x: 0 }}
+                  exit={isMobile ? { y: "100%" } : { x: "100%" }}
+                  transition={{ duration: 0.5, ease: "circOut" }}
+                  className={cn("relative w-full h-1/2 md:w-1/2 md:h-full border-t md:border-t-0 md:border-l border-rose-500/20", !opponentStats?.banner && "bg-rose-950/30")}
+                  style={getBackgroundStyle(opponentStats?.banner)}
+                >
+                  <div className="absolute inset-0 bg-rose-950/60 backdrop-blur-sm" />
+                </motion.div>
+              )}
             </div>
             <div className="relative w-full max-w-6xl h-full flex flex-col md:flex-row items-center justify-between px-4 md:px-20 py-12 md:py-0">
               {/* Left/Top Player (You) */}
@@ -421,7 +427,7 @@ export function ArenaPage() {
                 initial={isMobile ? { y: -100, opacity: 0 } : { x: -200, opacity: 0 }}
                 animate={isMobile ? { y: 0, opacity: 1 } : { x: 0, opacity: 1 }}
                 transition={{ delay: 0.3, type: "spring", stiffness: 100 }}
-                className="flex flex-col items-center gap-4 md:gap-6 z-10"
+                className={cn("flex flex-col items-center gap-4 md:gap-6 z-10", isDaily && "md:col-span-2 mx-auto")}
               >
                 <div className="relative">
                   <div className="absolute inset-0 bg-indigo-500 blur-[60px] opacity-40 rounded-full" />
@@ -435,55 +441,59 @@ export function ArenaPage() {
                     <span>{getFlagEmoji(user.country)}</span>
                     <span>ELO {user.elo}</span>
                   </div>
-                  {myTitle && (
-                    <div className="mt-2 text-amber-400 font-bold uppercase tracking-wider text-sm">{myTitle}</div>
+                  {(myDisplayTitle || myTitle) && (
+                    <div className="mt-2 text-amber-400 font-bold uppercase tracking-wider text-sm">{myDisplayTitle || myTitle}</div>
                   )}
                 </div>
               </motion.div>
               {/* VS Badge */}
-              <motion.div
-                initial={{ scale: 0, rotate: -180, opacity: 0 }}
-                animate={{ scale: 1, rotate: 0, opacity: 1 }}
-                transition={{ delay: 0.8, type: "spring", stiffness: 200, damping: 15 }}
-                className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20"
-              >
-                <div className="relative">
-                  <div className="absolute inset-0 bg-yellow-500 blur-[80px] opacity-50 rounded-full animate-pulse" />
-                  <div className="w-24 h-24 md:w-40 md:h-40 bg-zinc-950 text-white font-black text-4xl md:text-7xl flex items-center justify-center rounded-full border-4 md:border-8 border-yellow-500 shadow-[0_0_60px_rgba(234,179,8,0.6)] italic transform -skew-x-12">
-                    <span className="bg-clip-text text-transparent bg-gradient-to-b from-yellow-300 to-yellow-600 drop-shadow-sm">VS</span>
+              {!isDaily && (
+                <motion.div
+                  initial={{ scale: 0, rotate: -180, opacity: 0 }}
+                  animate={{ scale: 1, rotate: 0, opacity: 1 }}
+                  transition={{ delay: 0.8, type: "spring", stiffness: 200, damping: 15 }}
+                  className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20"
+                >
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-yellow-500 blur-[80px] opacity-50 rounded-full animate-pulse" />
+                    <div className="w-24 h-24 md:w-40 md:h-40 bg-zinc-950 text-white font-black text-4xl md:text-7xl flex items-center justify-center rounded-full border-4 md:border-8 border-yellow-500 shadow-[0_0_60px_rgba(234,179,8,0.6)] italic transform -skew-x-12">
+                      <span className="bg-clip-text text-transparent bg-gradient-to-b from-yellow-300 to-yellow-600 drop-shadow-sm">VS</span>
+                    </div>
                   </div>
-                </div>
-              </motion.div>
+                </motion.div>
+              )}
               {/* Right/Bottom Player (Opponent) */}
-              <motion.div
-                initial={isMobile ? { y: 100, opacity: 0 } : { x: 200, opacity: 0 }}
-                animate={isMobile ? { y: 0, opacity: 1 } : { x: 0, opacity: 1 }}
-                transition={{ delay: 0.5, type: "spring", stiffness: 100 }}
-                className="flex flex-col items-center gap-4 md:gap-6 z-10"
-              >
-                <div className="relative">
-                  <div className="absolute inset-0 bg-rose-500 blur-[60px] opacity-40 rounded-full" />
-                  <div className="w-24 h-24 md:w-48 md:h-48 rounded-full border-4 border-rose-500 shadow-[0_0_50px_rgba(244,63,94,0.5)] overflow-hidden bg-zinc-900 relative z-10">
-                    {opponentStats?.avatar ? (
-                       <img src={opponentStats.avatar} alt={opponentName} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-rose-600 to-orange-600 flex items-center justify-center">
-                         <span className="text-3xl md:text-4xl font-bold text-white/50">{opponentName[0]}</span>
-                      </div>
+              {!isDaily && (
+                <motion.div
+                  initial={isMobile ? { y: 100, opacity: 0 } : { x: 200, opacity: 0 }}
+                  animate={isMobile ? { y: 0, opacity: 1 } : { x: 0, opacity: 1 }}
+                  transition={{ delay: 0.5, type: "spring", stiffness: 100 }}
+                  className="flex flex-col items-center gap-4 md:gap-6 z-10"
+                >
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-rose-500 blur-[60px] opacity-40 rounded-full" />
+                    <div className="w-24 h-24 md:w-48 md:h-48 rounded-full border-4 border-rose-500 shadow-[0_0_50px_rgba(244,63,94,0.5)] overflow-hidden bg-zinc-900 relative z-10">
+                      {opponentStats?.avatar ? (
+                        <img src={opponentStats.avatar} alt={opponentName} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-rose-600 to-orange-600 flex items-center justify-center">
+                          <span className="text-3xl md:text-4xl font-bold text-white/50">{opponentName[0]}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <h2 className="text-2xl md:text-5xl font-bold text-white font-display tracking-wider mb-1 md:mb-2">{opponentName}</h2>
+                    <div className="px-3 py-0.5 md:px-4 md:py-1 bg-rose-500/20 border border-rose-500/30 rounded-full text-rose-300 font-mono text-sm md:text-base flex items-center justify-center gap-2">
+                      {opponentCountry && <span>{getFlagEmoji(opponentCountry)}</span>}
+                      {opponentElo ? <span>ELO {opponentElo}</span> : <span>CHALLENGER</span>}
+                    </div>
+                    {(opponentDisplayTitle || opponentTitle) && (
+                      <div className="mt-2 text-amber-400 font-bold uppercase tracking-wider text-sm">{opponentDisplayTitle || opponentTitle}</div>
                     )}
                   </div>
-                </div>
-                <div className="text-center">
-                  <h2 className="text-2xl md:text-5xl font-bold text-white font-display tracking-wider mb-1 md:mb-2">{opponentName}</h2>
-                  <div className="px-3 py-0.5 md:px-4 md:py-1 bg-rose-500/20 border border-rose-500/30 rounded-full text-rose-300 font-mono text-sm md:text-base flex items-center justify-center gap-2">
-                    {opponentCountry && <span>{getFlagEmoji(opponentCountry)}</span>}
-                    {opponentElo ? <span>ELO {opponentElo}</span> : <span>CHALLENGER</span>}
-                  </div>
-                  {opponentTitle && (
-                    <div className="mt-2 text-amber-400 font-bold uppercase tracking-wider text-sm">{opponentTitle}</div>
-                  )}
-                </div>
-              </motion.div>
+                </motion.div>
+              )}
             </div>
           </motion.div>
         )}
@@ -497,11 +507,11 @@ export function ArenaPage() {
       >
         {/* Header */}
         <header className="relative z-10 p-3 md:p-6 flex items-center justify-between w-full">
-          <div className="flex items-center gap-2 md:gap-6">
-            <OpponentAvatar name={user.name} className="scale-75 md:scale-100 origin-left" title={myTitle} />
+          <div className={cn("flex items-center gap-2 md:gap-6", isDaily && "mx-auto")}>
+            <OpponentAvatar name={user.name} className="scale-75 md:scale-100 origin-left" title={myTitle} displayTitle={myDisplayTitle} />
             <ScoreBadge score={myScore} label="You" />
           </div>
-          <div className="flex flex-col items-center -mt-2 relative">
+          <div className={cn("flex flex-col items-center -mt-2 relative", isDaily && "absolute left-1/2 -translate-x-1/2 top-4")}>
             <div className="flex flex-col items-center gap-1 mb-2 md:mb-4">
                 <div className="flex items-center gap-2 px-3 py-1 md:px-4 md:py-1.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-md shadow-lg">
                     <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-indigo-500 animate-pulse" />
@@ -524,9 +534,9 @@ export function ArenaPage() {
                 </AnimatePresence>
             </div>
             <div className="relative">
-                <TimerCircle 
-                  key={currentQuestion?.id} 
-                  duration={10} 
+                <TimerCircle
+                  key={currentQuestion?.id}
+                  duration={10}
                   isRunning={!isLocked && !showIntro && gameStatus === 'playing' && !isIntermission}
                   className={cn(
                     "scale-75 md:scale-100",
@@ -549,8 +559,8 @@ export function ArenaPage() {
                         exit={{ opacity: 0, scale: 0.8 }}
                         className={cn(
                           "absolute top-full mt-2 flex items-center gap-1.5 px-3 py-1 rounded-full border font-bold text-sm backdrop-blur-md z-20 animate-shake",
-                          streak >= 5 
-                            ? "bg-red-500/20 border-red-500/40 text-red-400 shadow-[0_0_20px_rgba(239,68,68,0.4)]" 
+                          streak >= 5
+                            ? "bg-red-500/20 border-red-500/40 text-red-400 shadow-[0_0_20px_rgba(239,68,68,0.4)]"
                             : "bg-orange-500/20 border-orange-500/40 text-orange-400 shadow-[0_0_15px_rgba(249,115,22,0.3)]"
                         )}
                     >
@@ -560,33 +570,35 @@ export function ArenaPage() {
                 )}
             </AnimatePresence>
           </div>
-          <div className="flex items-center gap-2 md:gap-6 relative">
-            <ScoreBadge score={opponentScore} label="Enemy" isOpponent />
-            <div className="flex flex-col items-center gap-1 relative">
-              <OpponentAvatar name={opponentName} isOpponent className="scale-75 md:scale-100 origin-right" title={opponentTitle} />
-              {opponentCountry && (
-                <div className="flex items-center gap-1 text-[10px] bg-black/40 px-2 py-0.5 rounded-full border border-white/5">
-                  <span>{getFlagEmoji(opponentCountry)}</span>
-                  {opponentElo && <span className="text-rose-300 font-mono">{opponentElo}</span>}
-                </div>
-              )}
-              {/* Opponent Emote Floater */}
-              {opponentLastEmote && (
-                <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center pointer-events-none">
-                  <EmoteFloater emoji={opponentLastEmote.emoji} timestamp={opponentLastEmote.timestamp} />
-                </div>
-              )}
+          {!isDaily && (
+            <div className="flex items-center gap-2 md:gap-6 relative">
+              <ScoreBadge score={opponentScore} label="Enemy" isOpponent />
+              <div className="flex flex-col items-center gap-1 relative">
+                <OpponentAvatar name={opponentName} isOpponent className="scale-75 md:scale-100 origin-right" title={opponentTitle} displayTitle={opponentDisplayTitle} />
+                {opponentCountry && (
+                  <div className="flex items-center gap-1 text-[10px] bg-black/40 px-2 py-0.5 rounded-full border border-white/5">
+                    <span>{getFlagEmoji(opponentCountry)}</span>
+                    {opponentElo && <span className="text-rose-300 font-mono">{opponentElo}</span>}
+                  </div>
+                )}
+                {/* Opponent Emote Floater */}
+                {opponentLastEmote && (
+                  <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center pointer-events-none">
+                    <EmoteFloater emoji={opponentLastEmote.emoji} timestamp={opponentLastEmote.timestamp} />
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </header>
         {/* Arena */}
         <main className="flex-1 flex flex-col items-center justify-center p-4 w-full relative z-10 pb-20 md:pb-20">
           <AnimatePresence mode="wait">
             {isIntermission && !showIntro && (
-               <RoundIntermission 
+               <RoundIntermission
                  key="intermission"
-                 roundNumber={Math.min(currentIndex + 1, questions.length)} 
-                 totalRounds={questions.length} 
+                 roundNumber={Math.min(currentIndex + 1, questions.length)}
+                 totalRounds={questions.length}
                />
             )}
             {!isIntermission && currentQuestion && (
@@ -621,9 +633,9 @@ export function ArenaPage() {
                           {currentQuestion.media.content}
                         </span>
                       ) : (
-                        <img 
-                          src={currentQuestion.media.content} 
-                          alt="Question Media" 
+                        <img
+                          src={currentQuestion.media.content}
+                          alt="Question Media"
                           className="max-h-32 md:max-h-48 rounded-xl shadow-2xl border border-white/10"
                         />
                       )}
@@ -660,8 +672,8 @@ export function ArenaPage() {
                         exit={{ opacity: 0, scale: 0.8 }}
                         className={cn(
                           "px-6 py-3 md:px-10 md:py-4 rounded-full font-black text-lg md:text-2xl uppercase tracking-widest shadow-2xl border backdrop-blur-xl flex items-center gap-3 md:gap-4",
-                          lastCorrect 
-                            ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-400 shadow-emerald-500/20" 
+                          lastCorrect
+                            ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-400 shadow-emerald-500/20"
                             : "bg-rose-500/20 border-rose-500/50 text-rose-400 shadow-rose-500/20"
                         )}
                       >
@@ -670,7 +682,7 @@ export function ArenaPage() {
                       </motion.div>
                     )}
                     {/* Waiting for opponent indicator */}
-                    {isLocked && !lastCorrect && isSubmitting && (
+                    {isLocked && !lastCorrect && isSubmitting && !isDaily && (
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}

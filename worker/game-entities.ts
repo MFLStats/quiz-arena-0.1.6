@@ -1,7 +1,7 @@
 import { IndexedEntity, Entity, Env, Index } from "./core-utils";
 import { UserEntity } from "./entities";
-import type { MatchState, Question, PlayerStats, SubmitAnswerResponse, Category, Report, SystemConfig, ShopItem } from "@shared/types";
-import { MOCK_QUESTIONS, MOCK_SHOP_ITEMS } from "@shared/mock-data";
+import type { MatchState, Question, PlayerStats, SubmitAnswerResponse, Category, Report, SystemConfig, ShopItem, User } from "@shared/types";
+import { MOCK_QUESTIONS, MOCK_SHOP_ITEMS, MOCK_CATEGORIES } from "@shared/mock-data";
 // --- Randomization Helpers ---
 function simpleHash(str: string): number {
   let hash = 0;
@@ -264,6 +264,87 @@ export class MatchEntity extends IndexedEntity<MatchState> {
     }
     return s;
   }
+  // Helper to calculate ranks for players
+  async calculateRanks(env: Env, userIds: string[], categoryId: string, mode: string): Promise<Record<string, { displayTitle?: string, categoryRank?: number }>> {
+    const results: Record<string, { displayTitle?: string, categoryRank?: number }> = {};
+    try {
+      // Fetch users to determine rank. Limiting to 500 for performance in this demo scale.
+      // In production, this would use a dedicated leaderboard service or optimized query.
+      const { items: allUsers } = await UserEntity.list(env, null, 500);
+      // 1. Daily Mode Ranks
+      if (mode === 'daily') {
+        const today = new Date().toISOString().split('T')[0];
+        const dailyUsers = allUsers
+          .filter(u => u.dailyStats?.date === today && (u.dailyStats?.score || 0) > 0)
+          .sort((a, b) => (b.dailyStats?.score || 0) - (a.dailyStats?.score || 0));
+        for (const uid of userIds) {
+          const rankIndex = dailyUsers.findIndex(u => u.id === uid);
+          if (rankIndex !== -1) {
+            const rank = rankIndex + 1;
+            if (rank === 1) results[uid] = { displayTitle: "1st Daily Quiz Challenge" };
+            else if (rank === 2) results[uid] = { displayTitle: "2nd Daily Quiz Challenge" };
+            else if (rank === 3) results[uid] = { displayTitle: "3rd Daily Quiz Challenge" };
+          }
+        }
+      } 
+      // 2. Ranked Mode Ranks
+      else {
+        // Overall Rank (Elo)
+        const sortedByElo = [...allUsers].sort((a, b) => b.elo - a.elo);
+        // Category Rank
+        const sortedByCategory = [...allUsers]
+          .filter(u => (u.categoryElo?.[categoryId] || 0) > 0)
+          .sort((a, b) => (b.categoryElo?.[categoryId] || 0) - (a.categoryElo?.[categoryId] || 0));
+        // Get Category Name
+        let categoryName = categoryId;
+        // Try to find name in mocks first for speed
+        const mockCat = MOCK_CATEGORIES.find(c => c.id === categoryId);
+        if (mockCat) {
+            categoryName = mockCat.name;
+        } else {
+            // Try to fetch dynamic category
+            try {
+                const catEntity = new CategoryEntity(env, categoryId);
+                if (await catEntity.exists()) {
+                    const cat = await catEntity.getState();
+                    categoryName = cat.name;
+                }
+            } catch (e) {
+                // Fallback to ID if fetch fails
+            }
+        }
+        for (const uid of userIds) {
+          let displayTitle: string | undefined;
+          let categoryRank: number | undefined;
+          // Check Overall Rank
+          const overallRank = sortedByElo.findIndex(u => u.id === uid) + 1;
+          if (overallRank === 1) displayTitle = "Gold";
+          else if (overallRank === 2) displayTitle = "Silver";
+          else if (overallRank === 3) displayTitle = "Bronze";
+          // Check Category Rank
+          const catRankIndex = sortedByCategory.findIndex(u => u.id === uid);
+          if (catRankIndex !== -1) {
+            categoryRank = catRankIndex + 1;
+            // If no overall title, use category rank title
+            if (!displayTitle) {
+               displayTitle = `${categoryRank}${this.getOrdinalSuffix(categoryRank)} in ${categoryName}`;
+            }
+          }
+          results[uid] = { displayTitle, categoryRank };
+        }
+      }
+    } catch (e) {
+      console.error("Failed to calculate ranks", e);
+    }
+    return results;
+  }
+  private getOrdinalSuffix(i: number): string {
+    const j = i % 10, k = i % 100;
+    if (j === 1 && k !== 11) return "st";
+    if (j === 2 && k !== 12) return "nd";
+    if (j === 3 && k !== 13) return "rd";
+    return "th";
+  }
   async startMatch(userIds: string[], categoryId: string, mode: 'ranked' | 'daily' = 'ranked', isPrivate: boolean = false): Promise<MatchState> {
     let dynamicQuestions: Question[] = [];
     try {
@@ -311,6 +392,8 @@ export class MatchEntity extends IndexedEntity<MatchState> {
          console.error("CRITICAL: No questions available for match");
       }
     }
+    // Calculate Ranks & Titles
+    const rankInfo = await this.calculateRanks(this.env, userIds, categoryId, mode);
     const players: Record<string, PlayerStats> = {};
     for (const uid of userIds) {
       let name = 'Player';
@@ -339,6 +422,12 @@ export class MatchEntity extends IndexedEntity<MatchState> {
           console.error(`Failed to fetch user ${uid} for match snapshot`, e);
         }
       }
+      // Override title if dynamic rank title exists
+      const dynamicInfo = rankInfo[uid];
+      if (dynamicInfo?.displayTitle) {
+        // If it's a special rank title (Gold/Silver/Bronze/Daily), use it as displayTitle
+        // The frontend will prioritize displayTitle over title
+      }
       players[uid] = {
         userId: uid,
         score: 0,
@@ -350,7 +439,9 @@ export class MatchEntity extends IndexedEntity<MatchState> {
         title,
         avatar,
         frame,
-        banner
+        banner,
+        displayTitle: dynamicInfo?.displayTitle,
+        categoryRank: dynamicInfo?.categoryRank
       };
     }
     const newState: MatchState = {
@@ -394,6 +485,11 @@ export class MatchEntity extends IndexedEntity<MatchState> {
     } catch (e) {
       console.error(`Failed to fetch user ${userId} for match join`, e);
     }
+    // Calculate rank for joining player (simplified, re-calculating for single user context)
+    // Note: In a real scenario, we might want to re-calculate for everyone or just this user.
+    // For simplicity, we'll calculate for this user.
+    const rankInfo = await this.calculateRanks(this.env, [userId], state.categoryId, state.mode);
+    const dynamicInfo = rankInfo[userId];
     const newPlayer: PlayerStats = {
       userId,
       score: 0,
@@ -405,7 +501,9 @@ export class MatchEntity extends IndexedEntity<MatchState> {
       title,
       avatar,
       frame,
-      banner
+      banner,
+      displayTitle: dynamicInfo?.displayTitle,
+      categoryRank: dynamicInfo?.categoryRank
     };
     const updatedPlayers = { ...state.players, [userId]: newPlayer };
     const playerCount = Object.keys(updatedPlayers).length;

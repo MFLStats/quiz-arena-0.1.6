@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { Check, X, User as UserIcon, Loader2, Crown, Smile, Swords } from 'lucide-react';
+import { Check, X, User as UserIcon, Loader2, Crown, Smile, Swords, Medal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 // --- Timer Circle ---
@@ -159,7 +159,27 @@ export function ScoreBadge({ score, label, isOpponent }: ScoreBadgeProps) {
   );
 }
 // --- Opponent Avatar ---
-export function OpponentAvatar({ name, className, isOpponent, title }: { name: string, className?: string, isOpponent?: boolean, title?: string }) {
+export function OpponentAvatar({ name, className, isOpponent, title, displayTitle }: { name: string, className?: string, isOpponent?: boolean, title?: string, displayTitle?: string }) {
+  // Determine title styling based on content
+  let titleClass = "text-amber-400 border-amber-500/20 bg-amber-500/10";
+  let titleIcon = <Crown className="w-3 h-3 fill-amber-400" />;
+  if (displayTitle) {
+    if (displayTitle === 'Gold' || displayTitle.includes('1st Daily')) {
+      titleClass = "text-yellow-400 border-yellow-500/30 bg-yellow-500/10";
+      titleIcon = <Crown className="w-3 h-3 fill-yellow-400" />;
+    } else if (displayTitle === 'Silver' || displayTitle.includes('2nd Daily')) {
+      titleClass = "text-slate-300 border-slate-400/30 bg-slate-400/10";
+      titleIcon = <Medal className="w-3 h-3 text-slate-300" />;
+    } else if (displayTitle === 'Bronze' || displayTitle.includes('3rd Daily')) {
+      titleClass = "text-amber-600 border-amber-700/30 bg-amber-700/10";
+      titleIcon = <Medal className="w-3 h-3 text-amber-600" />;
+    } else if (displayTitle.includes('in ')) {
+      // Category Rank
+      titleClass = "text-indigo-300 border-indigo-500/30 bg-indigo-500/10";
+      titleIcon = <Medal className="w-3 h-3 text-indigo-300" />;
+    }
+  }
+  const finalTitle = displayTitle || title;
   return (
     <div className={cn("flex flex-col items-center gap-2", className)}>
       <div className={cn(
@@ -177,9 +197,12 @@ export function OpponentAvatar({ name, className, isOpponent, title }: { name: s
         <span className="text-xs font-bold text-white/90 tracking-wide bg-black/40 px-2 py-0.5 rounded-full backdrop-blur-sm border border-white/5">
           {name}
         </span>
-        {title && (
-          <span className="mt-1 text-[10px] font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
-            <Crown className="w-3 h-3 fill-amber-400" /> {title}
+        {finalTitle && (
+          <span className={cn(
+            "mt-1 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 px-1.5 py-0.5 rounded border max-w-[120px] truncate",
+            titleClass
+          )}>
+            {titleIcon} {finalTitle}
           </span>
         )}
       </div>
@@ -191,7 +214,7 @@ interface EmotePickerProps {
   onSelect: (emoji: string) => void;
   disabled?: boolean;
 }
-const EMOJIS = ['😂', '👏', '🤔', '😱', '😎', '😭', '🤯', '🔥'];
+const EMOJIS = ['����', '👏', '🤔', '😱', '😎', '😭', '🤯', '🔥'];
 export function EmotePicker({ onSelect, disabled }: EmotePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isCooldown, setIsCooldown] = useState(false);

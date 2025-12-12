@@ -108,6 +108,9 @@ export interface PlayerStats {
   frame?: string;
   banner?: string;
   lastEmote?: { emoji: string; timestamp: number; };
+  // Dynamic Rank Info
+  categoryRank?: number;
+  displayTitle?: string;
 }
 export interface MatchState {
   id: string;
