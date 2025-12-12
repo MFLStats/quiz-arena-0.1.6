@@ -141,41 +141,25 @@ export function ResultsPage() {
     loadData();
   }, [matchId, user, storeResult, storeQuestions]);
   const triggerConfetti = () => {
-    // Reduced particle count and simplified burst for better visibility
+    // Reduced duration and intensity for better UX
     const count = 100;
     const defaults = {
       origin: { y: 0.7 },
       zIndex: 100
     };
-    function fire(particleRatio: number, opts: any) {
-      confetti({
-        ...defaults,
-        ...opts,
-        particleCount: Math.floor(count * particleRatio)
-      });
-    }
-    // Single controlled burst sequence
-    fire(0.25, {
-      spread: 26,
-      startVelocity: 55,
-    });
-    fire(0.2, {
+    // Single burst sequence
+    confetti({
+      ...defaults,
+      particleCount: 50,
       spread: 60,
-    });
-    fire(0.35, {
-      spread: 100,
-      decay: 0.91,
-      scalar: 0.8
-    });
-    fire(0.1, {
-      spread: 120,
-      startVelocity: 25,
-      decay: 0.92,
-      scalar: 1.2
-    });
-    fire(0.1, {
-      spread: 120,
       startVelocity: 45,
+    });
+    confetti({
+      ...defaults,
+      particleCount: 30,
+      spread: 100,
+      decay: 0.9,
+      scalar: 1.2
     });
   };
   const triggerLevelUpConfetti = () => {
@@ -220,7 +204,7 @@ export function ResultsPage() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4 relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/20 via-background to-background pointer-events-none" />
-      <motion.div 
+      <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         className="relative z-10 max-w-4xl w-full bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6 md:p-12 text-center shadow-2xl overflow-y-auto max-h-[90vh]"
@@ -239,16 +223,16 @@ export function ResultsPage() {
         )}
         {/* Header */}
         <div className="mb-8 relative">
-          <Button 
-            variant="ghost" 
-            size="icon" 
+          <Button
+            variant="ghost"
+            size="icon"
             className="absolute right-0 top-0 text-muted-foreground hover:text-white"
             onClick={handleShare}
             title="Share Result"
           >
             <Share2 className="w-5 h-5" />
           </Button>
-          <motion.div 
+          <motion.div
             initial={{ y: -20 }}
             animate={{ y: 0 }}
             className="inline-flex p-4 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 shadow-lg mb-6"
@@ -278,7 +262,7 @@ export function ResultsPage() {
         {/* Rewards Grid */}
         {(result.xpEarned > 0 || result.coinsEarned > 0) && (
           <div className="grid grid-cols-2 gap-4 mb-8 max-w-lg mx-auto">
-            <motion.div 
+            <motion.div
               initial={{ x: -20, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               transition={{ delay: 0.2 }}
@@ -297,7 +281,7 @@ export function ResultsPage() {
                 ))}
               </div>
             </motion.div>
-            <motion.div 
+            <motion.div
               initial={{ x: 20, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               transition={{ delay: 0.3 }}
@@ -346,32 +330,32 @@ export function ResultsPage() {
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
-                  <XAxis 
-                    dataKey="question" 
-                    stroke="#ffffff50" 
+                  <XAxis
+                    dataKey="question"
+                    stroke="#ffffff50"
                     tick={{fill: '#ffffff50', fontSize: 12}}
                     tickLine={false}
                     axisLine={false}
                   />
-                  <YAxis 
-                    stroke="#ffffff50" 
+                  <YAxis
+                    stroke="#ffffff50"
                     tick={{fill: '#ffffff50', fontSize: 12}}
                     tickLine={false}
                     axisLine={false}
                     unit="s"
                   />
-                  <Tooltip 
+                  <Tooltip
                     contentStyle={{ backgroundColor: '#18181b', border: '1px solid #ffffff20', borderRadius: '8px' }}
                     itemStyle={{ color: '#fff' }}
                     labelStyle={{ color: '#a1a1aa' }}
                   />
-                  <Area 
-                    type="monotone" 
-                    dataKey="time" 
-                    stroke="#818cf8" 
-                    strokeWidth={3} 
-                    fillOpacity={1} 
-                    fill="url(#colorTime)" 
+                  <Area
+                    type="monotone"
+                    dataKey="time"
+                    stroke="#818cf8"
+                    strokeWidth={3}
+                    fillOpacity={1}
+                    fill="url(#colorTime)"
                   />
                 </AreaChart>
               </ResponsiveContainer>

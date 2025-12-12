@@ -5,7 +5,7 @@ interface GameState {
   // Session Data
   matchId: string | null;
   categoryId: string | null;
-  mode: 'ranked' | 'daily';
+  mode: 'ranked' | 'daily' | 'practice';
   questions: Question[];
   code: string | null;
   isPrivate: boolean;

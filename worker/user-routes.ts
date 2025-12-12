@@ -363,7 +363,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
             // Check if #1
             // We scan top 1000 users to check rank.
             const { items: allUsers } = await UserEntity.list(c.env, null, 1000);
-            const isNumberOne = !allUsers.some(u => 
+            const isNumberOne = !allUsers.some(u =>
                 u.id !== user.id && (u.categoryElo?.[bestCatId] || 1200) > maxElo
             );
             if (isNumberOne) {
@@ -983,9 +983,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
         if (!dailyStats || dailyStats.date !== today || myStats.score > dailyStats.score) {
           dailyStats = { date: today, score: myStats.score };
         }
-        if (myStats.score >= 500 && title !== 'Daily Challenge Winner') {
-          title = 'Daily Challenge Winner';
-        }
+        // Removed automatic title assignment logic here to ensure exclusivity
       }
       const activityMap = user.activityMap || {};
       const newActivityCount = (activityMap[today] || 0) + 1;
@@ -1227,8 +1225,8 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
         if (categoryId) {
             allQuestions = allQuestions.filter(q => q.categoryId === categoryId);
         }
-        const filtered = allQuestions.filter(q => 
-            q.text.toLowerCase().includes(search) || 
+        const filtered = allQuestions.filter(q =>
+            q.text.toLowerCase().includes(search) ||
             q.id.toLowerCase().includes(search) ||
             q.categoryId.toLowerCase().includes(search)
         );
@@ -1252,8 +1250,8 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     if (!cursor) {
         const questionMap = new Map<string, Question>();
         // Add relevant mocks
-        const relevantMocks = categoryId 
-            ? MOCK_QUESTIONS.filter(q => q.categoryId === categoryId) 
+        const relevantMocks = categoryId
+            ? MOCK_QUESTIONS.filter(q => q.categoryId === categoryId)
             : MOCK_QUESTIONS;
         relevantMocks.forEach(q => questionMap.set(q.id, q));
         // Add/Override with dynamic (dynamic takes precedence)
@@ -1374,8 +1372,8 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       // Search mode (scan larger batch, no cursor support for simplicity in this phase)
       const { items } = await UserEntity.list(c.env, null, 1000);
       let filtered = items.map(sanitizeUser);
-      filtered = filtered.filter(u => 
-        u.name.toLowerCase().includes(search) || 
+      filtered = filtered.filter(u =>
+        u.name.toLowerCase().includes(search) ||
         u.id.toLowerCase().includes(search) ||
         (u.email && u.email.toLowerCase().includes(search))
       );

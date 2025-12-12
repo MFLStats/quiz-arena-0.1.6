@@ -19,6 +19,8 @@ import { useCategories } from '@/hooks/use-categories';
 import { useShop } from '@/hooks/use-shop';
 import { Button } from '@/components/ui/button';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 export function ProfilePage() {
   const currentUser = useAuthStore(s => s.user);
   const updateUser = useAuthStore(s => s.updateUser);
@@ -27,6 +29,7 @@ export function ProfilePage() {
   const { userId } = useParams();
   const { categories } = useCategories();
   const { items: shopItems } = useShop();
+  const isMobile = useIsMobile();
   const [user, setUser] = useState<User | null>(null);
   const [friends, setFriends] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -153,32 +156,70 @@ export function ProfilePage() {
           shopItems={shopItems}
           onLogout={handleLogout}
         />
-        {/* Middle Section: Stats */}
-        <StatGrid user={user} />
-        {/* Activity Heatmap */}
-        <ActivityHeatmap activityMap={user.activityMap} />
-        {/* Bottom Section: Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Main Content: Mastery & Achievements (8 cols) */}
-          <div className="lg:col-span-8 space-y-8">
-            {/* Skill Radar Chart */}
-            <SkillRadar categories={categories} categoryElo={user.categoryElo} />
-            <TopicMastery
-              categories={categories}
-              categoryElo={user.categoryElo}
-            />
-            <AchievementsGrid userAchievements={user.achievements || []} />
-          </div>
-          {/* Sidebar: History & Friends (4 cols) */}
-          <div className="lg:col-span-4 space-y-8">
-            {/* Only show match history if it's own profile or if we implement public history later */}
-            <MatchHistoryList history={user.history || []} />
-            {/* Only show friends management on own profile */}
-            {isOwnProfile && (
-              <FriendsList friends={friends} onAddFriend={handleAddFriend} />
-            )}
-          </div>
-        </div>
+        {isMobile ? (
+          <Tabs defaultValue="stats" className="w-full">
+            <TabsList className="grid w-full grid-cols-4 bg-white/5 p-1 rounded-xl">
+              <TabsTrigger value="stats" className="text-xs">Stats</TabsTrigger>
+              <TabsTrigger value="mastery" className="text-xs">Skills</TabsTrigger>
+              <TabsTrigger value="history" className="text-xs">History</TabsTrigger>
+              <TabsTrigger value="social" className="text-xs">Social</TabsTrigger>
+            </TabsList>
+            <TabsContent value="stats" className="space-y-6 mt-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <StatGrid user={user} />
+              <ActivityHeatmap activityMap={user.activityMap} />
+            </TabsContent>
+            <TabsContent value="mastery" className="space-y-6 mt-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <SkillRadar categories={categories} categoryElo={user.categoryElo} />
+              <TopicMastery
+                categories={categories}
+                categoryElo={user.categoryElo}
+              />
+              <AchievementsGrid userAchievements={user.achievements || []} />
+            </TabsContent>
+            <TabsContent value="history" className="mt-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <MatchHistoryList history={user.history || []} />
+            </TabsContent>
+            <TabsContent value="social" className="mt-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              {isOwnProfile ? (
+                <FriendsList friends={friends} onAddFriend={handleAddFriend} />
+              ) : (
+                <div className="text-center py-8 text-muted-foreground text-sm border border-dashed border-white/10 rounded-lg bg-white/5">
+                  Friend list is private.
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        ) : (
+          // Desktop Layout
+          <>
+            {/* Middle Section: Stats */}
+            <StatGrid user={user} />
+            {/* Activity Heatmap */}
+            <ActivityHeatmap activityMap={user.activityMap} />
+            {/* Bottom Section: Content Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+              {/* Main Content: Mastery & Achievements (8 cols) */}
+              <div className="lg:col-span-8 space-y-8">
+                {/* Skill Radar Chart */}
+                <SkillRadar categories={categories} categoryElo={user.categoryElo} />
+                <TopicMastery
+                  categories={categories}
+                  categoryElo={user.categoryElo}
+                />
+                <AchievementsGrid userAchievements={user.achievements || []} />
+              </div>
+              {/* Sidebar: History & Friends (4 cols) */}
+              <div className="lg:col-span-4 space-y-8">
+                {/* Only show match history if it's own profile or if we implement public history later */}
+                <MatchHistoryList history={user.history || []} />
+                {/* Only show friends management on own profile */}
+                {isOwnProfile && (
+                  <FriendsList friends={friends} onAddFriend={handleAddFriend} />
+                )}
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </AppLayout>
   );
