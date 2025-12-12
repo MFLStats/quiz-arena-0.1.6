@@ -23,6 +23,7 @@ import { MatchReview } from '@/components/game/MatchReview';
 import { shareContent } from '@/lib/utils';
 import { XPProgress } from '@/components/game/XPProgress';
 import { AchievementUnlock } from '@/components/game/AchievementUnlock';
+import { useTheme } from '@/hooks/use-theme';
 export function ResultsPage() {
   const { matchId } = useParams();
   const user = useAuthStore(s => s.user);
@@ -31,6 +32,7 @@ export function ResultsPage() {
   const storeQuestions = useGameStore(s => s.questions);
   const [result, setResult] = useState<GameResult | null>(null);
   const [loading, setLoading] = useState(true);
+  const { reduceMotion } = useTheme();
   // Sync User Data Effect
   useEffect(() => {
     const syncUserData = async () => {
@@ -61,12 +63,12 @@ export function ResultsPage() {
         setLoading(false);
         if (storeResult.won) {
             playSfx('win');
-            triggerConfetti();
+            if (!reduceMotion) triggerConfetti();
         } else {
             playSfx('lose');
         }
         if (storeResult.levelUp) {
-            setTimeout(() => triggerLevelUpConfetti(), 1000);
+            if (!reduceMotion) setTimeout(() => triggerLevelUpConfetti(), 1000);
         }
         return;
       }
@@ -139,7 +141,7 @@ export function ResultsPage() {
       }
     };
     loadData();
-  }, [matchId, user, storeResult, storeQuestions]);
+  }, [matchId, user, storeResult, storeQuestions, reduceMotion]);
   const triggerConfetti = () => {
     // Reduced duration and intensity for better UX
     const count = 100;

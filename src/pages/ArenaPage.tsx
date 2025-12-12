@@ -14,6 +14,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { playSfx } from '@/lib/sound-fx';
 import { triggerHaptic } from '@/lib/haptics';
 import { useInterval } from '@/hooks/use-interval';
+import { useTheme } from '@/hooks/use-theme';
 import {
   Dialog,
   DialogContent,
@@ -37,6 +38,7 @@ export function ArenaPage() {
   const navigate = useNavigate();
   const user = useAuthStore(s => s.user);
   const isMobile = useIsMobile();
+  const { reduceMotion } = useTheme();
   // Selectors
   const questions = useGameStore(s => s.questions);
   const currentIndex = useGameStore(s => s.currentQuestionIndex);
@@ -114,7 +116,7 @@ export function ArenaPage() {
   }, [isFinalRound, isIntermission, showIntro, gameStatus]);
   // Confetti for High Streaks
   useEffect(() => {
-    if (streak >= 3) {
+    if (!reduceMotion && streak >= 3 && (streak === 3 || streak % 5 === 0)) {
       const particleCount = streak >= 5 ? 100 : 50;
       const spread = streak >= 5 ? 80 : 60;
       confetti({
@@ -125,7 +127,7 @@ export function ArenaPage() {
         disableForReducedMotion: true
       });
     }
-  }, [streak]);
+  }, [streak, reduceMotion]);
   // Recover match state on refresh
   useEffect(() => {
     if (matchId) {

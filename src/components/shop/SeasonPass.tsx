@@ -13,6 +13,7 @@ import { useAuthStore } from '@/lib/auth-store';
 import { toast } from 'sonner';
 import confetti from 'canvas-confetti';
 import { playSfx } from '@/lib/sound-fx';
+import { useTheme } from '@/hooks/use-theme';
 interface SeasonPassProps {
   user: User | null;
 }
@@ -26,6 +27,7 @@ export function SeasonPass({ user }: SeasonPassProps) {
   const [timeLeft, setTimeLeft] = useState('');
   const [rewardResult, setRewardResult] = useState<{ type: 'coins' | 'item', amount?: number, item?: ShopItem } | null>(null);
   const [seasonName, setSeasonName] = useState(SEASON_NAME);
+  const { reduceMotion } = useTheme();
   const currentLevel = user?.level || 1;
   const currentXp = user?.xp || 0;
   const isPremium = user?.seasonPass?.isPremium || false;
@@ -85,12 +87,14 @@ export function SeasonPass({ user }: SeasonPassProps) {
       updateUser(response.user);
       setRewardResult(response.reward);
       playSfx('win');
-      confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 },
-        colors: ['#fbbf24', '#f59e0b', '#d97706']
-      });
+      if (!reduceMotion) {
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#fbbf24', '#f59e0b', '#d97706']
+        });
+      }
     } catch (err: any) {
       console.error(err);
       toast.error(err.message || "Failed to claim reward");

@@ -25,7 +25,7 @@ import {
 import { useAudioStore } from '@/lib/audio-store';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuthStore } from '@/lib/auth-store';
-import { Volume2, Monitor, User, LogOut, VolumeX, Trash2, Loader2, RefreshCw } from 'lucide-react';
+import { Volume2, Monitor, User, LogOut, VolumeX, Trash2, Loader2, RefreshCw, ZapOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api-client';
 import { toast } from 'sonner';
@@ -35,7 +35,7 @@ interface SettingsDialogProps {
 }
 export function SettingsDialog({ isOpen, onOpenChange }: SettingsDialogProps) {
   const { masterVolume, sfxVolume, setMasterVolume, setSfxVolume } = useAudioStore();
-  const { isDark, toggleTheme } = useTheme();
+  const { isDark, toggleTheme, reduceMotion, toggleReduceMotion } = useTheme();
   const user = useAuthStore(s => s.user);
   const logout = useAuthStore(s => s.logout);
   const navigate = useNavigate();
@@ -130,6 +130,21 @@ export function SettingsDialog({ isOpen, onOpenChange }: SettingsDialogProps) {
               <Switch
                 checked={isDark}
                 onCheckedChange={toggleTheme}
+                className="data-[state=checked]:bg-indigo-500"
+              />
+            </div>
+            <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
+              <div className="space-y-1">
+                <Label className="text-base text-white flex items-center gap-2">
+                  <ZapOff className="w-4 h-4" /> Reduce Motion
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Disable confetti and heavy animations.
+                </p>
+              </div>
+              <Switch
+                checked={reduceMotion}
+                onCheckedChange={toggleReduceMotion}
                 className="data-[state=checked]:bg-indigo-500"
               />
             </div>

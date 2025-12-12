@@ -27,6 +27,7 @@ import { SeasonPass } from '@/components/shop/SeasonPass';
 import { Link, useNavigate } from 'react-router-dom';
 import confetti from 'canvas-confetti';
 import { playSfx } from '@/lib/sound-fx';
+import { useTheme } from '@/hooks/use-theme';
 function EmptyShopState({ title, description }: { title: string, description: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center border border-dashed border-white/10 rounded-xl bg-white/5">
@@ -50,6 +51,7 @@ export function ShopPage() {
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [mysteryBoxResult, setMysteryBoxResult] = useState<ShopItem | null>(null);
   const [itemToBuy, setItemToBuy] = useState<ShopItem | null>(null);
+  const { reduceMotion } = useTheme();
   const fetchUserData = useCallback(async () => {
     if (!currentUserId) {
       setUserLoading(false);
@@ -104,12 +106,14 @@ export function ShopPage() {
         await new Promise(resolve => setTimeout(resolve, 1500));
       }
       updateUser(updatedUser);
-      confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 },
-        colors: ['#fbbf24', '#f59e0b', '#d97706']
-      });
+      if (!reduceMotion) {
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#fbbf24', '#f59e0b', '#d97706']
+        });
+      }
       if (item.type === 'box') {
         const oldInv = new Set(currentUser.inventory || []);
         const newInv = updatedUser.inventory || [];
