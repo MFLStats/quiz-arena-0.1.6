@@ -1,1 +1,2 @@
-// This file is intentionally deleted as it has been superseded by src/lib/notification-store.ts
+// DEPRECATED: This file has been removed and is no longer used.
+export {};

@@ -1,2 +1,2 @@
-// This file has been deprecated and superseded by BottomNav.
+// DEPRECATED: This file has been removed and is no longer used.
 export {};
