@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Lock, Check, Star, Crown, Gift, Zap, Coins, Box, User as UserIcon, Image as ImageIcon } from 'lucide-react';
+import { Lock, Check, Star, Crown, Gift, Zap, Coins, Box, User as UserIcon, Image as ImageIcon, Sparkles } from 'lucide-react';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { cn } from '@/lib/utils';
-import type { User, ClaimRewardRequest, UpgradeSeasonPassRequest } from '@shared/types';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { cn, getBackgroundStyle } from '@/lib/utils';
+import type { User, ClaimRewardRequest, ClaimRewardResponse, UpgradeSeasonPassRequest, ShopItem } from '@shared/types';
 import { SEASON_REWARDS_CONFIG, SEASON_COST, SEASON_LEVELS, SEASON_NAME, SEASON_END_DATE } from '@shared/constants';
 import { api } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/auth-store';
 import { toast } from 'sonner';
+import confetti from 'canvas-confetti';
+import { playSfx } from '@/lib/sound-fx';
 interface SeasonPassProps {
   user: User | null;
 }
@@ -21,12 +24,12 @@ export function SeasonPass({ user }: SeasonPassProps) {
   const updateUser = useAuthStore(s => s.updateUser);
   const [isProcessing, setIsProcessing] = useState(false);
   const [timeLeft, setTimeLeft] = useState('');
+  const [rewardResult, setRewardResult] = useState<{ type: 'coins' | 'item', amount?: number, item?: ShopItem } | null>(null);
   const currentLevel = user?.level || 1;
   const currentXp = user?.xp || 0;
   const isPremium = user?.seasonPass?.isPremium || false;
   const claimedRewards = user?.seasonPass?.claimedRewards || [];
   // Calculate progress within current level (simplified for display)
-  // In a real app, we'd use getXpRequiredForNextLevel from progression.ts
   const progressPercent = (currentXp % 100);
   useEffect(() => {
     const calculateTimeLeft = () => {
@@ -61,12 +64,19 @@ export function SeasonPass({ user }: SeasonPassProps) {
     setIsProcessing(true);
     try {
       const req: ClaimRewardRequest = { userId: user.id, level, track };
-      const updatedUser = await api<User>('/api/shop/season/claim', {
+      const response = await api<ClaimRewardResponse>('/api/shop/season/claim', {
         method: 'POST',
         body: JSON.stringify(req)
       });
-      updateUser(updatedUser);
-      toast.success(`Claimed Level ${level} ${track} reward!`);
+      updateUser(response.user);
+      setRewardResult(response.reward);
+      playSfx('win');
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#fbbf24', '#f59e0b', '#d97706']
+      });
     } catch (err: any) {
       console.error(err);
       toast.error(err.message || "Failed to claim reward");
@@ -228,6 +238,53 @@ export function SeasonPass({ user }: SeasonPassProps) {
           <ScrollBar orientation="horizontal" className="bg-white/5" />
         </ScrollArea>
       </div>
+      {/* Reward Reveal Dialog */}
+      <Dialog open={!!rewardResult} onOpenChange={() => setRewardResult(null)}>
+        <DialogContent className="bg-zinc-950 border-white/10 text-center sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-display text-white">Reward Unlocked!</DialogTitle>
+            <DialogDescription className="sr-only">You have claimed a reward</DialogDescription>
+          </DialogHeader>
+          {rewardResult && (
+            <div className="py-8 flex flex-col items-center animate-in zoom-in duration-500">
+              <div className={cn(
+                "w-32 h-32 rounded-full flex items-center justify-center mb-6 relative",
+                rewardResult.type === 'item' && rewardResult.item?.rarity === 'legendary' ? "bg-yellow-500/20 shadow-[0_0_50px_rgba(234,179,8,0.5)]" :
+                rewardResult.type === 'item' && rewardResult.item?.rarity === 'epic' ? "bg-purple-500/20 shadow-[0_0_50px_rgba(168,85,247,0.5)]" :
+                "bg-blue-500/20"
+              )}>
+                <Sparkles className={cn(
+                  "absolute -top-4 -right-4 w-8 h-8 animate-bounce",
+                  rewardResult.type === 'item' && rewardResult.item?.rarity === 'legendary' ? "text-yellow-400" : "text-white"
+                )} />
+                {rewardResult.type === 'coins' ? (
+                  <Coins className="w-16 h-16 text-yellow-400" />
+                ) : rewardResult.item ? (
+                  rewardResult.item.type === 'avatar' ? (
+                    <img src={rewardResult.item.assetUrl} className="w-24 h-24 rounded-full" />
+                  ) : (
+                    <div className="w-24 h-16 rounded bg-cover bg-center" style={getBackgroundStyle(rewardResult.item.assetUrl)} />
+                  )
+                ) : (
+                  <Gift className="w-16 h-16 text-white" />
+                )}
+              </div>
+              <h3 className={cn(
+                "text-xl font-bold mb-1",
+                rewardResult.type === 'item' && rewardResult.item?.rarity === 'legendary' ? "text-yellow-400" :
+                rewardResult.type === 'item' && rewardResult.item?.rarity === 'epic' ? "text-purple-400" :
+                "text-white"
+              )}>
+                {rewardResult.type === 'coins' ? `${rewardResult.amount} Coins` : rewardResult.item?.name}
+              </h3>
+              {rewardResult.type === 'item' && rewardResult.item && (
+                <p className="text-sm text-muted-foreground uppercase tracking-widest">{rewardResult.item.rarity}</p>
+              )}
+            </div>
+          )}
+          <Button onClick={() => setRewardResult(null)}>Awesome!</Button>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

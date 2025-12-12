@@ -3,7 +3,7 @@ import type { Env } from './core-utils';
 import { UserEntity } from "./entities";
 import { MatchEntity, QueueEntity, QuestionEntity, CategoryEntity, ReportEntity, CodeRegistryEntity, ConfigEntity, ShopEntity, getCategoryQuestionIndex } from "./game-entities";
 import { ok, bad, notFound, isStr, Index } from './core-utils';
-import type { FinishMatchResponse, MatchHistoryItem, UpdateUserRequest, PurchaseItemRequest, EquipItemRequest, UnequipItemRequest, RegisterRequest, LoginEmailRequest, LoginRequest, User, RewardBreakdown, ShopItem, UserAchievement, Question, BulkImportRequest, Category, ClaimRewardRequest, UpgradeSeasonPassRequest, CreateReportRequest, Report, JoinMatchRequest, SystemConfig, SystemStats, ChallengeRequest, Notification, ClearNotificationsRequest } from "@shared/types";
+import type { FinishMatchResponse, MatchHistoryItem, UpdateUserRequest, PurchaseItemRequest, EquipItemRequest, UnequipItemRequest, RegisterRequest, LoginEmailRequest, LoginRequest, User, RewardBreakdown, ShopItem, UserAchievement, Question, BulkImportRequest, Category, ClaimRewardRequest, ClaimRewardResponse, UpgradeSeasonPassRequest, CreateReportRequest, Report, JoinMatchRequest, SystemConfig, SystemStats, ChallengeRequest, Notification, ClearNotificationsRequest } from "@shared/types";
 import { MOCK_CATEGORIES, MOCK_QUESTIONS } from "@shared/mock-data";
 import { PROGRESSION_CONSTANTS, getLevelFromXp, getXpRequiredForNextLevel } from "@shared/progression";
 import { SEASON_REWARDS_CONFIG as SHARED_SEASON_CONFIG, SEASON_COST } from "@shared/constants";
@@ -631,10 +631,48 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       if (reward.type === 'none') return bad(c, 'No reward at this level');
       let currencyToAdd = 0;
       const inventoryToAdd: string[] = [];
+      let awardedItem: ShopItem | undefined;
+      let rewardType: 'coins' | 'item' = 'coins';
       if (reward.type === 'coins') {
         currencyToAdd = reward.amount || 0;
+        rewardType = 'coins';
+      } else if (reward.type === 'box' && reward.itemId) {
+        // Logic to open box and award random item
+        const { items: allItems } = await ShopEntity.list(c.env, null, 1000);
+        // Determine rarity pool based on box type (heuristic or fetch)
+        const boxEntity = new ShopEntity(c.env, reward.itemId);
+        let boxRarity = 'common';
+        if (await boxEntity.exists()) {
+            const box = await boxEntity.getState();
+            boxRarity = box.rarity;
+        }
+        let pool: ShopItem[] = [];
+        if (boxRarity === 'common') {
+            pool = allItems.filter(i => i.type !== 'box' && (i.rarity === 'common' || i.rarity === 'rare'));
+        } else if (boxRarity === 'rare') {
+            pool = allItems.filter(i => i.type !== 'box' && (i.rarity === 'rare' || i.rarity === 'epic'));
+        } else {
+            pool = allItems.filter(i => i.type !== 'box' && (i.rarity === 'epic' || i.rarity === 'legendary'));
+        }
+        const unowned = pool.filter(i => !user.inventory?.includes(i.id));
+        const targetPool = unowned.length > 0 ? unowned : pool;
+        if (targetPool.length > 0) {
+            awardedItem = targetPool[Math.floor(Math.random() * targetPool.length)];
+            inventoryToAdd.push(awardedItem.id);
+            rewardType = 'item';
+        } else {
+            // Fallback if pool empty (owned everything)
+            currencyToAdd = 100; // Fallback coins
+            rewardType = 'coins';
+        }
       } else if (reward.itemId) {
+        // Direct item reward
         inventoryToAdd.push(reward.itemId);
+        const itemEntity = new ShopEntity(c.env, reward.itemId);
+        if (await itemEntity.exists()) {
+            awardedItem = await itemEntity.getState();
+        }
+        rewardType = 'item';
       }
       await userEntity.mutate(u => ({
         ...u,
@@ -645,7 +683,15 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
           claimedRewards: [...seasonPass.claimedRewards, claimKey]
         }
       }));
-      return ok(c, sanitizeUser(await userEntity.getState()));
+      const response: ClaimRewardResponse = {
+        user: await userEntity.getState(),
+        reward: {
+            type: rewardType,
+            amount: currencyToAdd,
+            item: awardedItem
+        }
+      };
+      return ok(c, response);
     } catch (e) {
       console.error('[API] Claim reward error:', e);
       return c.json({ success: false, error: 'Internal Server Error' }, 500);

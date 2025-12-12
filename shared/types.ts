@@ -266,6 +266,14 @@ export interface ClaimRewardRequest {
   level: number;
   track: 'free' | 'premium';
 }
+export interface ClaimRewardResponse {
+  user: User;
+  reward: {
+    type: 'coins' | 'item';
+    amount?: number;
+    item?: ShopItem;
+  };
+}
 export interface UpgradeSeasonPassRequest {
   userId: string;
 }

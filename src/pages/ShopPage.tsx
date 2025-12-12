@@ -45,8 +45,6 @@ export function ShopPage() {
   const logout = useAuthStore(s => s.logout);
   const navigate = useNavigate();
   const { items: shopItems, loading: shopLoading, error: shopError, refresh: refreshShop } = useShop();
-  const [userCurrency, setUserCurrency] = useState(0);
-  const [inventory, setInventory] = useState<string[]>([]);
   const [userLoading, setUserLoading] = useState(true);
   const [userError, setUserError] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
@@ -61,17 +59,10 @@ export function ShopPage() {
     setUserError(null);
     try {
       const user = await api<User>(`/api/users/${currentUserId}`);
-      setUserCurrency(user.currency || 0);
-      setInventory(user.inventory || []);
       updateUser(user);
     } catch (err: any) {
       console.error('Failed to fetch user data:', err);
       setUserError(err.message || 'Failed to load shop data');
-      const fallbackUser = useAuthStore.getState().user;
-      if (fallbackUser) {
-        setUserCurrency(fallbackUser.currency || 0);
-        setInventory(fallbackUser.inventory || []);
-      }
     } finally {
       setUserLoading(false);
     }
@@ -91,7 +82,7 @@ export function ShopPage() {
   };
   const initiatePurchase = (item: ShopItem) => {
     if (!currentUser) return;
-    if (userCurrency < item.price) {
+    if ((currentUser.currency || 0) < item.price) {
       toast.error("Not enough coins!");
       return;
     }
@@ -112,8 +103,6 @@ export function ShopPage() {
       if (item.type === 'box') {
         await new Promise(resolve => setTimeout(resolve, 1500));
       }
-      setUserCurrency(updatedUser.currency || 0);
-      setInventory(updatedUser.inventory || []);
       updateUser(updatedUser);
       confetti({
         particleCount: 100,
@@ -122,7 +111,7 @@ export function ShopPage() {
         colors: ['#fbbf24', '#f59e0b', '#d97706']
       });
       if (item.type === 'box') {
-        const oldInv = new Set(inventory);
+        const oldInv = new Set(currentUser.inventory || []);
         const newInv = updatedUser.inventory || [];
         const awardedId = newInv.find(id => !oldInv.has(id));
         if (awardedId) {
@@ -262,7 +251,7 @@ export function ShopPage() {
           </div>
           <div className="flex items-center gap-2 px-4 py-2 bg-yellow-500/10 border border-yellow-500/20 rounded-full">
             <Coins className="w-5 h-5 text-yellow-500" />
-            <span className="text-xl font-bold text-yellow-500 tabular-nums">{userCurrency}</span>
+            <span className="text-xl font-bold text-yellow-500 tabular-nums">{currentUser.currency || 0}</span>
           </div>
         </div>
         <Tabs defaultValue="season" className="w-full">
@@ -288,9 +277,9 @@ export function ShopPage() {
                     key={item.id}
                     item={item}
                     index={i}
-                    purchased={inventory.includes(item.id)}
+                    purchased={currentUser.inventory?.includes(item.id)}
                     equipped={currentUser?.avatar === item.assetUrl}
-                    canAfford={userCurrency >= item.price}
+                    canAfford={(currentUser.currency || 0) >= item.price}
                     isProcessing={processingId === item.id}
                     onBuy={() => initiatePurchase(item)}
                     onEquip={() => handleEquip(item.id, 'avatar')}
@@ -310,9 +299,9 @@ export function ShopPage() {
                     key={item.id}
                     item={item}
                     index={i}
-                    purchased={inventory.includes(item.id)}
+                    purchased={currentUser.inventory?.includes(item.id)}
                     equipped={currentUser?.banner === item.assetUrl}
-                    canAfford={userCurrency >= item.price}
+                    canAfford={(currentUser.currency || 0) >= item.price}
                     isProcessing={processingId === item.id}
                     onBuy={() => initiatePurchase(item)}
                     onEquip={() => handleEquip(item.id, 'banner')}
@@ -332,9 +321,9 @@ export function ShopPage() {
                     key={item.id}
                     item={item}
                     index={i}
-                    purchased={inventory.includes(item.id)}
+                    purchased={currentUser.inventory?.includes(item.id)}
                     equipped={currentUser?.frame === item.assetUrl}
-                    canAfford={userCurrency >= item.price}
+                    canAfford={(currentUser.currency || 0) >= item.price}
                     isProcessing={processingId === item.id}
                     onBuy={() => initiatePurchase(item)}
                     onEquip={() => handleEquip(item.id, 'frame')}
@@ -356,7 +345,7 @@ export function ShopPage() {
                     index={i}
                     purchased={false}
                     equipped={false}
-                    canAfford={userCurrency >= item.price}
+                    canAfford={(currentUser.currency || 0) >= item.price}
                     isProcessing={processingId === item.id}
                     onBuy={() => initiatePurchase(item)}
                     onEquip={() => {}}
