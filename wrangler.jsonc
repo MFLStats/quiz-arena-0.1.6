@@ -4,7 +4,7 @@
  */
  {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "trivium-arena-515ervom",
+	"name": "quiz-arena-1-1",
 	"main": "worker/index.ts",
 	"compatibility_date": "2025-04-24",
 	"assets": {
