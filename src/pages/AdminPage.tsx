@@ -616,7 +616,7 @@ export function AdminPage() {
     const action = newStatus ? "promote" : "revoke";
     if (!confirm(`Are you sure you want to ${action} admin privileges for ${targetUser.name}?`)) return;
     try {
-        const updatedUser = await api<User>(`/api/admin/users/${targetUser.id}/role`, {
+        const updatedUser = await api<User>(`/api/admin/users/${targetUser.id}/role?userId=${user.id}`, {
             method: 'PUT',
             body: JSON.stringify({ isAdmin: newStatus })
         });
