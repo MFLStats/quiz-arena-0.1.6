@@ -1,1 +1,2 @@
-export {}; // File deleted as part of navigation overhaul
+// This file has been deprecated and superseded by BottomNav.
+export {};

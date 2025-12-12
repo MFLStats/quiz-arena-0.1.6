@@ -56,6 +56,16 @@ export function HomePage() {
     api<SystemConfig>('/api/config').then(setConfig).catch(console.error);
     api<SystemStats>('/api/stats').then(setStats).catch(console.error);
   }, []);
+  // Onboarding Effect: Show How to Play for new users
+  useEffect(() => {
+    if (user && (user.stats?.matches === 0 || !user.stats)) {
+      const hasSeenIntro = sessionStorage.getItem('hasSeenIntro');
+      if (!hasSeenIntro) {
+        setShowHowToPlay(true);
+        sessionStorage.setItem('hasSeenIntro', 'true');
+      }
+    }
+  }, [user]);
   const handleDailyChallenge = async () => {
     if (isStartingDaily || !user) return;
     setIsStartingDaily(true);
