@@ -11,6 +11,7 @@ interface AuthState {
   register: (data: RegisterRequest) => Promise<void>;
   logout: () => void;
   updateUser: (user: User) => void;
+  hydrateUser: (user: User) => void;
 }
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -59,6 +60,7 @@ export const useAuthStore = create<AuthState>()(
       },
       logout: () => set({ user: null, isAuthenticated: false }),
       updateUser: (user) => set({ user }),
+      hydrateUser: (user) => set({ user, isAuthenticated: true, isLoading: false }),
     }),
     {
       name: 'auth-storage',

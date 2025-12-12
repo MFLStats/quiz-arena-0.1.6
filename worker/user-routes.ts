@@ -135,6 +135,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       name = `Guest ${id.substring(0, 4)}`;
       avatarSeed = id;
     } else {
+      // Legacy simulation fallback if needed, but real OAuth routes are below
       if (userEmail) {
         id = await generateUserId(userEmail);
         name = userEmail.split('@')[0];
@@ -186,6 +187,118 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       notifications: []
     });
     return ok(c, sanitizeUser(user));
+  });
+  // --- REAL OAUTH ROUTES ---
+  // Google
+  app.get('/api/auth/google/redirect', (c) => {
+    const env = c.env as any;
+    const clientId = env.GOOGLE_CLIENT_ID;
+    if (!clientId) return c.text("Missing GOOGLE_CLIENT_ID env var", 500);
+    const redirectUri = `${new URL(c.req.url).origin}/api/auth/google/callback`;
+    const scope = 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile';
+    const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&access_type=offline&prompt=consent`;
+    return c.redirect(url);
+  });
+  app.get('/api/auth/google/callback', async (c) => {
+    const code = c.req.query('code');
+    const error = c.req.query('error');
+    if (error) return c.redirect(`/?error=${error}`);
+    if (!code) return c.redirect(`/?error=no_code`);
+    const env = c.env as any;
+    const clientId = env.GOOGLE_CLIENT_ID;
+    const clientSecret = env.GOOGLE_CLIENT_SECRET;
+    const redirectUri = `${new URL(c.req.url).origin}/api/auth/google/callback`;
+    try {
+      // Exchange code
+      const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+              code,
+              client_id: clientId,
+              client_secret: clientSecret,
+              redirect_uri: redirectUri,
+              grant_type: 'authorization_code'
+          })
+      });
+      const tokenData: any = await tokenResponse.json();
+      if (tokenData.error) return c.redirect(`/?error=${tokenData.error}`);
+      // Get User Info
+      const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+          headers: { Authorization: `Bearer ${tokenData.access_token}` }
+      });
+      const userData: any = await userResponse.json();
+      const email = userData.email;
+      const name = userData.name || email.split('@')[0];
+      const picture = userData.picture;
+      const userId = await generateUserId(email);
+      const userEntity = new UserEntity(c.env, userId);
+      if (await userEntity.exists()) {
+        await userEntity.processLogin();
+        // Update avatar if it's the default one or missing
+        await userEntity.mutate(u => ({
+            ...u,
+            avatar: u.avatar && u.avatar.includes('dicebear') ? picture : u.avatar,
+            provider: 'google' // Link provider
+        }));
+      } else {
+        // Create new user
+        const newUser: User = {
+            id: userId,
+            name,
+            email,
+            provider: 'google',
+            elo: 1200,
+            categoryElo: {},
+            country: 'US',
+            friends: [],
+            currency: 1000,
+            inventory: [],
+            history: [],
+            stats: { wins: 0, losses: 0, matches: 0 },
+            avatar: picture || `https://api.dicebear.com/9.x/avataaars/svg?seed=${userId}`,
+            xp: 0,
+            level: 1,
+            loginStreak: 1,
+            lastLogin: new Date().toISOString().split('T')[0],
+            achievements: [],
+            seasonPass: { level: 1, xp: 0, isPremium: false, claimedRewards: [] },
+            activityMap: {},
+            notifications: []
+        };
+        await UserEntity.create(c.env, newUser);
+      }
+      const frontendUrl = new URL(c.req.url).origin + '/auth/callback';
+      return c.redirect(`${frontendUrl}?userId=${userId}`);
+    } catch (err: any) {
+      console.error("Google OAuth Error:", err);
+      return c.redirect(`/?error=oauth_failed`);
+    }
+  });
+  // Apple
+  app.get('/api/auth/apple/redirect', (c) => {
+    const env = c.env as any;
+    const clientId = env.APPLE_CLIENT_ID;
+    if (!clientId) return c.text("Missing APPLE_CLIENT_ID env var", 500);
+    const redirectUri = `${new URL(c.req.url).origin}/api/auth/apple/callback`;
+    const scope = 'name email';
+    const state = crypto.randomUUID(); // Should ideally be stored and verified
+    const url = `https://appleid.apple.com/auth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&response_mode=form_post&state=${state}`;
+    return c.redirect(url);
+  });
+  app.post('/api/auth/apple/callback', async (c) => {
+    // Apple sends data as form_post
+    const body = await c.req.parseBody();
+    const code = body['code'];
+    const userJson = body['user']; // Only sent on first login
+    const error = body['error'];
+    if (error) return c.redirect(`/?error=${error}`);
+    if (!code) return c.redirect(`/?error=no_code`);
+    // NOTE: Full Apple Sign-In requires generating a client_secret JWT signed with a P8 key.
+    // This is complex to do in a Worker without external crypto libraries (like jose/jsonwebtoken).
+    // For this demo environment, we cannot easily complete the token exchange without those deps.
+    // We will redirect with a specific error message to inform the user.
+    return c.redirect(`/?error=apple_signin_requires_jwt_config`);
   });
   // --- USERS ---
   app.get('/api/users', async (c) => {
@@ -828,8 +941,8 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       newAchievements,
       isPrivate: matchState.isPrivate,
       categoryId: matchState.categoryId,
-      answers: myStats.answers, // Added for review
-      questions: matchState.questions // Added for review
+      answers: myStats.answers,
+      questions: matchState.questions
     };
     return ok(c, response);
   });

@@ -11,12 +11,18 @@ import { LoginPage } from '@/pages/LoginPage';
 import { AdminPage } from '@/pages/AdminPage';
 import { RouteErrorBoundary } from '@/components/RouteErrorBoundary';
 import { AuthGuard } from '@/components/auth/AuthGuard';
+import { AuthCallback } from '@/components/auth/AuthCallback';
 import { Toaster } from '@/components/ui/sonner';
 import { useTheme } from '@/hooks/use-theme';
 const router = createBrowserRouter([
   {
     path: "/login",
     element: <LoginPage />,
+    errorElement: <RouteErrorBoundary />,
+  },
+  {
+    path: "/auth/callback",
+    element: <AuthCallback />,
     errorElement: <RouteErrorBoundary />,
   },
   {

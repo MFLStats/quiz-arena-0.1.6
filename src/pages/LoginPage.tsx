@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/lib/auth-store';
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { LoginForm, RegisterForm, OAuthSimulationModal } from '@/components/auth/AuthForms';
+import { LoginForm, RegisterForm } from '@/components/auth/AuthForms';
+import { api } from '@/lib/api-client';
 // Simple Google Icon Component
 function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
@@ -24,10 +25,6 @@ export function LoginPage() {
   const navigate = useNavigate();
   const login = useAuthStore((s) => s.login);
   const [isLoggingIn, setIsLoggingIn] = useState<string | null>(null);
-  const [oauthModal, setOauthModal] = useState<{ open: boolean; provider: 'google' | 'apple' }>({
-    open: false,
-    provider: 'google'
-  });
   const handleGuestLogin = async () => {
     setIsLoggingIn('guest');
     try {
@@ -42,21 +39,10 @@ export function LoginPage() {
     }
   };
   const handleOAuthClick = (provider: 'google' | 'apple') => {
-    setOauthModal({ open: true, provider });
-  };
-  const handleOAuthConfirm = async (email: string) => {
-    setOauthModal({ ...oauthModal, open: false });
-    setIsLoggingIn(oauthModal.provider);
-    try {
-      await login(oauthModal.provider, email);
-      toast.success(`Welcome back! Signed in with ${oauthModal.provider === 'google' ? 'Google' : 'Apple'}`);
-      navigate('/');
-    } catch (error) {
-      console.error(error);
-      toast.error('Failed to sign in.');
-    } finally {
-      setIsLoggingIn(null);
-    }
+    setIsLoggingIn(provider);
+    toast.info(`Redirecting to ${provider === 'google' ? 'Google' : 'Apple'}...`);
+    // Redirect to backend OAuth endpoint
+    window.location.href = `/api/auth/${provider}/redirect`;
   };
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background relative overflow-hidden">
@@ -150,12 +136,6 @@ export function LoginPage() {
           </div>
         </div>
       </motion.div>
-      <OAuthSimulationModal
-        isOpen={oauthModal.open}
-        onClose={() => setOauthModal({ ...oauthModal, open: false })}
-        provider={oauthModal.provider}
-        onConfirm={handleOAuthConfirm}
-      />
     </div>
   );
 }
