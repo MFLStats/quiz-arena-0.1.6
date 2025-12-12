@@ -683,62 +683,64 @@ export function AdminPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-9 bg-white/5 mb-6">
-                    <TabsTrigger value="overview">Overview</TabsTrigger>
-                    <TabsTrigger value="single">Single</TabsTrigger>
-                    <TabsTrigger value="bulk">Bulk</TabsTrigger>
-                    <TabsTrigger value="categories">Cats</TabsTrigger>
-                    <TabsTrigger value="shop">Shop</TabsTrigger>
-                    <TabsTrigger value="reports" className="relative">
-                      Reports
-                      {reports.length > 0 && (
-                        <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                      )}
-                    </TabsTrigger>
-                    <TabsTrigger value="users">Users</TabsTrigger>
-                    <TabsTrigger value="system">System</TabsTrigger>
-                    <TabsTrigger value="data">Data</TabsTrigger>
-                </TabsList>
+                <div className="w-full overflow-x-auto pb-2 mb-4 scrollbar-hide">
+                    <TabsList className="flex w-max bg-white/5 p-1">
+                        <TabsTrigger value="overview" className="px-4">Overview</TabsTrigger>
+                        <TabsTrigger value="single" className="px-4">Single</TabsTrigger>
+                        <TabsTrigger value="bulk" className="px-4">Bulk</TabsTrigger>
+                        <TabsTrigger value="categories" className="px-4">Cats</TabsTrigger>
+                        <TabsTrigger value="shop" className="px-4">Shop</TabsTrigger>
+                        <TabsTrigger value="reports" className="px-4 relative">
+                        Reports
+                        {reports.length > 0 && (
+                            <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                        )}
+                        </TabsTrigger>
+                        <TabsTrigger value="users" className="px-4">Users</TabsTrigger>
+                        <TabsTrigger value="system" className="px-4">System</TabsTrigger>
+                        <TabsTrigger value="data" className="px-4">Data</TabsTrigger>
+                    </TabsList>
+                </div>
                 <TabsContent value="overview">
                   <div className="grid grid-cols-2 gap-4">
-                    <Card className="bg-zinc-900/50 border-white/10 backdrop-blur-sm">
-                      <CardHeader className="pb-2">
+                    <Card className="bg-zinc-900/50 border-white/10 backdrop-blur-sm p-3 md:p-6">
+                      <CardHeader className="pb-2 p-0 md:p-6">
                         <CardTitle className="text-sm font-medium text-muted-foreground">Total Users</CardTitle>
                       </CardHeader>
-                      <CardContent>
+                      <CardContent className="p-0 pt-2 md:p-6 md:pt-0">
                         <div className="text-2xl font-bold text-white flex items-center gap-2">
                           <Users className="w-5 h-5 text-indigo-400" />
                           {stats?.userCount ?? '-'}
                         </div>
                       </CardContent>
                     </Card>
-                    <Card className="bg-zinc-900/50 border-white/10 backdrop-blur-sm">
-                      <CardHeader className="pb-2">
+                    <Card className="bg-zinc-900/50 border-white/10 backdrop-blur-sm p-3 md:p-6">
+                      <CardHeader className="pb-2 p-0 md:p-6">
                         <CardTitle className="text-sm font-medium text-muted-foreground">Total Questions</CardTitle>
                       </CardHeader>
-                      <CardContent>
+                      <CardContent className="p-0 pt-2 md:p-6 md:pt-0">
                         <div className="text-2xl font-bold text-white flex items-center gap-2">
                           <HelpCircle className="w-5 h-5 text-emerald-400" />
                           {stats?.questionCount ?? '-'}
                         </div>
                       </CardContent>
                     </Card>
-                    <Card className="bg-zinc-900/50 border-white/10 backdrop-blur-sm">
-                      <CardHeader className="pb-2">
+                    <Card className="bg-zinc-900/50 border-white/10 backdrop-blur-sm p-3 md:p-6">
+                      <CardHeader className="pb-2 p-0 md:p-6">
                         <CardTitle className="text-sm font-medium text-muted-foreground">Categories</CardTitle>
                       </CardHeader>
-                      <CardContent>
+                      <CardContent className="p-0 pt-2 md:p-6 md:pt-0">
                         <div className="text-2xl font-bold text-white flex items-center gap-2">
                           <Layers className="w-5 h-5 text-yellow-400" />
                           {stats?.categoryCount ?? '-'}
                         </div>
                       </CardContent>
                     </Card>
-                    <Card className="bg-zinc-900/50 border-white/10 backdrop-blur-sm">
-                      <CardHeader className="pb-2">
+                    <Card className="bg-zinc-900/50 border-white/10 backdrop-blur-sm p-3 md:p-6">
+                      <CardHeader className="pb-2 p-0 md:p-6">
                         <CardTitle className="text-sm font-medium text-muted-foreground">Pending Reports</CardTitle>
                       </CardHeader>
-                      <CardContent>
+                      <CardContent className="p-0 pt-2 md:p-6 md:pt-0">
                         <div className="text-2xl font-bold text-white flex items-center gap-2">
                           <Flag className="w-5 h-5 text-red-400" />
                           {stats?.reportCount ?? '-'}
@@ -1006,7 +1008,7 @@ export function AdminPage() {
                       <CardDescription>View, edit, and remove community-created categories.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <ScrollArea className="h-[400px] rounded-lg border border-white/10 bg-black/20 p-4">
+                      <ScrollArea className="h-[calc(100vh-300px)] rounded-lg border border-white/10 bg-black/20 p-4">
                         <div className="space-y-3">
                           {categories.map(cat => (
                             <div key={cat.id} className="flex items-center justify-between p-3 rounded bg-white/5 border border-white/5">
@@ -1080,7 +1082,7 @@ export function AdminPage() {
                       </div>
                     </CardHeader>
                     <CardContent>
-                      <ScrollArea className="h-[500px] rounded-lg border border-white/10 bg-black/20 p-4">
+                      <ScrollArea className="h-[calc(100vh-300px)] rounded-lg border border-white/10 bg-black/20 p-4">
                         <div className="space-y-3">
                           {shopItems.map(item => (
                             <div key={item.id} className="flex items-center justify-between p-3 rounded bg-white/5 border border-white/5">
@@ -1144,7 +1146,7 @@ export function AdminPage() {
                       <CardDescription>Review flagged questions from players.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <ScrollArea className="h-[500px] rounded-lg border border-white/10 bg-black/20 p-4">
+                      <ScrollArea className="h-[calc(100vh-300px)] rounded-lg border border-white/10 bg-black/20 p-4">
                         {reports.length === 0 ? (
                           <div className="text-center py-12 text-muted-foreground">
                             No active reports. Good job!
@@ -1215,7 +1217,7 @@ export function AdminPage() {
                         />
                         <Button onClick={fetchUsers}>Search</Button>
                       </div>
-                      <ScrollArea className="h-[500px] rounded-lg border border-white/10 bg-black/20 p-4">
+                      <ScrollArea className="h-[calc(100vh-300px)] rounded-lg border border-white/10 bg-black/20 p-4">
                         {users.length === 0 ? (
                           <div className="text-center py-12 text-muted-foreground">
                             No users found.

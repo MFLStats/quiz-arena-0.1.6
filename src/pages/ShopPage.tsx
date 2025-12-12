@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { ShoppingBag, Coins, Lock, Check, Loader2, Package, Sparkles, Crown, RefreshCw, AlertCircle, LogOut } from 'lucide-react';
+import { ShoppingBag, Coins, Lock, Check, Loader2, Package, Sparkles, Crown, RefreshCw, AlertCircle, LogOut, Image as ImageIcon } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -108,17 +108,13 @@ export function ShopPage() {
         method: 'POST',
         body: JSON.stringify(req)
       });
-      // Play purchase sound immediately
       playSfx('purchase');
-      // If box, add suspense
       if (item.type === 'box') {
-        // Wait for 1.5s to build suspense
         await new Promise(resolve => setTimeout(resolve, 1500));
       }
       setUserCurrency(updatedUser.currency || 0);
       setInventory(updatedUser.inventory || []);
       updateUser(updatedUser);
-      // Trigger effects
       confetti({
         particleCount: 100,
         spread: 70,
@@ -133,7 +129,6 @@ export function ShopPage() {
           const awardedItem = shopItems.find(i => i.id === awardedId);
           if (awardedItem) {
             setMysteryBoxResult(awardedItem);
-            // Play win sound for the reveal
             playSfx('win');
           }
         } else {
@@ -182,14 +177,13 @@ export function ShopPage() {
           </div>
           <div className="space-y-8">
             <Skeleton className="h-10 w-full max-w-3xl bg-white/5 rounded-lg" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
               {[1, 2, 3, 4, 5, 6].map((i) => (
                 <div key={i} className="rounded-xl border border-white/5 bg-white/5 overflow-hidden">
-                  <Skeleton className="h-48 w-full bg-white/5" />
-                  <div className="p-4 space-y-3">
-                    <Skeleton className="h-6 w-3/4 bg-white/5" />
-                    <Skeleton className="h-4 w-full bg-white/5" />
-                    <Skeleton className="h-10 w-full bg-white/5 rounded-md mt-4" />
+                  <Skeleton className="h-32 w-full bg-white/5" />
+                  <div className="p-3 space-y-2">
+                    <Skeleton className="h-4 w-3/4 bg-white/5" />
+                    <Skeleton className="h-8 w-full bg-white/5 rounded-md mt-2" />
                   </div>
                 </div>
               ))}
@@ -240,35 +234,37 @@ export function ShopPage() {
   }
   return (
     <AppLayout>
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-12">
-          <div>
-            <h1 className="text-4xl font-display font-bold mb-2 flex items-center gap-3">
-              <ShoppingBag className="w-10 h-10 text-indigo-400" /> Item Shop
+      <div className="container mx-auto px-4 py-6 max-w-6xl">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-8">
+          <div className="text-center md:text-left">
+            <h1 className="text-3xl font-display font-bold mb-1 flex items-center justify-center md:justify-start gap-2">
+              <ShoppingBag className="w-8 h-8 text-indigo-400" /> Item Shop
             </h1>
-            <p className="text-muted-foreground">Customize your profile with exclusive cosmetics.</p>
+            <p className="text-sm text-muted-foreground">Customize your profile with exclusive cosmetics.</p>
           </div>
-          <div className="flex items-center gap-2 px-6 py-3 bg-yellow-500/10 border border-yellow-500/20 rounded-full">
-            <Coins className="w-6 h-6 text-yellow-500" />
-            <span className="text-2xl font-bold text-yellow-500 tabular-nums">{userCurrency}</span>
+          <div className="flex items-center gap-2 px-4 py-2 bg-yellow-500/10 border border-yellow-500/20 rounded-full">
+            <Coins className="w-5 h-5 text-yellow-500" />
+            <span className="text-xl font-bold text-yellow-500 tabular-nums">{userCurrency}</span>
           </div>
         </div>
         <Tabs defaultValue="season" className="w-full">
-          <TabsList className="grid w-full max-w-3xl grid-cols-5 mb-8 bg-white/5">
-            <TabsTrigger value="season" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-600 data-[state=active]:to-purple-600 data-[state=active]:text-white">
-              <Crown className="w-4 h-4 mr-2" /> Holiday Season
-            </TabsTrigger>
-            <TabsTrigger value="avatars">Avatars</TabsTrigger>
-            <TabsTrigger value="banners">Banners</TabsTrigger>
-            <TabsTrigger value="frames">Frames</TabsTrigger>
-            <TabsTrigger value="boxes">Boxes</TabsTrigger>
-          </TabsList>
+          <div className="w-full overflow-x-auto pb-2 mb-4 scrollbar-hide">
+            <TabsList className="flex w-max bg-white/5 p-1">
+              <TabsTrigger value="season" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-600 data-[state=active]:to-purple-600 data-[state=active]:text-white px-4">
+                <Crown className="w-4 h-4 mr-2" /> Season
+              </TabsTrigger>
+              <TabsTrigger value="avatars" className="px-4">Avatars</TabsTrigger>
+              <TabsTrigger value="banners" className="px-4">Banners</TabsTrigger>
+              <TabsTrigger value="frames" className="px-4">Frames</TabsTrigger>
+              <TabsTrigger value="boxes" className="px-4">Boxes</TabsTrigger>
+            </TabsList>
+          </div>
           <TabsContent value="season" className="mt-0">
             <SeasonPass user={currentUser} />
           </TabsContent>
           <TabsContent value="avatars" className="mt-0">
             {avatars.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                 {avatars.map((item, i) => (
                   <ShopItemCard
                     key={item.id}
@@ -284,15 +280,12 @@ export function ShopPage() {
                 ))}
               </div>
             ) : (
-              <EmptyShopState 
-                title="No Avatars Available" 
-                description="Check back later for new avatar collections!" 
-              />
+              <EmptyShopState title="No Avatars" description="Check back later!" />
             )}
           </TabsContent>
           <TabsContent value="banners" className="mt-0">
             {banners.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                 {banners.map((item, i) => (
                   <ShopItemCard
                     key={item.id}
@@ -308,15 +301,12 @@ export function ShopPage() {
                 ))}
               </div>
             ) : (
-              <EmptyShopState 
-                title="No Banners Available" 
-                description="Check back later for new profile banners!" 
-              />
+              <EmptyShopState title="No Banners" description="Check back later!" />
             )}
           </TabsContent>
           <TabsContent value="frames" className="mt-0">
             {frames.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                 {frames.map((item, i) => (
                   <ShopItemCard
                     key={item.id}
@@ -332,15 +322,12 @@ export function ShopPage() {
                 ))}
               </div>
             ) : (
-              <EmptyShopState 
-                title="No Frames Available" 
-                description="Check back later for new avatar frames!" 
-              />
+              <EmptyShopState title="No Frames" description="Check back later!" />
             )}
           </TabsContent>
           <TabsContent value="boxes" className="mt-0">
             {boxes.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                 {boxes.map((item, i) => (
                   <ShopItemCard
                     key={item.id}
@@ -356,10 +343,7 @@ export function ShopPage() {
                 ))}
               </div>
             ) : (
-              <EmptyShopState 
-                title="No Mystery Boxes" 
-                description="Check back later for new mystery boxes!" 
-              />
+              <EmptyShopState title="No Boxes" description="Check back later!" />
             )}
           </TabsContent>
         </Tabs>
@@ -368,7 +352,7 @@ export function ShopPage() {
             <AlertDialogHeader>
               <AlertDialogTitle className="text-white">Confirm Purchase</AlertDialogTitle>
               <AlertDialogDescription className="text-muted-foreground">
-                Are you sure you want to buy <span className="font-bold text-white">{itemToBuy?.name}</span> for <span className="font-bold text-yellow-500">{itemToBuy?.price} Coins</span>?
+                Buy <span className="font-bold text-white">{itemToBuy?.name}</span> for <span className="font-bold text-yellow-500">{itemToBuy?.price} Coins</span>?
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -433,26 +417,26 @@ function ShopItemCard({ item, index, purchased, equipped, canAfford, isProcessin
       transition={{ delay: index * 0.05 }}
     >
       <Card className={cn(
-        "overflow-hidden bg-white/5 hover:bg-white/10 transition-all duration-300 group border-2",
+        "overflow-hidden bg-white/5 hover:bg-white/10 transition-all duration-300 group border-2 h-full flex flex-col",
         rarityColors[item.rarity as keyof typeof rarityColors],
         equipped && "border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.2)]"
       )}>
-        <div className="aspect-square relative p-8 flex items-center justify-center bg-black/20">
+        <div className="aspect-square relative p-4 flex items-center justify-center bg-black/20">
           {item.type === 'avatar' ? (
-            <img 
-              src={item.assetUrl} 
-              alt={item.name} 
-              className="w-32 h-32 rounded-full shadow-2xl group-hover:scale-110 transition-transform duration-300" 
+            <img
+              src={item.assetUrl}
+              alt={item.name}
+              className="w-24 h-24 md:w-32 md:h-32 rounded-full shadow-2xl group-hover:scale-110 transition-transform duration-300"
             />
           ) : item.type === 'box' ? (
             <Package className={cn(
-              "w-24 h-24 group-hover:scale-110 transition-transform duration-300",
+              "w-20 h-20 md:w-24 md:h-24 group-hover:scale-110 transition-transform duration-300",
               item.rarity === 'legendary' ? "text-yellow-400" :
               item.rarity === 'rare' ? "text-blue-400" : "text-white"
             )} />
           ) : item.type === 'frame' ? (
-            <div className="w-32 h-32 rounded-full flex items-center justify-center relative">
-               <div className="w-full h-full rounded-full bg-white/10" /> {/* Avatar placeholder */}
+            <div className="w-24 h-24 md:w-32 md:h-32 rounded-full flex items-center justify-center relative">
+               <div className="w-full h-full rounded-full bg-white/10" />
                {isImageUrl(item.assetUrl) ? (
                    <img src={item.assetUrl} className="absolute inset-0 w-full h-full object-contain scale-110 z-10 pointer-events-none" alt={item.name} />
                ) : (
@@ -460,32 +444,32 @@ function ShopItemCard({ item, index, purchased, equipped, canAfford, isProcessin
                )}
             </div>
           ) : (
-            <div 
-              className="w-full h-24 rounded-lg shadow-lg group-hover:scale-105 transition-transform duration-300"
+            <div
+              className="w-full h-16 md:h-24 rounded-lg shadow-lg group-hover:scale-105 transition-transform duration-300"
               style={getBackgroundStyle(item.assetUrl)}
             />
           )}
           {equipped && (
-            <div className="absolute top-4 right-4 bg-emerald-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg">
+            <div className="absolute top-2 right-2 bg-emerald-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-lg">
               EQUIPPED
             </div>
           )}
-          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-black/60 text-white/80">
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-[9px] md:text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-black/60 text-white/80">
             {item.rarity}
           </div>
         </div>
-        <CardHeader>
-          <CardTitle className="flex justify-between items-start">
-            <span className="truncate pr-2">{item.name}</span>
-            {purchased && !equipped && item.type !== 'box' && <Check className="w-5 h-5 text-indigo-500 flex-shrink-0" />}
+        <CardHeader className="p-3 md:p-4 flex-1">
+          <CardTitle className="flex justify-between items-start text-sm md:text-base">
+            <span className="truncate pr-1">{item.name}</span>
+            {purchased && !equipped && item.type !== 'box' && <Check className="w-4 h-4 text-indigo-500 flex-shrink-0" />}
           </CardTitle>
-          <p className="text-sm text-muted-foreground line-clamp-2 min-h-[2.5em]">{item.description}</p>
+          <p className="text-xs text-muted-foreground line-clamp-2 hidden sm:block mt-1">{item.description}</p>
         </CardHeader>
-        <CardFooter>
+        <CardFooter className="p-3 md:p-4 pt-0">
           {purchased && item.type !== 'box' ? (
-            <Button 
+            <Button
               className={cn(
-                "w-full font-bold",
+                "w-full font-bold h-8 md:h-10 text-xs md:text-sm",
                 equipped ? "bg-emerald-500/20 text-emerald-500 hover:bg-emerald-500/30" : "bg-indigo-600 hover:bg-indigo-500"
               )}
               variant={equipped ? "ghost" : "default"}
@@ -493,7 +477,7 @@ function ShopItemCard({ item, index, purchased, equipped, canAfford, isProcessin
               onClick={onEquip}
             >
               {isProcessing ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-3 h-3 md:w-4 md:h-4 animate-spin" />
               ) : equipped ? (
                 "Equipped"
               ) : (
@@ -501,18 +485,18 @@ function ShopItemCard({ item, index, purchased, equipped, canAfford, isProcessin
               )}
             </Button>
           ) : (
-            <Button 
-              className="w-full font-bold"
+            <Button
+              className="w-full font-bold h-8 md:h-10 text-xs md:text-sm"
               variant={canAfford ? "default" : "secondary"}
               disabled={!canAfford || isProcessing}
               onClick={onBuy}
             >
               {isProcessing ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-3 h-3 md:w-4 md:h-4 animate-spin" />
               ) : (
-                <span className="flex items-center gap-2">
-                  {!canAfford && <Lock className="w-4 h-4" />}
-                  {item.price} Coins
+                <span className="flex items-center gap-1.5">
+                  {!canAfford && <Lock className="w-3 h-3" />}
+                  {item.price}
                 </span>
               )}
             </Button>

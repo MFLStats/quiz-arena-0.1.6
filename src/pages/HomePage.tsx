@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Play, Sparkles, ArrowRight, Calendar, Loader2, HelpCircle, Timer, Users, Megaphone, Flame, Gift, CheckCircle } from 'lucide-react';
+import { Play, Sparkles, ArrowRight, Calendar, Loader2, HelpCircle, Timer, Users, Megaphone, Flame, Gift, CheckCircle, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { api } from '@/lib/api-client';
@@ -10,8 +10,11 @@ import { useAuthStore } from '@/lib/auth-store';
 import { toast } from 'sonner';
 import { HowToPlayModal } from '@/components/game/HowToPlayModal';
 import { JoinGameModal } from '@/components/game/JoinGameModal';
+import { QueueModal } from '@/components/game/QueueModal';
 import { useCategories } from '@/hooks/use-categories';
 import type { SystemConfig, SystemStats } from '@shared/types';
+import { playSfx } from '@/lib/sound-fx';
+import { CATEGORY_ICONS } from '@/lib/icons';
 // Season Timer Component
 function SeasonTimer({ endDate }: { endDate?: string }) {
   const [timeLeft, setTimeLeft] = useState('');
@@ -52,6 +55,10 @@ export function HomePage() {
   const [showJoinGame, setShowJoinGame] = useState(false);
   const [config, setConfig] = useState<SystemConfig | null>(null);
   const [stats, setStats] = useState<SystemStats | null>(null);
+  // Queue Logic State
+  const [queueState, setQueueState] = useState<{ categoryId: string; categoryName: string; matchFound?: boolean } | null>(null);
+  const [joiningId, setJoiningId] = useState<string | null>(null);
+  const pollIntervalRef = useRef<number | null>(null);
   useEffect(() => {
     api<SystemConfig>('/api/config').then(setConfig).catch(console.error);
     api<SystemStats>('/api/stats').then(setStats).catch(console.error);
@@ -66,6 +73,90 @@ export function HomePage() {
       }
     }
   }, [user]);
+  // --- Queue Logic (Duplicated from CategorySelectPage for direct access) ---
+  const startMatch = useCallback(async (matchId: string) => {
+    try {
+      const match = await api<any>(`/api/match/${matchId}`);
+      initMatch(match);
+      setQueueState(null);
+      navigate(`/arena/${matchId}`);
+    } catch (err) {
+      toast.error('Failed to load match details');
+      console.error(err);
+      setQueueState(null);
+    }
+  }, [initMatch, navigate]);
+  const stopPolling = useCallback(() => {
+    if (pollIntervalRef.current) {
+      window.clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+  }, []);
+  const startPolling = useCallback((categoryId: string) => {
+    if (!user) return;
+    if (pollIntervalRef.current) {
+      window.clearInterval(pollIntervalRef.current);
+    }
+    pollIntervalRef.current = window.setInterval(async () => {
+      try {
+        const res = await api<{ matchId: string | null }>(`/api/queue/status?userId=${user.id}&categoryId=${categoryId}`);
+        if (res.matchId) {
+          stopPolling();
+          setQueueState(prev => prev ? { ...prev, matchFound: true } : null);
+          playSfx('match_found');
+          setTimeout(() => {
+            startMatch(res.matchId!);
+          }, 1500);
+        }
+      } catch (err) {
+        console.error("Polling error", err);
+      }
+    }, 2000);
+  }, [user, startMatch, stopPolling]);
+  const handleJoinQueue = useCallback(async (categoryId: string, categoryName: string) => {
+    if (!user) {
+      toast.error("Please log in to enter the arena");
+      return;
+    }
+    setJoiningId(categoryId);
+    try {
+      // Join Ranked Queue
+      const res = await api<{ matchId: string | null }>('/api/queue/join', {
+        method: 'POST',
+        body: JSON.stringify({ userId: user.id, categoryId })
+      });
+      if (res.matchId) {
+        await startMatch(res.matchId);
+      } else {
+        setQueueState({ categoryId, categoryName });
+        startPolling(categoryId);
+      }
+    } catch (err) {
+      toast.error('Failed to join. Please try again.');
+      console.error(err);
+    } finally {
+      setJoiningId(null);
+    }
+  }, [user, startMatch, startPolling]);
+  const handleCancelQueue = useCallback(async () => {
+    stopPolling();
+    const catId = queueState?.categoryId;
+    setQueueState(null);
+    if (user && catId) {
+      try {
+        await api('/api/queue/leave', {
+          method: 'POST',
+          body: JSON.stringify({ userId: user.id, categoryId: catId })
+        });
+      } catch (e) {
+        console.error("Failed to leave queue", e);
+      }
+    }
+  }, [queueState, stopPolling, user]);
+  useEffect(() => {
+    return () => stopPolling();
+  }, [stopPolling]);
+  // --- Daily Challenge ---
   const handleDailyChallenge = async () => {
     if (isStartingDaily || !user) return;
     setIsStartingDaily(true);
@@ -87,6 +178,14 @@ export function HomePage() {
   const streakProgress = ((streak % 7) / 7) * 100;
   const today = new Date().toISOString().split('T')[0];
   const isClaimedToday = user?.lastLogin === today;
+  // Helper for dynamic player count simulation
+  const getActivePlayers = (catId: string, baseElo: number) => {
+    // Stable pseudo-random number based on category ID and current hour
+    const hour = new Date().getHours();
+    const seed = catId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const variance = (seed * (hour + 1)) % 300;
+    return Math.floor(baseElo * 0.5 + variance + 100);
+  };
   return (
     <AppLayout>
       <div className="min-h-screen flex flex-col">
@@ -275,31 +374,44 @@ export function HomePage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8">
-              {categories.slice().reverse().slice(0, 3).map((cat, i) => (
-                <motion.div
-                  key={cat.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 + (i * 0.1) }}
-                  className="group relative overflow-hidden rounded-3xl bg-white/[0.03] border border-white/10 p-6 md:p-8 hover:bg-white/[0.08] transition-all duration-500 cursor-pointer hover:-translate-y-2 hover:shadow-[0_10px_40px_rgba(0,0,0,0.5)]"
-                >
-                  <div className={`absolute inset-0 bg-gradient-to-br ${cat.color} opacity-0 group-hover:opacity-5 transition-opacity duration-500`} />
-                  <div className="relative z-10">
-                    <div className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-gradient-to-br ${cat.color} flex items-center justify-center mb-4 md:mb-6 shadow-lg group-hover:scale-110 transition-transform duration-500`}>
-                      <span className="text-white font-bold text-xl md:text-2xl">{cat.name[0]}</span>
+              {categories.slice().reverse().slice(0, 3).map((cat, i) => {
+                const Icon = CATEGORY_ICONS[cat.icon] || CATEGORY_ICONS.Atom;
+                const activePlayers = getActivePlayers(cat.id, cat.baseElo);
+                const isJoining = joiningId === cat.id;
+                return (
+                  <motion.div
+                    key={cat.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 + (i * 0.1) }}
+                    className="group relative overflow-hidden rounded-3xl bg-white/[0.03] border border-white/10 p-6 md:p-8 hover:bg-white/[0.08] transition-all duration-500 cursor-pointer hover:-translate-y-2 hover:shadow-[0_10px_40px_rgba(0,0,0,0.5)]"
+                    onClick={() => !isJoining && handleJoinQueue(cat.id, cat.name)}
+                  >
+                    <div className={`absolute inset-0 bg-gradient-to-br ${cat.color} opacity-0 group-hover:opacity-5 transition-opacity duration-500`} />
+                    {/* Play Overlay */}
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20 backdrop-blur-[2px]">
+                      <div className="bg-white text-black px-6 py-3 rounded-full font-bold flex items-center gap-2 transform scale-90 group-hover:scale-100 transition-transform">
+                        {isJoining ? <Loader2 className="w-5 h-5 animate-spin" /> : <Play className="w-5 h-5 fill-current" />}
+                        {isJoining ? 'Joining...' : 'Play Now'}
+                      </div>
                     </div>
-                    <h3 className="text-xl md:text-2xl font-bold mb-2 md:mb-3 group-hover:text-white transition-colors">{cat.name}</h3>
-                    <p className="text-sm md:text-base text-muted-foreground mb-4 md:mb-6 leading-relaxed">{cat.description}</p>
-                    <div className="flex items-center justify-between pt-4 border-t border-white/5">
-                      <span className="text-indigo-300 font-mono text-xs md:text-sm bg-indigo-500/10 px-2 py-1 rounded">Elo {cat.baseElo}</span>
-                      <span className="text-muted-foreground text-xs md:text-sm flex items-center gap-1">
-                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                        1.2k playing
-                      </span>
+                    <div className="relative z-10">
+                      <div className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-gradient-to-br ${cat.color} flex items-center justify-center mb-4 md:mb-6 shadow-lg group-hover:scale-110 transition-transform duration-500`}>
+                        <Icon className="w-6 h-6 md:w-7 md:h-7 text-white" />
+                      </div>
+                      <h3 className="text-xl md:text-2xl font-bold mb-2 md:mb-3 group-hover:text-white transition-colors">{cat.name}</h3>
+                      <p className="text-sm md:text-base text-muted-foreground mb-4 md:mb-6 leading-relaxed">{cat.description}</p>
+                      <div className="flex items-center justify-between pt-4 border-t border-white/5">
+                        <span className="text-indigo-300 font-mono text-xs md:text-sm bg-indigo-500/10 px-2 py-1 rounded">Elo {cat.baseElo}</span>
+                        <span className="text-muted-foreground text-xs md:text-sm flex items-center gap-1">
+                          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                          {activePlayers.toLocaleString()} playing
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                </motion.div>
-              ))}
+                  </motion.div>
+                );
+              })}
             </div>
           )}
         </section>
@@ -311,6 +423,12 @@ export function HomePage() {
       <JoinGameModal
         isOpen={showJoinGame}
         onOpenChange={setShowJoinGame}
+      />
+      <QueueModal
+        isOpen={!!queueState}
+        onCancel={handleCancelQueue}
+        categoryName={queueState?.categoryName || ''}
+        matchFound={queueState?.matchFound}
       />
     </AppLayout>
   );
