@@ -286,7 +286,7 @@ export class MatchEntity extends IndexedEntity<MatchState> {
             else if (rank === 3) results[uid] = { displayTitle: "3rd Daily Quiz Challenge" };
           }
         }
-      } 
+      }
       // 2. Ranked Mode Ranks
       else {
         // Overall Rank (Elo)
@@ -540,11 +540,23 @@ export class MatchEntity extends IndexedEntity<MatchState> {
     }
     const question = state.questions[questionIndex];
     if (!question) throw new Error("Invalid question index");
+    // Server-side timing validation
+    const now = Date.now();
+    const serverRemaining = state.roundEndTime - now;
+    const LATENCY_BUFFER = 2000; // 2 seconds buffer
+    // Validate client timestamp
+    let validatedTimeMs = timeRemainingMs;
+    // If client claims more time than server has + buffer, clamp it
+    if (validatedTimeMs > serverRemaining + LATENCY_BUFFER) {
+        validatedTimeMs = Math.max(0, serverRemaining);
+    }
+    // Ensure non-negative
+    validatedTimeMs = Math.max(0, validatedTimeMs);
     const isCorrect = answerIndex === question.correctIndex;
     let points = 0;
     if (isCorrect) {
       const basePoints = 100;
-      const timeBonus = Math.floor((timeRemainingMs / 10000) * 50);
+      const timeBonus = Math.floor((validatedTimeMs / 10000) * 50);
       points = basePoints + timeBonus;
       if (questionIndex === state.questions.length - 1) {
         points *= 2;
@@ -565,7 +577,7 @@ export class MatchEntity extends IndexedEntity<MatchState> {
         correctCount: isCorrect ? player.correctCount + 1 : player.correctCount,
         answers: [...player.answers, {
             questionId: question.id,
-            timeMs: 10000 - timeRemainingMs,
+            timeMs: 10000 - validatedTimeMs, // Store time taken
             correct: isCorrect,
             selectedIndex: answerIndex // Added selectedIndex persistence
         }]

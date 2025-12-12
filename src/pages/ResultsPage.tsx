@@ -72,37 +72,64 @@ export function ResultsPage() {
       // 2. Otherwise fetch from API (archive view)
       if (!user || !matchId) return;
       try {
-        const [match, userData] = await Promise.all([
-          api<MatchState>(`/api/match/${matchId}`),
-          api<User>(`/api/users/${user.id}`)
-        ]);
-        const myStats = match.players[user.id];
-        if (!myStats) throw new Error("You were not in this match");
-        const opponentId = Object.keys(match.players).find(id => id !== user.id);
-        const opponentStats = opponentId ? match.players[opponentId] : null;
-        const historyItem = userData.history?.find(h => h.matchId === matchId);
-        // Reconstruct result for archive view
-        const reconstructed: GameResult = {
-          matchId: match.id,
-          won: historyItem ? historyItem.result === 'win' : myStats.score > (opponentStats?.score || 0),
-          score: myStats.score,
-          opponentScore: opponentStats?.score || 0,
-          eloChange: historyItem?.eloChange || 0,
-          newElo: userData.elo,
-          reactionTimes: myStats.answers.map((a, i) => ({
-            question: i + 1,
-            time: a.timeMs
-          })),
-          xpEarned: 0, // Not stored in history currently
-          coinsEarned: 0,
-          xpBreakdown: [],
-          coinsBreakdown: [],
-          isPrivate: match.isPrivate,
-          categoryId: match.categoryId,
-          answers: myStats.answers,
-          questions: match.questions
-        };
-        setResult(reconstructed);
+        // Fetch user data first as it's more likely to succeed/be needed for fallback
+        const userData = await api<User>(`/api/users/${user.id}`);
+        let match: MatchState | null = null;
+        try {
+            match = await api<MatchState>(`/api/match/${matchId}`);
+        } catch (e) {
+            console.warn("Match entity not found, falling back to history", e);
+        }
+        if (match) {
+            const myStats = match.players[user.id];
+            if (!myStats) throw new Error("You were not in this match");
+            const opponentId = Object.keys(match.players).find(id => id !== user.id);
+            const opponentStats = opponentId ? match.players[opponentId] : null;
+            const historyItem = userData.history?.find(h => h.matchId === matchId);
+            // Reconstruct result for archive view
+            const reconstructed: GameResult = {
+              matchId: match.id,
+              won: historyItem ? historyItem.result === 'win' : myStats.score > (opponentStats?.score || 0),
+              score: myStats.score,
+              opponentScore: opponentStats?.score || 0,
+              eloChange: historyItem?.eloChange || 0,
+              newElo: userData.elo,
+              reactionTimes: myStats.answers.map((a, i) => ({
+                question: i + 1,
+                time: a.timeMs
+              })),
+              xpEarned: 0, // Not stored in history currently
+              coinsEarned: 0,
+              xpBreakdown: [],
+              coinsBreakdown: [],
+              isPrivate: match.isPrivate,
+              categoryId: match.categoryId,
+              answers: myStats.answers,
+              questions: match.questions
+            };
+            setResult(reconstructed);
+        } else {
+            // Fallback to history
+            const historyItem = userData.history?.find(h => h.matchId === matchId);
+            if (!historyItem) throw new Error("Match not found in history");
+            const reconstructed: GameResult = {
+                matchId: historyItem.matchId,
+                won: historyItem.result === 'win',
+                score: historyItem.score,
+                opponentScore: historyItem.opponentScore,
+                eloChange: historyItem.eloChange,
+                newElo: userData.elo, // Approximate, current elo
+                reactionTimes: [], // Unavailable
+                xpEarned: 0,
+                coinsEarned: 0,
+                xpBreakdown: [],
+                coinsBreakdown: [],
+                isPrivate: false, // Unknown
+                categoryId: 'unknown', // Could try to infer or leave generic
+                // Missing questions/answers
+            };
+            setResult(reconstructed);
+        }
       } catch (err) {
         console.error(err);
         toast.error("Could not load match results");
@@ -301,32 +328,32 @@ export function ResultsPage() {
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
-                  <XAxis 
-                    dataKey="question" 
-                    stroke="#ffffff50" 
+                  <XAxis
+                    dataKey="question"
+                    stroke="#ffffff50"
                     tick={{fill: '#ffffff50', fontSize: 12}}
                     tickLine={false}
                     axisLine={false}
                   />
-                  <YAxis 
-                    stroke="#ffffff50" 
+                  <YAxis
+                    stroke="#ffffff50"
                     tick={{fill: '#ffffff50', fontSize: 12}}
                     tickLine={false}
                     axisLine={false}
                     unit="s"
                   />
-                  <Tooltip 
+                  <Tooltip
                     contentStyle={{ backgroundColor: '#18181b', border: '1px solid #ffffff20', borderRadius: '8px' }}
                     itemStyle={{ color: '#fff' }}
                     labelStyle={{ color: '#a1a1aa' }}
                   />
-                  <Area 
-                    type="monotone" 
-                    dataKey="time" 
-                    stroke="#818cf8" 
-                    strokeWidth={3} 
-                    fillOpacity={1} 
-                    fill="url(#colorTime)" 
+                  <Area
+                    type="monotone"
+                    dataKey="time"
+                    stroke="#818cf8"
+                    strokeWidth={3}
+                    fillOpacity={1}
+                    fill="url(#colorTime)"
                   />
                 </AreaChart>
               </ResponsiveContainer>
@@ -334,10 +361,14 @@ export function ResultsPage() {
           </div>
         )}
         {/* Match Review Section */}
-        {result.questions && result.answers && (
+        {result.questions && result.answers ? (
           <div className="mb-12">
             <MatchReview questions={result.questions} answers={result.answers} />
           </div>
+        ) : (
+            <div className="mb-12 p-6 rounded-xl bg-white/5 border border-white/5 text-muted-foreground text-sm">
+                Detailed stats unavailable for archived match.
+            </div>
         )}
         {/* Elo Change */}
         <div className="mb-12">

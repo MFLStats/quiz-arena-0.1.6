@@ -68,3 +68,19 @@ export async function shareContent(data: { title?: string; text?: string; url?: 
     toast.error('Failed to copy link');
   }
 }
+/**
+ * Calculates the current winning streak from a list of answers.
+ * Iterates backwards from the most recent answer.
+ */
+export function calculateStreak(answers: { correct: boolean }[]): number {
+  if (!answers || answers.length === 0) return 0;
+  let streak = 0;
+  for (let i = answers.length - 1; i >= 0; i--) {
+    if (answers[i].correct) {
+      streak++;
+    } else {
+      break;
+    }
+  }
+  return streak;
+}

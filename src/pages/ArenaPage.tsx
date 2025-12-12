@@ -8,7 +8,7 @@ import { TimerCircle, AnswerButton, ScoreBadge, OpponentAvatar, EmotePicker, Emo
 import { MatchLoadingScreen } from '@/components/game/MatchLoadingScreen';
 import { toast } from 'sonner';
 import { Loader2, Check, AlertTriangle, Flame, Flag, Zap } from 'lucide-react';
-import { cn, getFlagEmoji, getBackgroundStyle } from '@/lib/utils';
+import { cn, getFlagEmoji, getBackgroundStyle, calculateStreak } from '@/lib/utils';
 import type { FinishMatchResponse, MatchState, ReportReason } from '@shared/types';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { playSfx } from '@/lib/sound-fx';
@@ -122,6 +122,13 @@ export function ArenaPage() {
             if (match.status === 'playing' && elapsed > 4000) {
               setShowIntro(false);
             }
+            // Initialize local streak from server data if available
+            if (user) {
+                const myStats = match.players[user.id];
+                if (myStats?.answers) {
+                    setStreak(calculateStreak(myStats.answers));
+                }
+            }
           }
         })
         .catch((err) => {
@@ -130,7 +137,7 @@ export function ArenaPage() {
           navigate('/');
         });
     }
-  }, [matchId, initMatch, navigate]);
+  }, [matchId, initMatch, navigate, user]);
   // Polling Effect for Sync
   useEffect(() => {
     if (!matchId || !user) return;
@@ -379,6 +386,7 @@ export function ArenaPage() {
   const opponentElo = opponentStats?.elo;
   const opponentTitle = opponentStats?.title;
   const opponentDisplayTitle = opponentStats?.displayTitle;
+  const opponentStreak = opponentStats?.answers ? calculateStreak(opponentStats.answers) : 0;
   const myStats = matchData.players[user.id];
   const myTitle = myStats?.title || user.title;
   const myDisplayTitle = myStats?.displayTitle;
@@ -574,7 +582,14 @@ export function ArenaPage() {
             <div className="flex items-center gap-2 md:gap-6 relative">
               <ScoreBadge score={opponentScore} label="Enemy" isOpponent />
               <div className="flex flex-col items-center gap-1 relative">
-                <OpponentAvatar name={opponentName} isOpponent className="scale-75 md:scale-100 origin-right" title={opponentTitle} displayTitle={opponentDisplayTitle} />
+                <OpponentAvatar
+                  name={opponentName}
+                  isOpponent
+                  className="scale-75 md:scale-100 origin-right"
+                  title={opponentTitle}
+                  displayTitle={opponentDisplayTitle}
+                  streak={opponentStreak}
+                />
                 {opponentCountry && (
                   <div className="flex items-center gap-1 text-[10px] bg-black/40 px-2 py-0.5 rounded-full border border-white/5">
                     <span>{getFlagEmoji(opponentCountry)}</span>
