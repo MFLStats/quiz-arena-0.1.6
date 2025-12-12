@@ -786,7 +786,9 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       newLevel,
       newAchievements,
       isPrivate: matchState.isPrivate,
-      categoryId: matchState.categoryId
+      categoryId: matchState.categoryId,
+      answers: myStats.answers, // Added for review
+      questions: matchState.questions // Added for review
     };
     return ok(c, response);
   });
@@ -995,8 +997,8 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     const { items } = await UserEntity.list(c.env, null, 100);
     let filtered = items.map(sanitizeUser);
     if (search) {
-      filtered = filtered.filter(u => 
-        u.name.toLowerCase().includes(search) || 
+      filtered = filtered.filter(u =>
+        u.name.toLowerCase().includes(search) ||
         u.id.toLowerCase().includes(search) ||
         (u.email && u.email.toLowerCase().includes(search))
       );

@@ -465,7 +465,12 @@ export class MatchEntity extends IndexedEntity<MatchState> {
         ...player,
         score: player.score + points,
         correctCount: isCorrect ? player.correctCount + 1 : player.correctCount,
-        answers: [...player.answers, { questionId: question.id, timeMs: 10000 - timeRemainingMs, correct: isCorrect }]
+        answers: [...player.answers, {
+            questionId: question.id,
+            timeMs: 10000 - timeRemainingMs,
+            correct: isCorrect,
+            selectedIndex: answerIndex // Added selectedIndex persistence
+        }]
     };
     await this.mutate(s => ({
       ...s,

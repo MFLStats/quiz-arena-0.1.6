@@ -87,7 +87,7 @@ export interface PlayerStats {
   userId: string;
   score: number;
   correctCount: number;
-  answers: { questionId: string; timeMs: number; correct: boolean }[];
+  answers: { questionId: string; timeMs: number; correct: boolean; selectedIndex?: number }[];
   // Snapshot of player details at match start
   name?: string;
   country?: string;
@@ -136,6 +136,9 @@ export interface GameResult {
   newAchievements?: string[]; // IDs of newly unlocked achievements
   isPrivate?: boolean;
   categoryId?: string; // Added for Play Again functionality
+  // Match Review Data
+  answers?: { questionId: string; timeMs: number; correct: boolean; selectedIndex?: number }[];
+  questions?: Question[];
 }
 // Alias for API response to match GameResult
 export type FinishMatchResponse = GameResult;

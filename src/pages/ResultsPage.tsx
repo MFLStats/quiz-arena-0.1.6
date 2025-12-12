@@ -19,17 +19,24 @@ import {
   Tooltip,
   CartesianGrid
 } from 'recharts';
+import { MatchReview } from '@/components/game/MatchReview';
 export function ResultsPage() {
   const { matchId } = useParams();
   const user = useAuthStore(s => s.user);
   const storeResult = useGameStore(s => s.gameResult);
+  const storeQuestions = useGameStore(s => s.questions);
   const [result, setResult] = useState<GameResult | null>(null);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     const loadData = async () => {
       // 1. Use store result if available and matches current ID (immediate post-game)
       if (storeResult && storeResult.matchId === matchId) {
-        setResult(storeResult);
+        // Ensure questions are available for review
+        const resultWithQuestions = {
+            ...storeResult,
+            questions: storeResult.questions || storeQuestions
+        };
+        setResult(resultWithQuestions);
         setLoading(false);
         if (storeResult.won) {
             playSfx('win');
@@ -66,12 +73,14 @@ export function ResultsPage() {
             question: i + 1,
             time: a.timeMs
           })),
-          xpEarned: 0,
+          xpEarned: 0, // Not stored in history currently
           coinsEarned: 0,
           xpBreakdown: [],
           coinsBreakdown: [],
           isPrivate: match.isPrivate,
-          categoryId: match.categoryId // Added for Play Again
+          categoryId: match.categoryId,
+          answers: myStats.answers,
+          questions: match.questions
         };
         setResult(reconstructed);
       } catch (err) {
@@ -82,7 +91,7 @@ export function ResultsPage() {
       }
     };
     loadData();
-  }, [matchId, user, storeResult]);
+  }, [matchId, user, storeResult, storeQuestions]);
   const triggerConfetti = () => {
     const duration = 3000;
     const end = Date.now() + duration;
@@ -292,6 +301,12 @@ export function ResultsPage() {
                 </AreaChart>
               </ResponsiveContainer>
             </div>
+          </div>
+        )}
+        {/* Match Review Section */}
+        {result.questions && result.answers && (
+          <div className="mb-12">
+            <MatchReview questions={result.questions} answers={result.answers} />
           </div>
         )}
         {/* Elo Change */}
