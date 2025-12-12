@@ -167,7 +167,7 @@ export function AdminPage() {
   const [reports, setReports] = useState<Report[]>([]);
   const [processingReportId, setProcessingReportId] = useState<string | null>(null);
   // System Config State
-  const [systemConfig, setSystemConfig] = useState<SystemConfig>({ motd: '', maintenance: false });
+  const [systemConfig, setSystemConfig] = useState<SystemConfig>({ motd: '', maintenance: false, seasonName: '' });
   const [isSavingConfig, setIsSavingConfig] = useState(false);
   // User Management State
   const [users, setUsers] = useState<User[]>([]);
@@ -1287,7 +1287,7 @@ export function AdminPage() {
                                     {u.name}
                                     {u.isAdmin && <Badge variant="default" className="bg-indigo-500 hover:bg-indigo-600 text-[10px] gap-1"><Shield className="w-3 h-3" /> Admin</Badge>}
                                   </div>
-                                  <div className="text-xs text-muted-foreground font-mono">{u.email || 'No Email'} �� {u.id}</div>
+                                  <div className="text-xs text-muted-foreground font-mono">{u.email || 'No Email'}  {u.id}</div>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <Button
@@ -1347,6 +1347,15 @@ export function AdminPage() {
                           className="bg-black/20 border-white/10"
                           value={systemConfig.motd || ''}
                           onChange={(e) => setSystemConfig(prev => ({ ...prev, motd: e.target.value }))}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Season Name</Label>
+                        <Input
+                          placeholder="e.g. Holiday Season"
+                          className="bg-black/20 border-white/10"
+                          value={systemConfig.seasonName || ''}
+                          onChange={(e) => setSystemConfig(prev => ({ ...prev, seasonName: e.target.value }))}
                         />
                       </div>
                       <div className="space-y-2">

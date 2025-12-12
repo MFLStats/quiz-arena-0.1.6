@@ -45,6 +45,58 @@ function SeasonTimer({ endDate }: { endDate?: string }) {
     <span className="font-mono font-bold tracking-wide">{timeLeft}</span>
   );
 }
+function ParticleBackground() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    let animationFrameId: number;
+    let particles: Array<{x: number, y: number, size: number, speed: number, opacity: number}> = [];
+    const resize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      initParticles();
+    };
+    const initParticles = () => {
+      particles = [];
+      const count = Math.floor(window.innerWidth / 15); // Density
+      for (let i = 0; i < count; i++) {
+        particles.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          size: Math.random() * 2 + 0.5,
+          speed: Math.random() * 0.5 + 0.1,
+          opacity: Math.random() * 0.5 + 0.1
+        });
+      }
+    };
+    const animate = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particles.forEach(p => {
+        p.y -= p.speed;
+        if (p.y < 0) {
+          p.y = canvas.height;
+          p.x = Math.random() * canvas.width;
+        }
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255, 255, 255, ${p.opacity})`;
+        ctx.fill();
+      });
+      animationFrameId = requestAnimationFrame(animate);
+    };
+    window.addEventListener('resize', resize);
+    resize();
+    animate();
+    return () => {
+      window.removeEventListener('resize', resize);
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, []);
+  return <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none z-0" />;
+}
 export function HomePage() {
   const navigate = useNavigate();
   const initMatch = useGameStore(s => s.initMatch);
@@ -180,7 +232,7 @@ export function HomePage() {
       <div className="min-h-screen flex flex-col">
         {/* MOTD Banner */}
         {config?.motd && (
-          <div className="bg-indigo-600/20 border-b border-indigo-500/20 text-indigo-200 px-4 py-2 text-center text-sm font-medium backdrop-blur-md flex items-center justify-center gap-2 animate-in slide-in-from-top duration-500">
+          <div className="bg-indigo-600/20 border-b border-indigo-500/20 text-indigo-200 px-4 py-2 text-center text-sm font-medium backdrop-blur-md flex items-center justify-center gap-2 animate-in slide-in-from-top duration-500 relative z-20">
             <Megaphone className="w-4 h-4 animate-pulse" />
             {config.motd}
           </div>
@@ -190,6 +242,7 @@ export function HomePage() {
           <div className="absolute inset-0 bg-background">
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-indigo-600/10 blur-[120px] rounded-full animate-pulse" />
             <div className="absolute bottom-0 right-0 w-[800px] h-[600px] bg-purple-600/5 blur-[100px] rounded-full" />
+            <ParticleBackground />
           </div>
           <div className="absolute top-4 right-4 md:top-8 md:right-8 z-20">
             <Button
@@ -284,7 +337,7 @@ export function HomePage() {
         </section>
         {/* Guest Warning */}
         {user?.provider === 'guest' && showGuestWarning && (
-          <div className="max-w-7xl mx-auto px-4 mb-8 w-full">
+          <div className="max-w-7xl mx-auto px-4 mb-8 w-full relative z-10">
             <GlassCard className="p-4 border-l-4 border-l-yellow-500 bg-yellow-500/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="flex items-start gap-3">
                 <div className="p-2 bg-yellow-500/10 rounded-lg text-yellow-500 shrink-0">
@@ -308,7 +361,7 @@ export function HomePage() {
         )}
         {/* Daily Streak Dashboard */}
         {user && (
-          <section className="max-w-7xl mx-auto px-4 mb-12 w-full">
+          <section className="max-w-7xl mx-auto px-4 mb-12 w-full relative z-10">
             <GlassCard className="p-6 md:p-8 bg-gradient-to-br from-orange-900/20 to-red-900/20">
               <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1485546246426-74dc88dec4d9?q=80&w=2069&auto=format&fit=crop')] bg-cover bg-center opacity-5 mix-blend-overlay" />
               <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">

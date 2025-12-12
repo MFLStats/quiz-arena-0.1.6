@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { cn, getBackgroundStyle } from '@/lib/utils';
-import type { User, ClaimRewardRequest, ClaimRewardResponse, UpgradeSeasonPassRequest, ShopItem } from '@shared/types';
+import type { User, ClaimRewardRequest, ClaimRewardResponse, UpgradeSeasonPassRequest, ShopItem, SystemConfig } from '@shared/types';
 import { SEASON_REWARDS_CONFIG, SEASON_COST, SEASON_LEVELS, SEASON_NAME, SEASON_END_DATE } from '@shared/constants';
 import { api } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/auth-store';
@@ -25,12 +25,26 @@ export function SeasonPass({ user }: SeasonPassProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [timeLeft, setTimeLeft] = useState('');
   const [rewardResult, setRewardResult] = useState<{ type: 'coins' | 'item', amount?: number, item?: ShopItem } | null>(null);
+  const [seasonName, setSeasonName] = useState(SEASON_NAME);
   const currentLevel = user?.level || 1;
   const currentXp = user?.xp || 0;
   const isPremium = user?.seasonPass?.isPremium || false;
   const claimedRewards = user?.seasonPass?.claimedRewards || [];
   // Calculate progress within current level (simplified for display)
   const progressPercent = (currentXp % 100);
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const config = await api<SystemConfig>('/api/config');
+        if (config.seasonName) {
+          setSeasonName(config.seasonName);
+        }
+      } catch (e) {
+        console.error("Failed to fetch season config", e);
+      }
+    };
+    fetchConfig();
+  }, []);
   useEffect(() => {
     const calculateTimeLeft = () => {
       const end = new Date(SEASON_END_DATE).getTime();
@@ -116,7 +130,7 @@ export function SeasonPass({ user }: SeasonPassProps) {
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/20 border border-red-500/30 text-red-300 text-sm font-bold uppercase tracking-wider">
               <Crown className="w-4 h-4 fill-red-300" /> Season Event
             </div>
-            <h2 className="text-4xl md:text-5xl font-display font-bold text-white">{SEASON_NAME}</h2>
+            <h2 className="text-4xl md:text-5xl font-display font-bold text-white">{seasonName}</h2>
             <p className="text-indigo-100 max-w-lg">
               Unlock exclusive festive rewards, holiday avatars, and spread the cheer.
               Ends in {timeLeft}.

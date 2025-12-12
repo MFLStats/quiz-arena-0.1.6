@@ -303,6 +303,7 @@ export interface SystemConfig {
   motd?: string;
   seasonEndDate?: string; // ISO Date string
   maintenance?: boolean;
+  seasonName?: string; // Dynamic season name
 }
 // Analytics
 export interface SystemStats {

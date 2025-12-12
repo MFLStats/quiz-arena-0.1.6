@@ -47,7 +47,8 @@ export class ConfigEntity extends Entity<SystemConfig> {
   static readonly initialState: SystemConfig = {
     motd: "",
     maintenance: false,
-    seasonEndDate: '2025-12-31'
+    seasonEndDate: '2025-12-31',
+    seasonName: 'Holiday Season'
   };
 }
 // SHOP ENTITY: Stores dynamic shop items individually
@@ -614,7 +615,7 @@ export class MatchEntity extends IndexedEntity<MatchState> {
     }));
     const updatedState = await this.getState();
     const currentQId = updatedState.questions[updatedState.currentQuestionIndex].id;
-    const allAnswered = Object.values(updatedState.players).every(p => 
+    const allAnswered = Object.values(updatedState.players).every(p =>
         p.answers.some(a => a.questionId === currentQId)
     );
     if (allAnswered) {

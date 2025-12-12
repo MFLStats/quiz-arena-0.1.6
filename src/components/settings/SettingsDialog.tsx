@@ -25,7 +25,7 @@ import {
 import { useAudioStore } from '@/lib/audio-store';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuthStore } from '@/lib/auth-store';
-import { Volume2, Monitor, User, LogOut, VolumeX, Trash2, Loader2 } from 'lucide-react';
+import { Volume2, Monitor, User, LogOut, VolumeX, Trash2, Loader2, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api-client';
 import { toast } from 'sonner';
@@ -58,6 +58,13 @@ export function SettingsDialog({ isOpen, onOpenChange }: SettingsDialogProps) {
       console.error(err);
       toast.error("Failed to delete account");
       setIsDeleting(false);
+    }
+  };
+  const handleResetApp = () => {
+    if (confirm("This will clear all local data and reload the application. You will need to sign in again. Continue?")) {
+      localStorage.clear();
+      sessionStorage.clear();
+      window.location.reload();
     }
   };
   return (
@@ -154,8 +161,15 @@ export function SettingsDialog({ isOpen, onOpenChange }: SettingsDialogProps) {
                   <LogOut className="w-4 h-4" /> Sign Out
                 </Button>
                 {/* Danger Zone */}
-                <div className="pt-4 border-t border-white/10">
+                <div className="pt-4 border-t border-white/10 space-y-3">
                   <h4 className="text-sm font-bold text-red-400 mb-2">Danger Zone</h4>
+                  <Button
+                    variant="outline"
+                    className="w-full border-red-500/20 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                    onClick={handleResetApp}
+                  >
+                    <RefreshCw className="w-4 h-4 mr-2" /> Reset Application
+                  </Button>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button variant="destructive" className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20">
