@@ -508,7 +508,7 @@ export function ArenaPage() {
         {/* Header */}
         <header className="relative z-10 p-3 md:p-6 flex items-center justify-between w-full">
           <div className={cn("flex items-center gap-2 md:gap-6", isDaily && "mx-auto")}>
-            <OpponentAvatar name={user.name} className="scale-75 md:scale-100 origin-left" title={myTitle} displayTitle={myDisplayTitle} />
+            <OpponentAvatar name={user.name} className="scale-75 md:scale-100 origin-left" title={myTitle} displayTitle={myDisplayTitle} streak={streak} />
             <ScoreBadge score={myScore} label="You" />
           </div>
           <div className={cn("flex flex-col items-center -mt-2 relative", isDaily && "absolute left-1/2 -translate-x-1/2 top-4")}>

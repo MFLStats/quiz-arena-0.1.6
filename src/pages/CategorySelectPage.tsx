@@ -1,81 +1,20 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Sparkles, Zap, ArrowRight, Loader2, ChevronDown, ChevronUp, Swords, Lock, Atom, Flame, Star, Clock, Filter, Play } from 'lucide-react';
+import { Search, Zap, Loader2, Flame, Clock, Play } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { api } from '@/lib/api-client';
 import { useGameStore } from '@/lib/game-store';
 import { useAuthStore } from '@/lib/auth-store';
 import { toast } from 'sonner';
 import { QueueModal } from '@/components/game/QueueModal';
-import { cn } from '@/lib/utils';
 import type { Category, MatchState } from '@shared/types';
 import { useCategories } from '@/hooks/use-categories';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { playSfx } from '@/lib/sound-fx';
-import { CATEGORY_ICONS } from '@/lib/icons';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-interface CategoryTileProps {
-  cat: Category;
-  userRating?: number;
-  isJoining: boolean;
-  onJoin: (id: string, name: string) => void;
-  index: number;
-  gameMode: 'ranked' | 'private';
-  badge?: {
-    text: string;
-    color: string;
-    icon: React.ElementType;
-  };
-}
-// Compact Tile Component - No longer a motion component to avoid ref conflicts with Tooltip
-const CategoryTile = React.forwardRef<HTMLDivElement, CategoryTileProps>(
-  ({ cat, userRating, isJoining, onJoin, index, gameMode, badge }, ref) => {
-    const Icon = CATEGORY_ICONS[cat.icon] || Atom;
-    return (
-      <div
-        ref={ref}
-        className="group relative aspect-square h-full w-full"
-        onClick={() => !isJoining && onJoin(cat.id, cat.name)}
-      >
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 rounded-2xl blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-        <div className="relative h-full flex flex-col items-center justify-center bg-black/40 border border-white/[0.05] hover:border-white/20 backdrop-blur-sm rounded-2xl p-3 transition-all duration-200 hover:-translate-y-1 hover:bg-white/[0.03] cursor-pointer overflow-hidden">
-          {/* Background Gradient */}
-          <div className={`absolute inset-0 bg-gradient-to-br ${cat.color} opacity-[0.05] group-hover:opacity-10 transition-opacity duration-300`} />
-          {/* Badge */}
-          {badge && (
-            <div className={cn(
-              "absolute top-2 right-2 w-2 h-2 rounded-full shadow-lg z-20",
-              badge.color.replace('text-', 'bg-').split(' ')[0] // Extract bg color from badge props
-            )} title={badge.text} />
-          )}
-          {/* Icon */}
-          <div className={`w-12 h-12 md:w-14 md:h-14 rounded-xl bg-gradient-to-br ${cat.color} flex items-center justify-center mb-3 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-            {isJoining ? (
-              <Loader2 className="w-6 h-6 text-white animate-spin" />
-            ) : (
-              <Icon className="w-6 h-6 md:w-7 md:h-7 text-white" />
-            )}
-          </div>
-          {/* Text */}
-          <div className="text-center relative z-10 w-full">
-            <h3 className="text-sm md:text-base font-bold text-white leading-tight truncate px-1 group-hover:text-indigo-300 transition-colors">
-              {cat.name}
-            </h3>
-            {userRating && (
-              <span className="text-[10px] font-mono text-indigo-300/80 mt-0.5 block">
-                {userRating}
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
-);
-CategoryTile.displayName = "CategoryTile";
+import { CategoryTile } from '@/components/CategoryTile';
 interface CategorySectionProps {
   title: string;
   categories: Category[];
@@ -116,7 +55,7 @@ function CategorySection({ title, categories, joiningId, onJoin, userRatings, ga
                       index={i}
                       isJoining={joiningId === cat.id}
                       onJoin={onJoin}
-                      userRating={userRatings?.[cat.id]}
+                      userElo={userRatings?.[cat.id]}
                       gameMode={gameMode}
                       badge={getBadge(cat)}
                     />
@@ -152,7 +91,7 @@ export function CategorySelectPage() {
   const { categories, loading: categoriesLoading } = useCategories();
   // Memoize filtered categories
   const filtered = useMemo(() => {
-    return categories.filter(c => 
+    return categories.filter(c =>
       c.name.toLowerCase().includes(search.toLowerCase())
     );
   }, [categories, search]);
@@ -315,7 +254,7 @@ export function CategorySelectPage() {
         </div>
         {/* Featured Banner (Compact) */}
         {!search && featuredCategory && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
             className="mb-8 relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-indigo-900/20 to-purple-900/20 p-6 group cursor-pointer"
@@ -369,7 +308,7 @@ export function CategorySelectPage() {
                             index={i}
                             isJoining={joiningId === cat.id}
                             onJoin={handleJoinQueue}
-                            userRating={user?.categoryElo?.[cat.id]}
+                            userElo={user?.categoryElo?.[cat.id]}
                             gameMode={gameMode}
                           />
                         </TooltipTrigger>
@@ -390,24 +329,24 @@ export function CategorySelectPage() {
           </div>
         ) : (
           <div className="space-y-2">
-            <CategorySection 
-              title="General Knowledge" 
+            <CategorySection
+              title="General Knowledge"
               categories={groupedCategories['General']}
               joiningId={joiningId}
               onJoin={handleJoinQueue}
               userRatings={user?.categoryElo}
               gameMode={gameMode}
             />
-            <CategorySection 
-              title="Education & Science" 
+            <CategorySection
+              title="Education & Science"
               categories={groupedCategories['Education']}
               joiningId={joiningId}
               onJoin={handleJoinQueue}
               userRatings={user?.categoryElo}
               gameMode={gameMode}
             />
-            <CategorySection 
-              title="Entertainment" 
+            <CategorySection
+              title="Entertainment"
               categories={groupedCategories['TV & Movies']}
               joiningId={joiningId}
               onJoin={handleJoinQueue}
@@ -415,8 +354,8 @@ export function CategorySelectPage() {
               gameMode={gameMode}
             />
              {groupedCategories['Sports'].length > 0 && (
-              <CategorySection 
-                title="Sports" 
+              <CategorySection
+                title="Sports"
                 categories={groupedCategories['Sports']}
                 joiningId={joiningId}
                 onJoin={handleJoinQueue}
@@ -426,9 +365,9 @@ export function CategorySelectPage() {
             )}
           </div>
         )}
-        <QueueModal 
-          isOpen={!!queueState} 
-          onCancel={handleCancelQueue} 
+        <QueueModal
+          isOpen={!!queueState}
+          onCancel={handleCancelQueue}
           categoryName={queueState?.categoryName || ''}
           matchFound={queueState?.matchFound}
         />

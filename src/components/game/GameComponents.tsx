@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { Check, X, User as UserIcon, Loader2, Crown, Smile, Swords, Medal } from 'lucide-react';
+import { Check, X, User as UserIcon, Loader2, Crown, Smile, Swords, Medal, Flame } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 // --- Timer Circle ---
@@ -159,7 +159,7 @@ export function ScoreBadge({ score, label, isOpponent }: ScoreBadgeProps) {
   );
 }
 // --- Opponent Avatar ---
-export function OpponentAvatar({ name, className, isOpponent, title, displayTitle }: { name: string, className?: string, isOpponent?: boolean, title?: string, displayTitle?: string }) {
+export function OpponentAvatar({ name, className, isOpponent, title, displayTitle, streak }: { name: string, className?: string, isOpponent?: boolean, title?: string, displayTitle?: string, streak?: number }) {
   // Determine title styling based on content
   let titleClass = "text-amber-400 border-amber-500/20 bg-amber-500/10";
   let titleIcon = <Crown className="w-3 h-3 fill-amber-400" />;
@@ -181,12 +181,26 @@ export function OpponentAvatar({ name, className, isOpponent, title, displayTitl
   }
   const finalTitle = displayTitle || title;
   return (
-    <div className={cn("flex flex-col items-center gap-2", className)}>
+    <div className={cn("flex flex-col items-center gap-2 relative", className)}>
+      {/* Streak Badge */}
+      <AnimatePresence>
+        {streak && streak >= 3 && (
+          <motion.div
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0, opacity: 0 }}
+            className="absolute -top-2 -right-2 z-20 flex items-center justify-center w-6 h-6 bg-orange-500 rounded-full border-2 border-zinc-900 shadow-lg shadow-orange-500/50"
+          >
+            <Flame className="w-3.5 h-3.5 text-white fill-white animate-pulse" />
+          </motion.div>
+        )}
+      </AnimatePresence>
       <div className={cn(
-        "relative w-14 h-14 rounded-full p-[3px] shadow-xl",
+        "relative w-14 h-14 rounded-full p-[3px] shadow-xl transition-shadow duration-300",
         isOpponent
           ? "bg-gradient-to-br from-rose-500 to-orange-600"
-          : "bg-gradient-to-br from-indigo-500 to-cyan-500"
+          : "bg-gradient-to-br from-indigo-500 to-cyan-500",
+        streak && streak >= 3 && "shadow-[0_0_20px_rgba(249,115,22,0.6)]"
       )}>
         <div className="absolute inset-0 rounded-full animate-pulse opacity-50 bg-white blur-md" />
         <div className="relative w-full h-full rounded-full bg-zinc-900 flex items-center justify-center overflow-hidden">
@@ -214,7 +228,7 @@ interface EmotePickerProps {
   onSelect: (emoji: string) => void;
   disabled?: boolean;
 }
-const EMOJIS = ['����', '👏', '🤔', '😱', '😎', '😭', '🤯', '🔥'];
+const EMOJIS = ['��', '👏', '🤔', '😱', '😎', '😭', '🤯', '🔥'];
 export function EmotePicker({ onSelect, disabled }: EmotePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isCooldown, setIsCooldown] = useState(false);
