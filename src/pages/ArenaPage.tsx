@@ -387,6 +387,7 @@ export function ArenaPage() {
   const opponentTitle = opponentStats?.title;
   const opponentDisplayTitle = opponentStats?.displayTitle;
   const opponentStreak = opponentStats?.answers ? calculateStreak(opponentStats.answers) : 0;
+  const opponentFrameConfig = opponentStats?.frameConfig;
   const myStats = matchData.players[user.id];
   const myTitle = myStats?.title || user.title;
   const myDisplayTitle = myStats?.displayTitle;
@@ -516,7 +517,16 @@ export function ArenaPage() {
         {/* Header */}
         <header className="relative z-10 p-3 md:p-6 flex items-center justify-between w-full">
           <div className={cn("flex items-center gap-2 md:gap-6", isDaily && "mx-auto")}>
-            <OpponentAvatar name={user.name} className="scale-75 md:scale-100 origin-left" title={myTitle} displayTitle={myDisplayTitle} streak={streak} />
+            <OpponentAvatar
+              name={user.name}
+              className="scale-75 md:scale-100 origin-left"
+              title={myTitle}
+              displayTitle={myDisplayTitle}
+              streak={streak}
+              avatar={user.avatar}
+              frame={user.frame}
+              frameConfig={user.frameConfig}
+            />
             <ScoreBadge score={myScore} label="You" />
           </div>
           <div className={cn("flex flex-col items-center -mt-2 relative", isDaily && "absolute left-1/2 -translate-x-1/2 top-4")}>
@@ -589,6 +599,9 @@ export function ArenaPage() {
                   title={opponentTitle}
                   displayTitle={opponentDisplayTitle}
                   streak={opponentStreak}
+                  avatar={opponentStats?.avatar}
+                  frame={opponentStats?.frame}
+                  frameConfig={opponentFrameConfig}
                 />
                 {opponentCountry && (
                   <div className="flex items-center gap-1 text-[10px] bg-black/40 px-2 py-0.5 rounded-full border border-white/5">

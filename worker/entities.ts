@@ -103,6 +103,10 @@ export class UserEntity extends IndexedEntity<User> {
         newState.notifications = [];
         migrated = true;
       }
+      if (newState.frameConfig === undefined) {
+        newState.frameConfig = undefined; // Explicitly set to undefined to signify defaults
+        migrated = true;
+      }
       if (migrated) {
         this._state = newState;
         return newState;

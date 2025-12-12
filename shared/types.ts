@@ -37,6 +37,11 @@ export interface Notification {
   categoryName: string;
   timestamp: number;
 }
+export interface FrameConfig {
+  x: number;
+  y: number;
+  scale: number;
+}
 export interface User {
   id: string;
   name: string;
@@ -54,6 +59,7 @@ export interface User {
   avatar?: string;
   banner?: string; // URL/Gradient for profile banner
   frame?: string; // Avatar frame asset URL
+  frameConfig?: FrameConfig; // Custom frame positioning
   title?: string; // Equipped player title
   country?: string; // ISO 2-letter code e.g., 'US', 'JP'
   friends?: string[]; // List of friend User IDs
@@ -106,6 +112,7 @@ export interface PlayerStats {
   title?: string;
   avatar?: string;
   frame?: string;
+  frameConfig?: FrameConfig;
   banner?: string;
   lastEmote?: { emoji: string; timestamp: number; };
   // Dynamic Rank Info
@@ -199,6 +206,7 @@ export interface UpdateUserRequest {
   banner?: string;
   title?: string;
   frame?: string;
+  frameConfig?: FrameConfig;
 }
 export interface PurchaseItemRequest {
   userId: string;

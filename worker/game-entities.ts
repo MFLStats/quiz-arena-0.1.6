@@ -403,6 +403,7 @@ export class MatchEntity extends IndexedEntity<MatchState> {
       let avatar: string | undefined = undefined;
       let frame: string | undefined = undefined;
       let banner: string | undefined = undefined;
+      let frameConfig: any = undefined;
       if (mode === 'daily') {
         name = 'Challenger';
       } else {
@@ -417,6 +418,7 @@ export class MatchEntity extends IndexedEntity<MatchState> {
             avatar = user.avatar;
             frame = user.frame;
             banner = user.banner;
+            frameConfig = user.frameConfig;
           }
         } catch (e) {
           console.error(`Failed to fetch user ${uid} for match snapshot`, e);
@@ -439,6 +441,7 @@ export class MatchEntity extends IndexedEntity<MatchState> {
         title,
         avatar,
         frame,
+        frameConfig,
         banner,
         displayTitle: dynamicInfo?.displayTitle,
         categoryRank: dynamicInfo?.categoryRank
@@ -470,6 +473,7 @@ export class MatchEntity extends IndexedEntity<MatchState> {
     let avatar: string | undefined = undefined;
     let frame: string | undefined = undefined;
     let banner: string | undefined = undefined;
+    let frameConfig: any = undefined;
     try {
       const userEntity = new UserEntity(this.env, userId);
       if (await userEntity.exists()) {
@@ -480,6 +484,7 @@ export class MatchEntity extends IndexedEntity<MatchState> {
         title = user.title;
         avatar = user.avatar;
         frame = user.frame;
+        frameConfig = user.frameConfig;
         banner = user.banner;
       }
     } catch (e) {
@@ -501,6 +506,7 @@ export class MatchEntity extends IndexedEntity<MatchState> {
       title,
       avatar,
       frame,
+      frameConfig,
       banner,
       displayTitle: dynamicInfo?.displayTitle,
       categoryRank: dynamicInfo?.categoryRank

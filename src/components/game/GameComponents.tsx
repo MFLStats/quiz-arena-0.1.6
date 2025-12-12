@@ -4,6 +4,8 @@ import { cn } from '@/lib/utils';
 import { Check, X, User as UserIcon, Loader2, Crown, Smile, Swords, Medal, Flame } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { AvatarWithFrame } from '@/components/ui/avatar-with-frame';
+import type { FrameConfig } from '@shared/types';
 // --- Timer Circle ---
 interface TimerCircleProps {
   duration: number; // seconds
@@ -159,7 +161,7 @@ export function ScoreBadge({ score, label, isOpponent }: ScoreBadgeProps) {
   );
 }
 // --- Opponent Avatar ---
-export function OpponentAvatar({ name, className, isOpponent, title, displayTitle, streak }: { name: string, className?: string, isOpponent?: boolean, title?: string, displayTitle?: string, streak?: number }) {
+export function OpponentAvatar({ name, className, isOpponent, title, displayTitle, streak, avatar, frame, frameConfig }: { name: string, className?: string, isOpponent?: boolean, title?: string, displayTitle?: string, streak?: number, avatar?: string, frame?: string, frameConfig?: FrameConfig }) {
   // Determine title styling based on content
   let titleClass = "text-amber-400 border-amber-500/20 bg-amber-500/10";
   let titleIcon = <Crown className="w-3 h-3 fill-amber-400" />;
@@ -198,14 +200,18 @@ export function OpponentAvatar({ name, className, isOpponent, title, displayTitl
       <div className={cn(
         "relative w-14 h-14 rounded-full p-[3px] shadow-xl transition-shadow duration-300",
         isOpponent
-          ? "bg-gradient-to-br from-rose-500 to-orange-600"
-          : "bg-gradient-to-br from-indigo-500 to-cyan-500",
+          ? "bg-gradient-to-br from-rose-500 to-orange-600 ring-2 ring-rose-500/30"
+          : "bg-gradient-to-br from-indigo-500 to-cyan-500 ring-2 ring-indigo-500/30",
         streak && streak >= 3 && "shadow-[0_0_20px_rgba(249,115,22,0.6)]"
       )}>
-        <div className="absolute inset-0 rounded-full animate-pulse opacity-50 bg-white blur-md" />
-        <div className="relative w-full h-full rounded-full bg-zinc-900 flex items-center justify-center overflow-hidden">
-          <UserIcon className="w-7 h-7 text-white/80" />
-        </div>
+        <AvatarWithFrame
+          src={avatar}
+          fallback={name}
+          frameSrc={frame}
+          frameConfig={frameConfig}
+          className="w-full h-full"
+          isOpponent={isOpponent}
+        />
       </div>
       <div className="flex flex-col items-center">
         <span className="text-xs font-bold text-white/90 tracking-wide bg-black/40 px-2 py-0.5 rounded-full backdrop-blur-sm border border-white/5">

@@ -247,7 +247,8 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       avatar: updates.avatar !== undefined ? updates.avatar : user.avatar,
       banner: updates.banner !== undefined ? updates.banner : user.banner,
       title: updates.title !== undefined ? updates.title : user.title,
-      frame: updates.frame !== undefined ? updates.frame : user.frame
+      frame: updates.frame !== undefined ? updates.frame : user.frame,
+      frameConfig: updates.frameConfig !== undefined ? updates.frameConfig : user.frameConfig
     }));
     return ok(c, sanitizeUser(await userEntity.getState()));
   });

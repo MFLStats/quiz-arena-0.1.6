@@ -30,7 +30,8 @@ import {
   Share2,
   Activity,
   Search,
-  LogOut
+  LogOut,
+  Move
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -62,8 +63,9 @@ import {
 } from "@/components/ui/tooltip";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Slider } from '@/components/ui/slider';
 import { cn, getFlagEmoji, isImageUrl, getBackgroundStyle, shareContent } from '@/lib/utils';
-import type { User, Category, MatchHistoryItem, UpdateUserRequest, UserAchievement, ShopItem } from '@shared/types';
+import type { User, Category, MatchHistoryItem, UpdateUserRequest, UserAchievement, ShopItem, FrameConfig } from '@shared/types';
 import { getLevelFromXp } from '@shared/progression';
 import { ACHIEVEMENTS } from '@shared/achievements';
 import { COUNTRIES } from '@shared/constants';
@@ -72,6 +74,7 @@ import { toast } from 'sonner';
 import { eachDayOfInterval, subDays, format, isSameDay, startOfWeek, endOfWeek } from 'date-fns';
 import { api } from '@/lib/api-client';
 import { ChallengeModal } from '@/components/game/ChallengeModal';
+import { AvatarWithFrame } from '@/components/ui/avatar-with-frame';
 // --- Icon Map ---
 const ICON_MAP: Record<string, React.ElementType> = {
   Swords, Zap, Target, Shield, Coins, Flame, Users, Calendar
@@ -99,6 +102,7 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
   const [frame, setFrame] = useState(user.frame);
   const [banner, setBanner] = useState(user.banner);
   const [title, setTitle] = useState(user.title);
+  const [frameConfig, setFrameConfig] = useState<FrameConfig>({ x: 0, y: 0, scale: 1.35 });
   // Reset state when dialog opens
   useEffect(() => {
     if (isEditing) {
@@ -108,6 +112,7 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
       setFrame(user.frame);
       setBanner(user.banner);
       setTitle(user.title);
+      setFrameConfig(user.frameConfig || { x: 0, y: 0, scale: 1.35 });
       setShowCreator(false);
     }
   }, [isEditing, user]);
@@ -120,7 +125,8 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
         avatar,
         frame,
         banner,
-        title
+        title,
+        frameConfig
       });
       setIsEditing(false);
     } finally {
@@ -182,23 +188,13 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
             <Tooltip>
               <TooltipTrigger asChild>
                 <div className="relative w-32 h-32 md:w-40 md:h-40 rounded-full p-1.5 bg-zinc-900 ring-4 ring-zinc-900/50 cursor-help">
-                  <Avatar className="w-full h-full border-2 border-white/10">
-                    <AvatarImage src={user.avatar} className="object-cover" />
-                    <AvatarFallback className="text-4xl font-bold bg-zinc-800 text-white">
-                      {user.name.substring(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  {/* Frame Overlay */}
-                  {user.frame && isImageUrl(user.frame) && (
-                     <img
-                       src={user.frame}
-                       className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[135%] h-[135%] z-20 object-contain pointer-events-none"
-                       alt="frame"
-                     />
-                  )}
-                  {user.frame && !isImageUrl(user.frame) && (
-                     <div className={cn("absolute inset-0 rounded-full pointer-events-none z-20", user.frame)} />
-                  )}
+                  <AvatarWithFrame
+                    src={user.avatar}
+                    fallback={user.name}
+                    frameSrc={user.frame}
+                    frameConfig={user.frameConfig}
+                    className="w-full h-full"
+                  />
                 </div>
               </TooltipTrigger>
               <TooltipContent className="bg-zinc-900 border-white/10 text-xs font-medium">
@@ -318,6 +314,76 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
                           ) : (
                             <ScrollArea className="flex-1 pr-4">
                               <div className="space-y-8">
+                                {/* Preview Section */}
+                                <div className="flex flex-col items-center gap-4 p-4 bg-white/5 rounded-xl border border-white/10">
+                                  <Label className="text-muted-foreground">Preview</Label>
+                                  <div className="w-32 h-32 rounded-full bg-zinc-900 border-4 border-indigo-500/30 relative">
+                                    <AvatarWithFrame
+                                      src={avatar}
+                                      fallback={name}
+                                      frameSrc={frame}
+                                      frameConfig={frameConfig}
+                                      className="w-full h-full"
+                                    />
+                                  </div>
+                                  {/* Frame Adjustment Controls */}
+                                  {frame && isImageUrl(frame) && (
+                                    <div className="w-full space-y-4 pt-2 border-t border-white/5">
+                                      <div className="flex items-center justify-between">
+                                        <Label className="flex items-center gap-2 text-xs"><Move className="w-3 h-3" /> Frame Position</Label>
+                                        <Button 
+                                          size="sm" 
+                                          variant="ghost" 
+                                          className="h-6 text-[10px]"
+                                          onClick={() => setFrameConfig({ x: 0, y: 0, scale: 1.35 })}
+                                        >
+                                          Reset
+                                        </Button>
+                                      </div>
+                                      <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-1">
+                                          <div className="flex justify-between text-[10px] text-muted-foreground">
+                                            <span>Horizontal (X)</span>
+                                            <span>{frameConfig.x}%</span>
+                                          </div>
+                                          <Slider
+                                            value={[frameConfig.x]}
+                                            min={-50}
+                                            max={50}
+                                            step={1}
+                                            onValueChange={([val]) => setFrameConfig(prev => ({ ...prev, x: val }))}
+                                          />
+                                        </div>
+                                        <div className="space-y-1">
+                                          <div className="flex justify-between text-[10px] text-muted-foreground">
+                                            <span>Vertical (Y)</span>
+                                            <span>{frameConfig.y}%</span>
+                                          </div>
+                                          <Slider
+                                            value={[frameConfig.y]}
+                                            min={-50}
+                                            max={50}
+                                            step={1}
+                                            onValueChange={([val]) => setFrameConfig(prev => ({ ...prev, y: val }))}
+                                          />
+                                        </div>
+                                      </div>
+                                      <div className="space-y-1">
+                                        <div className="flex justify-between text-[10px] text-muted-foreground">
+                                          <span>Scale</span>
+                                          <span>{Math.round(frameConfig.scale * 100)}%</span>
+                                        </div>
+                                        <Slider
+                                          value={[frameConfig.scale]}
+                                          min={0.5}
+                                          max={2.0}
+                                          step={0.05}
+                                          onValueChange={([val]) => setFrameConfig(prev => ({ ...prev, scale: val }))}
+                                        />
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
                                 {/* Avatars */}
                                 <div className="space-y-3">
                                   <div className="flex items-center justify-between">
