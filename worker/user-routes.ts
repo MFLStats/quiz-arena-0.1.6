@@ -193,7 +193,10 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
   app.get('/api/auth/google/redirect', (c) => {
     const env = c.env as any;
     const clientId = env.GOOGLE_CLIENT_ID;
-    if (!clientId) return c.text("Missing GOOGLE_CLIENT_ID env var", 500);
+    // Graceful fallback for preview/dev environments
+    if (!clientId) {
+        return c.redirect('/login?error=missing_env&provider=google');
+    }
     const redirectUri = `${new URL(c.req.url).origin}/api/auth/google/callback`;
     const scope = 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile';
     const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&access_type=offline&prompt=consent`;
@@ -279,7 +282,10 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
   app.get('/api/auth/apple/redirect', (c) => {
     const env = c.env as any;
     const clientId = env.APPLE_CLIENT_ID;
-    if (!clientId) return c.text("Missing APPLE_CLIENT_ID env var", 500);
+    // Graceful fallback for preview/dev environments
+    if (!clientId) {
+        return c.redirect('/login?error=missing_env&provider=apple');
+    }
     const redirectUri = `${new URL(c.req.url).origin}/api/auth/apple/callback`;
     const scope = 'name email';
     const state = crypto.randomUUID(); // Should ideally be stored and verified
