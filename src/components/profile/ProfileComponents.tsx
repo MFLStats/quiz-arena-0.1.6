@@ -172,7 +172,7 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
       </div>
       <div className="relative z-10 pt-40 md:pt-56 px-6 pb-6 md:px-10 md:pb-10 flex flex-col md:flex-row items-center md:items-end gap-6 md:gap-8">
         {/* Avatar Group */}
-        <div className="relative shrink-0">
+        <div className="relative shrink-0 z-20">
           <div className="absolute -inset-2 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full blur-lg opacity-50 group-hover:opacity-75 transition duration-500" />
           <TooltipProvider>
             <Tooltip>
@@ -186,9 +186,9 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
                   </Avatar>
                   {/* Frame Overlay */}
                   {user.frame && isImageUrl(user.frame) && (
-                     <img
-                       src={user.frame}
-                       className="absolute inset-0 w-full h-full z-20 object-contain scale-110 pointer-events-none"
+                     <img 
+                       src={user.frame} 
+                       className="absolute inset-0 w-full h-full z-20 object-contain scale-110 pointer-events-none" 
                        alt="frame"
                      />
                   )}
@@ -198,7 +198,7 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
                 </div>
               </TooltipTrigger>
               <TooltipContent className="bg-zinc-900 border-white/10 text-xs font-medium">
-                Vector SVG �� 1:1 Aspect Ratio
+                Vector SVG • 1:1 Aspect Ratio
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -228,9 +228,9 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
             </h1>
             {/* Actions */}
             <div className="flex items-center gap-2">
-              <Button
-                size="icon"
-                variant="ghost"
+              <Button 
+                size="icon" 
+                variant="ghost" 
                 className="h-9 w-9 rounded-full bg-white/5 hover:bg-white/10 text-white/70 hover:text-white backdrop-blur-sm border border-white/5"
                 onClick={handleShare}
                 title="Share Profile"
@@ -259,9 +259,9 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
                         <div className="space-y-4">
                           <div className="space-y-2">
                             <Label>Display Name</Label>
-                            <Input
-                              value={name}
-                              onChange={(e) => setName(e.target.value)}
+                            <Input 
+                              value={name} 
+                              onChange={(e) => setName(e.target.value)} 
                               className="bg-black/20 border-white/10"
                               placeholder="Enter your name"
                             />
@@ -302,7 +302,7 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
                       {/* APPEARANCE TAB */}
                       <TabsContent value="appearance" className="flex-1 overflow-hidden flex flex-col py-4">
                         {showCreator ? (
-                          <AvatarCreator
+                          <AvatarCreator 
                             initialUrl={avatar}
                             onSave={(url) => {
                               setAvatar(url);
@@ -402,7 +402,7 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
                                         banner === item.assetUrl ? "border-indigo-500 ring-2 ring-indigo-500/30" : "border-white/10 hover:border-white/30"
                                       )}
                                     >
-                                      <div
+                                      <div 
                                         className="absolute inset-0"
                                         style={getBackgroundStyle(item.assetUrl)}
                                       />
@@ -436,8 +436,8 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
                 // Public Profile Actions
                 <>
                   {!isFriend ? (
-                    <Button
-                      size="sm"
+                    <Button 
+                      size="sm" 
                       className="bg-indigo-600 hover:bg-indigo-500 text-white gap-2"
                       onClick={handleFriendAction}
                       disabled={isAddingFriend}
@@ -467,7 +467,7 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button
+                  <button 
                     onClick={() => {
                       navigator.clipboard.writeText(user.id);
                       toast.success("User ID copied to clipboard!");
@@ -496,7 +496,7 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
               <span>{progressPercent}%</span>
             </div>
             <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-              <div
+              <div 
                 className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-1000"
                 style={{ width: `${progressPercent}%` }}
               />
@@ -519,7 +519,7 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
                 <DialogDescription>Design your unique digital identity.</DialogDescription>
             </DialogHeader>
             <div className="flex-1 min-h-0 overflow-hidden">
-                <AvatarCreator
+                <AvatarCreator 
                     initialUrl={user.avatar}
                     onSave={handleQuickAvatarSave}
                     onCancel={() => setShowAvatarDialog(false)}
@@ -827,9 +827,9 @@ export function MatchHistoryList({ history }: MatchHistoryListProps) {
       <CardContent className="space-y-2">
         {history.length > 0 ? (
           history.slice(0, 8).map((match, i) => (
-            <Link
+            <Link 
               // CRITICAL FIX: Use composite key to prevent collisions if matchId is duplicated in mock data
-              key={`${match.matchId}-${i}`}
+              key={`${match.matchId}-${i}`} 
               to={`/results/${match.matchId}`}
               className="block"
             >
@@ -949,7 +949,7 @@ export function FriendsList({ friends, onAddFriend }: FriendsListProps) {
             <div className="py-4 space-y-4">
               <div className="relative">
                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
+                <Input 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search users..."
@@ -975,8 +975,8 @@ export function FriendsList({ friends, onAddFriend }: FriendsListProps) {
                             <div className="text-xs text-muted-foreground">Lvl {user.level} • {getFlagEmoji(user.country)}</div>
                           </div>
                         </div>
-                        <Button
-                          size="sm"
+                        <Button 
+                          size="sm" 
                           variant="ghost"
                           onClick={() => user.id && handleAdd(user.id)}
                           disabled={isAdding}
@@ -1015,9 +1015,9 @@ export function FriendsList({ friends, onAddFriend }: FriendsListProps) {
                   </div>
                 </div>
               </Link>
-              <Button
-                size="icon"
-                variant="ghost"
+              <Button 
+                size="icon" 
+                variant="ghost" 
                 className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-indigo-500/20 hover:text-indigo-400"
                 title="Challenge Friend"
                 onClick={() => setChallengeFriend({ id: friend.id, name: friend.name })}

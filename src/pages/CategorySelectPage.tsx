@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Sparkles, Zap, ArrowRight, Loader2, ChevronDown, ChevronUp, Swords, Lock, Atom, Flame, Star, Clock, Filter } from 'lucide-react';
+import { Search, Sparkles, Zap, ArrowRight, Loader2, ChevronDown, ChevronUp, Swords, Lock, Atom, Flame, Star, Clock, Filter, Play } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { AppLayout } from '@/components/layout/AppLayout';

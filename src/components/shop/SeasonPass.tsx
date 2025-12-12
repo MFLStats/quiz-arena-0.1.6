@@ -152,7 +152,7 @@ export function SeasonPass({ user }: SeasonPassProps) {
         <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-zinc-950 to-transparent z-10 pointer-events-none md:hidden" />
         <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-zinc-950 to-transparent z-10 pointer-events-none md:hidden" />
         <ScrollArea className="w-full whitespace-nowrap">
-          <div className="flex p-8 min-w-max">
+          <div className="flex px-8 pt-8 pb-14 min-w-max">
             {/* Labels Column */}
             <div className="flex flex-col gap-8 mr-8 sticky left-0 z-20 bg-zinc-950/95 px-4 py-2 rounded-r-xl border-r border-white/10 shadow-xl">
               <div className="h-24 flex items-center font-bold text-indigo-300 uppercase tracking-wider text-sm">
@@ -182,7 +182,7 @@ export function SeasonPass({ user }: SeasonPassProps) {
                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-0">
                       <div className={cn(
                         "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-colors",
-                        isUnlocked 
+                        isUnlocked
                           ? "bg-indigo-600 border-indigo-400 text-white shadow-[0_0_10px_rgba(99,102,241,0.5)]"
                           : isNext
                             ? "bg-zinc-800 border-white/20 text-white animate-pulse"
