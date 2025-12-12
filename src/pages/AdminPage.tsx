@@ -173,6 +173,8 @@ export function AdminPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [userSearch, setUserSearch] = useState('');
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+  const [userCursor, setUserCursor] = useState<string | null>(null);
+  const [isLoadingMoreUsers, setIsLoadingMoreUsers] = useState(false);
   // Stats State
   const [stats, setStats] = useState<SystemStats | null>(null);
   const { register, handleSubmit, setValue, reset, watch, formState: { errors } } = useForm<QuestionFormData>({
@@ -214,11 +216,28 @@ export function AdminPage() {
   const fetchUsers = useCallback(() => {
     if (isAuthorized && user) {
       const query = userSearch ? `&search=${encodeURIComponent(userSearch)}` : '';
-      api<User[]>(`/api/admin/users?userId=${user.id}${query}`)
-        .then(setUsers)
+      api<{ items: User[], next: string | null }>(`/api/admin/users?userId=${user.id}${query}`)
+        .then(res => {
+            setUsers(res.items);
+            setUserCursor(res.next);
+        })
         .catch(console.error);
     }
   }, [user, userSearch, isAuthorized]);
+  const loadMoreUsers = async () => {
+    if (!user || !userCursor) return;
+    setIsLoadingMoreUsers(true);
+    try {
+        const res = await api<{ items: User[], next: string | null }>(`/api/admin/users?userId=${user.id}&cursor=${userCursor}`);
+        setUsers(prev => [...prev, ...res.items]);
+        setUserCursor(res.next);
+    } catch (e) {
+        console.error(e);
+        toast.error("Failed to load more users");
+    } finally {
+        setIsLoadingMoreUsers(false);
+    }
+  };
   const fetchStats = useCallback(() => {
     if (isAuthorized && user) {
       api<SystemStats>(`/api/admin/stats?userId=${user.id}`)
@@ -1247,7 +1266,7 @@ export function AdminPage() {
                                     {u.name}
                                     {u.id === 'Crushed' && <Badge variant="secondary" className="text-[10px]">Admin</Badge>}
                                   </div>
-                                  <div className="text-xs text-muted-foreground font-mono">{u.email || 'No Email'} ��� {u.id}</div>
+                                  <div className="text-xs text-muted-foreground font-mono">{u.email || 'No Email'} • {u.id}</div>
                                 </div>
                                 <Button
                                   variant="destructive"
@@ -1260,6 +1279,19 @@ export function AdminPage() {
                                 </Button>
                               </div>
                             ))}
+                            {userCursor && !userSearch && (
+                                <div className="pt-4 flex justify-center">
+                                    <Button
+                                        variant="outline"
+                                        onClick={loadMoreUsers}
+                                        disabled={isLoadingMoreUsers}
+                                        className="border-white/10 hover:bg-white/5"
+                                    >
+                                        {isLoadingMoreUsers ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                                        Load More Users
+                                    </Button>
+                                </div>
+                            )}
                           </div>
                         )}
                       </ScrollArea>

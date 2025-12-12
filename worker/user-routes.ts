@@ -7,13 +7,11 @@ import type { FinishMatchResponse, MatchHistoryItem, UpdateUserRequest, Purchase
 import { MOCK_CATEGORIES, MOCK_QUESTIONS } from "@shared/mock-data";
 import { PROGRESSION_CONSTANTS, getLevelFromXp, getXpRequiredForNextLevel } from "@shared/progression";
 import { SEASON_REWARDS_CONFIG as SHARED_SEASON_CONFIG, SEASON_COST } from "@shared/constants";
-
 type AuthEnv = Env & {
   GOOGLE_CLIENT_ID: string;
   GOOGLE_CLIENT_SECRET: string;
   APPLE_CLIENT_ID: string;
 };
-
 // --- Helpers ---
 async function generateUserId(email: string): Promise<string> {
   const msgBuffer = new TextEncoder().encode(email.toLowerCase().trim());
@@ -1354,20 +1352,30 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
   app.get('/api/admin/users', async (c) => {
     const requesterId = c.req.query('userId');
     const search = c.req.query('search')?.toLowerCase();
+    const cursor = c.req.query('cursor') || null;
+    const limitParam = c.req.query('limit');
+    const limit = limitParam ? Math.min(100, Math.max(1, parseInt(limitParam))) : 50;
     if (!requesterId) return bad(c, 'userId required');
     if (!await isAdmin(c.env, requesterId)) {
       return c.json({ success: false, error: 'Unauthorized' }, 403);
     }
-    const { items } = await UserEntity.list(c.env, null, 100);
-    let filtered = items.map(sanitizeUser);
     if (search) {
+      // Search mode (scan larger batch, no cursor support for simplicity in this phase)
+      const { items } = await UserEntity.list(c.env, null, 1000);
+      let filtered = items.map(sanitizeUser);
       filtered = filtered.filter(u =>
         u.name.toLowerCase().includes(search) ||
         u.id.toLowerCase().includes(search) ||
         (u.email && u.email.toLowerCase().includes(search))
       );
+      // Return as paginated structure with no next page
+      return ok(c, { items: filtered.slice(0, 100), next: null });
+    } else {
+      // Pagination mode
+      const { items, next } = await UserEntity.list(c.env, cursor, limit);
+      const sanitized = items.map(sanitizeUser);
+      return ok(c, { items: sanitized, next });
     }
-    return ok(c, filtered);
   });
   app.get('/api/stats', async (c) => {
     const userIdx = new Index<string>(c.env, UserEntity.indexName);
