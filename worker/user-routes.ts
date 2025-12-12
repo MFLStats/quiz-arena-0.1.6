@@ -342,6 +342,47 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       const userEntity = new UserEntity(c.env, id);
       if (!await userEntity.exists()) return notFound(c, 'User not found');
       const user = await userEntity.getState();
+      // Dynamic Title Logic
+      if (user.categoryElo && Object.keys(user.categoryElo).length > 0) {
+        // Find highest category
+        let maxElo = -1;
+        let bestCatId = '';
+        for (const [catId, elo] of Object.entries(user.categoryElo)) {
+            if (elo > maxElo) {
+                maxElo = elo;
+                bestCatId = catId;
+            }
+        }
+        if (bestCatId) {
+            // Check if #1
+            // We scan top 1000 users to check rank.
+            const { items: allUsers } = await UserEntity.list(c.env, null, 1000);
+            const isNumberOne = !allUsers.some(u => 
+                u.id !== user.id && (u.categoryElo?.[bestCatId] || 1200) > maxElo
+            );
+            if (isNumberOne) {
+                // Resolve Category Name
+                let catName = bestCatId;
+                // Try Dynamic First
+                try {
+                    const catEntity = new CategoryEntity(c.env, bestCatId);
+                    if (await catEntity.exists()) {
+                        const cat = await catEntity.getState();
+                        catName = cat.name;
+                    } else {
+                        // Try Mock
+                        const mockCat = MOCK_CATEGORIES.find(c => c.id === bestCatId);
+                        if (mockCat) catName = mockCat.name;
+                    }
+                } catch (e) {
+                    const mockCat = MOCK_CATEGORIES.find(c => c.id === bestCatId);
+                    if (mockCat) catName = mockCat.name;
+                }
+                // Inject dynamic title into response
+                (user as any).dynamicTitle = `1st in ${catName}`;
+            }
+        }
+      }
       // If the requester is the user themselves, return full data (sanitized of password)
       if (requesterId === id) {
         return ok(c, sanitizeUser(user));
@@ -1119,8 +1160,8 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
         if (categoryId) {
             allQuestions = allQuestions.filter(q => q.categoryId === categoryId);
         }
-        const filtered = allQuestions.filter(q =>
-            q.text.toLowerCase().includes(search) ||
+        const filtered = allQuestions.filter(q => 
+            q.text.toLowerCase().includes(search) || 
             q.id.toLowerCase().includes(search) ||
             q.categoryId.toLowerCase().includes(search)
         );
@@ -1262,8 +1303,8 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     const { items } = await UserEntity.list(c.env, null, 100);
     let filtered = items.map(sanitizeUser);
     if (search) {
-      filtered = filtered.filter(u =>
-        u.name.toLowerCase().includes(search) ||
+      filtered = filtered.filter(u => 
+        u.name.toLowerCase().includes(search) || 
         u.id.toLowerCase().includes(search) ||
         (u.email && u.email.toLowerCase().includes(search))
       );

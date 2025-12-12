@@ -76,6 +76,9 @@ export class ShopEntity extends IndexedEntity<ShopItem> {
   }
 }
 // CATEGORY ENTITY: Stores dynamic categories created by admins
+// PERSISTENCE NOTE: This entity stores user-generated categories.
+// The seedData logic in IndexedEntity only runs if the index is completely empty.
+// Existing dynamic categories are NEVER overwritten by deployments.
 export class CategoryEntity extends IndexedEntity<Category> {
   static readonly entityName = "category";
   static readonly indexName = "categories";
@@ -94,6 +97,8 @@ export function getCategoryQuestionIndex(env: Env, categoryId: string): Index<st
   return new Index<string>(env, `idx_cat_questions:${categoryId}`);
 }
 // QUESTION ENTITY: Stores dynamic questions created by admins
+// PERSISTENCE NOTE: User-generated questions are stored in Durable Objects.
+// They persist across deployments and are NOT reset unless explicitly deleted via Admin API.
 export class QuestionEntity extends IndexedEntity<Question> {
   static readonly entityName = "question";
   static readonly indexName = "questions";
@@ -269,7 +274,6 @@ export class MatchEntity extends IndexedEntity<MatchState> {
     const results: Record<string, { displayTitle?: string, categoryRank?: number }> = {};
     try {
       // Fetch users to determine rank. Limiting to 500 for performance in this demo scale.
-      // In production, this would use a dedicated leaderboard service or optimized query.
       const { items: allUsers } = await UserEntity.list(env, null, 500);
       // 1. Daily Mode Ranks
       if (mode === 'daily') {
@@ -295,23 +299,25 @@ export class MatchEntity extends IndexedEntity<MatchState> {
         const sortedByCategory = [...allUsers]
           .filter(u => (u.categoryElo?.[categoryId] || 0) > 0)
           .sort((a, b) => (b.categoryElo?.[categoryId] || 0) - (a.categoryElo?.[categoryId] || 0));
-        // Get Category Name
+        // Get Category Name (Robust Resolution)
         let categoryName = categoryId;
-        // Try to find name in mocks first for speed
-        const mockCat = MOCK_CATEGORIES.find(c => c.id === categoryId);
-        if (mockCat) {
-            categoryName = mockCat.name;
-        } else {
-            // Try to fetch dynamic category
-            try {
-                const catEntity = new CategoryEntity(env, categoryId);
-                if (await catEntity.exists()) {
-                    const cat = await catEntity.getState();
-                    categoryName = cat.name;
+        // 1. Try Dynamic Entity First (Priority for user content)
+        try {
+            const catEntity = new CategoryEntity(env, categoryId);
+            if (await catEntity.exists()) {
+                const cat = await catEntity.getState();
+                categoryName = cat.name;
+            } else {
+                // 2. Fallback to Mock
+                const mockCat = MOCK_CATEGORIES.find(c => c.id === categoryId);
+                if (mockCat) {
+                    categoryName = mockCat.name;
                 }
-            } catch (e) {
-                // Fallback to ID if fetch fails
             }
+        } catch (e) {
+            // Fallback if entity fetch fails
+            const mockCat = MOCK_CATEGORIES.find(c => c.id === categoryId);
+            if (mockCat) categoryName = mockCat.name;
         }
         for (const uid of userIds) {
           let displayTitle: string | undefined;

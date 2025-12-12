@@ -55,7 +55,7 @@ export function QuestionBank({ user, onEdit }: QuestionBankProps) {
       fetchQuestions(true);
     }, 500);
     return () => clearTimeout(timer);
-  }, [search, categoryFilter]);
+  }, [search, categoryFilter, fetchQuestions]);
   const handleDelete = async (questionId: string) => {
     if (!user || deletingId) return;
     if (!confirm("Are you sure you want to delete this question?")) return;

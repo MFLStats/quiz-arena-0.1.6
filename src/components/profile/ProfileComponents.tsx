@@ -86,6 +86,7 @@ interface ProfileBannerProps {
   isFriend?: boolean;
   shopItems: ShopItem[];
   onLogout?: () => void;
+  dynamicTitle?: string;
 }
 export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFriend, shopItems, onLogout }: ProfileBannerProps) {
   const [isEditing, setIsEditing] = useState(false);
@@ -165,6 +166,10 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
   const ownedTitles = ownedItems.filter(i => i.type === 'title');
   // Use shared progression logic
   const { level, currentLevelXp, nextLevelXp, progressPercent } = getLevelFromXp(user.xp || 0);
+  
+  // Check for dynamic title on user object (injected by backend)
+  const dynamicTitle = (user as any).dynamicTitle;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -485,6 +490,12 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
             </div>
           </div>
           <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 text-sm font-medium text-white/70">
+            {dynamicTitle && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-yellow-500/20 to-orange-500/20 text-yellow-400 border border-yellow-500/30 shadow-[0_0_15px_rgba(234,179,8,0.2)] animate-pulse-fast">
+                <Crown className="w-3.5 h-3.5 fill-yellow-400" />
+                {dynamicTitle}
+              </span>
+            )}
             {user.title && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 shadow-[0_0_10px_rgba(245,158,11,0.1)]">
                 <Crown className="w-3.5 h-3.5 fill-amber-400" />
