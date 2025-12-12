@@ -166,10 +166,8 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
   const ownedTitles = ownedItems.filter(i => i.type === 'title');
   // Use shared progression logic
   const { level, currentLevelXp, nextLevelXp, progressPercent } = getLevelFromXp(user.xp || 0);
-  
   // Check for dynamic title on user object (injected by backend)
   const dynamicTitle = (user as any).dynamicTitle;
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -184,9 +182,9 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
         />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-zinc-900/80 to-zinc-900" />
       </div>
-      <div className="relative z-10 pt-40 md:pt-56 px-6 pb-6 md:px-10 md:pb-10 flex flex-col md:flex-row items-center md:items-end gap-6 md:gap-8">
+      <div className="relative z-10 pt-40 md:pt-56 px-6 pb-12 md:px-10 md:pb-20 flex flex-col md:flex-row items-center md:items-end gap-6 md:gap-8">
         {/* Avatar Group */}
-        <div className="relative shrink-0 z-20">
+        <div className="relative shrink-0 z-20 mb-12 md:mb-0">
           <div className="absolute -inset-2 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full blur-lg opacity-50 group-hover:opacity-75 transition duration-500" />
           <TooltipProvider>
             <Tooltip>
@@ -220,7 +218,7 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
             </div>
           )}
           {/* Level Badge - Lowered position to avoid frame overlap */}
-          <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 bg-zinc-900 text-white font-bold px-4 py-1 rounded-full text-sm shadow-xl border border-white/10 flex items-center gap-1.5 whitespace-nowrap z-10">
+          <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 bg-zinc-900 text-white font-bold px-4 py-1 rounded-full text-sm shadow-xl border border-white/10 flex items-center gap-1.5 whitespace-nowrap z-30">
             <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
             LVL {level}
           </div>
@@ -265,8 +263,8 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
                           <div className="space-y-4">
                             <div className="space-y-2">
                               <Label>Display Name</Label>
-                              <Input
-                                value={name}
+                              <Input 
+                                value={name} 
                                 onChange={(e) => setName(e.target.value)}
                                 className="bg-black/20 border-white/10"
                                 placeholder="Enter your name"
@@ -308,7 +306,7 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
                         {/* APPEARANCE TAB */}
                         <TabsContent value="appearance" className="flex-1 overflow-hidden flex flex-col py-4">
                           {showCreator ? (
-                            <AvatarCreator
+                            <AvatarCreator 
                               initialUrl={avatar}
                               onSave={(url) => {
                                 setAvatar(url);
@@ -323,10 +321,10 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
                                 <div className="flex flex-col items-center gap-4 p-4 bg-white/5 rounded-xl border border-white/10">
                                   <Label className="text-muted-foreground">Preview</Label>
                                   <div className="w-32 h-32 rounded-full bg-zinc-900 border-4 border-indigo-500/30 relative">
-                                    <AvatarWithFrame
-                                      src={avatar}
-                                      fallback={name}
-                                      frameSrc={frame}
+                                    <AvatarWithFrame 
+                                      src={avatar} 
+                                      fallback={name} 
+                                      frameSrc={frame} 
                                       frameConfig={frameConfig}
                                       className="w-full h-full"
                                     />
@@ -422,7 +420,7 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
                                           banner === item.assetUrl ? "border-indigo-500 ring-2 ring-indigo-500/30" : "border-white/10 hover:border-white/30"
                                         )}
                                       >
-                                        <div
+                                        <div 
                                           className="absolute inset-0"
                                           style={getBackgroundStyle(item.assetUrl)}
                                         />
@@ -453,8 +451,8 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
                     </DialogContent>
                   </Dialog>
                   {onLogout && (
-                    <Button
-                      variant="destructive"
+                    <Button 
+                      variant="destructive" 
                       className="gap-2 border border-red-500/20 bg-red-500/10 text-red-400 hover:bg-red-500/20"
                       onClick={onLogout}
                       title="Sign Out"
@@ -468,8 +466,8 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
                 // Public Profile Actions
                 <>
                   {!isFriend ? (
-                    <Button
-                      size="sm"
+                    <Button 
+                      size="sm" 
                       className="bg-indigo-600 hover:bg-indigo-500 text-white gap-2"
                       onClick={handleFriendAction}
                       disabled={isAddingFriend}
@@ -505,7 +503,7 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button
+                  <button 
                     onClick={() => {
                       navigator.clipboard.writeText(user.id);
                       toast.success("User ID copied to clipboard!");
@@ -534,7 +532,7 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
               <span>{progressPercent}%</span>
             </div>
             <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-              <div
+              <div 
                 className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-1000"
                 style={{ width: `${progressPercent}%` }}
               />
@@ -557,7 +555,7 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
                 <DialogDescription>Design your unique digital identity.</DialogDescription>
             </DialogHeader>
             <div className="flex-1 min-h-0 overflow-hidden">
-                <AvatarCreator
+                <AvatarCreator 
                     initialUrl={user.avatar}
                     onSave={handleQuickAvatarSave}
                     onCancel={() => setShowAvatarDialog(false)}
@@ -576,36 +574,36 @@ export function StatGrid({ user }: StatGridProps) {
   const stats = user.stats || { wins: 0, losses: 0, matches: 0 };
   const winRate = stats.matches > 0 ? Math.round((stats.wins / stats.matches) * 100) : 0;
   const items = [
-    {
-      label: 'Win Rate',
-      value: `${winRate}%`,
+    { 
+      label: 'Win Rate', 
+      value: `${winRate}%`, 
       subtext: `${stats.wins}W - ${stats.losses}L`,
       icon: Trophy,
       color: 'text-yellow-400',
       bg: 'bg-yellow-400/10',
       border: 'border-yellow-400/20'
     },
-    {
-      label: 'Total Matches',
-      value: stats.matches,
+    { 
+      label: 'Total Matches', 
+      value: stats.matches, 
       subtext: 'Arena Veteran',
       icon: Swords,
       color: 'text-indigo-400',
       bg: 'bg-indigo-400/10',
       border: 'border-indigo-400/20'
     },
-    {
-      label: 'Login Streak',
-      value: user.loginStreak || 0,
+    { 
+      label: 'Login Streak', 
+      value: user.loginStreak || 0, 
       subtext: 'Daily Active',
       icon: Flame,
       color: 'text-orange-400',
       bg: 'bg-orange-400/10',
       border: 'border-orange-400/20'
     },
-    {
-      label: 'Total XP',
-      value: (user.xp || 0).toLocaleString(),
+    { 
+      label: 'Total XP', 
+      value: (user.xp || 0).toLocaleString(), 
       subtext: 'Lifetime Points',
       icon: Target,
       color: 'text-emerald-400',
@@ -676,7 +674,7 @@ export function ActivityHeatmap({ activityMap = {} }: ActivityHeatmapProps) {
               return (
                 <Tooltip key={dateStr}>
                   <TooltipTrigger asChild>
-                    <div
+                    <div 
                       className={cn(
                         "w-3 h-3 md:w-4 md:h-4 rounded-sm transition-colors hover:ring-1 hover:ring-white/50",
                         getColor(count)
@@ -865,9 +863,9 @@ export function MatchHistoryList({ history }: MatchHistoryListProps) {
       <CardContent className="space-y-2">
         {history.length > 0 ? (
           history.slice(0, 8).map((match, i) => (
-            <Link
+            <Link 
               // CRITICAL FIX: Use composite key to prevent collisions if matchId is duplicated in mock data
-              key={`${match.matchId}-${i}`}
+              key={`${match.matchId}-${i}`} 
               to={`/results/${match.matchId}`}
               className="block"
             >
@@ -987,7 +985,7 @@ export function FriendsList({ friends, onAddFriend }: FriendsListProps) {
             <div className="py-4 space-y-4">
               <div className="relative">
                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
+                <Input 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search users..."
@@ -1013,9 +1011,9 @@ export function FriendsList({ friends, onAddFriend }: FriendsListProps) {
                             <div className="text-xs text-muted-foreground">Lvl {user.level} • {getFlagEmoji(user.country)}</div>
                           </div>
                         </div>
-                        <Button
-                          size="sm"
-                          variant="ghost"
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
                           onClick={() => user.id && handleAdd(user.id)}
                           disabled={isAdding}
                         >
@@ -1053,9 +1051,9 @@ export function FriendsList({ friends, onAddFriend }: FriendsListProps) {
                   </div>
                 </div>
               </Link>
-              <Button
-                size="icon"
-                variant="ghost"
+              <Button 
+                size="icon" 
+                variant="ghost" 
                 className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-indigo-500/20 hover:text-indigo-400"
                 title="Challenge Friend"
                 onClick={() => setChallengeFriend({ id: friend.id, name: friend.name })}
@@ -1071,7 +1069,7 @@ export function FriendsList({ friends, onAddFriend }: FriendsListProps) {
         )}
       </CardContent>
       {challengeFriend && (
-        <ChallengeModal
+        <ChallengeModal 
           isOpen={!!challengeFriend}
           onClose={() => setChallengeFriend(null)}
           friendId={challengeFriend.id}
