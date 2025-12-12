@@ -1,6 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Loader2, Swords, Lightbulb, AlertCircle } from 'lucide-react';
+import { Loader2, Swords, Lightbulb, AlertCircle, Calendar, HelpCircle } from 'lucide-react';
+import { useGameStore } from '@/lib/game-store';
+import { useCategories } from '@/hooks/use-categories';
+import { CATEGORY_ICONS } from '@/lib/icons';
 const TIPS = [
   "Speed matters! Faster answers earn significantly more points.",
   "The final question is worth Double Points. Make it count!",
@@ -12,9 +15,31 @@ const TIPS = [
   "Winning matches increases your Elo rating and leaderboard rank."
 ];
 export function MatchLoadingScreen() {
+  const categoryId = useGameStore(s => s.categoryId);
+  const { categories } = useCategories();
   const [dots, setDots] = useState('');
   const [tipIndex, setTipIndex] = useState(0);
   const [showLongWait, setShowLongWait] = useState(false);
+  // Resolve Category Info
+  const categoryInfo = useMemo(() => {
+    if (categoryId === 'daily') {
+      return {
+        name: 'Daily Challenge',
+        icon: Calendar,
+        color: 'from-yellow-500 to-orange-500'
+      };
+    }
+    const cat = categories.find(c => c.id === categoryId);
+    if (cat) {
+      const Icon = CATEGORY_ICONS[cat.icon] || HelpCircle;
+      return {
+        name: cat.name,
+        icon: Icon,
+        color: cat.color
+      };
+    }
+    return null;
+  }, [categoryId, categories]);
   useEffect(() => {
     const interval = setInterval(() => {
       setDots(prev => prev.length >= 3 ? '' : prev + '.');
@@ -45,26 +70,34 @@ export function MatchLoadingScreen() {
         animate={{ opacity: 1, scale: 1 }}
         className="relative z-10 flex flex-col items-center gap-8 max-w-md px-6 text-center"
       >
-        {/* Central Pulse */}
+        {/* Central Visual */}
         <div className="relative">
-          <div className="absolute inset-0 bg-indigo-500/30 blur-[60px] rounded-full animate-pulse" />
+          <div className={`absolute inset-0 blur-[60px] rounded-full animate-pulse bg-gradient-to-br ${categoryInfo?.color || 'from-indigo-500 to-purple-500'} opacity-30`} />
           <div className="relative w-32 h-32 flex items-center justify-center">
+            {/* Rotating Rings */}
             <motion.div
               animate={{ rotate: 360 }}
               transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-              className="absolute inset-0 rounded-full border-t-4 border-l-4 border-indigo-500/50"
+              className="absolute inset-0 rounded-full border-t-4 border-l-4 border-white/10"
             />
             <motion.div
               animate={{ rotate: -360 }}
               transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
-              className="absolute inset-4 rounded-full border-b-4 border-r-4 border-purple-500/50"
+              className="absolute inset-4 rounded-full border-b-4 border-r-4 border-white/10"
             />
-            <Swords className="w-12 h-12 text-white fill-white/20 animate-pulse" />
+            {/* Icon */}
+            <div className="relative z-10">
+              {categoryInfo ? (
+                <categoryInfo.icon className="w-16 h-16 text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.5)] animate-pulse" />
+              ) : (
+                <Swords className="w-12 h-12 text-white fill-white/20 animate-pulse" />
+              )}
+            </div>
           </div>
         </div>
         <div className="space-y-2">
           <h2 className="text-3xl font-display font-bold text-white tracking-wider">
-            ENTERING ARENA
+            {categoryInfo ? categoryInfo.name.toUpperCase() : 'ENTERING ARENA'}
           </h2>
           <div className="flex flex-col items-center gap-2">
             <div className="flex items-center justify-center gap-2 text-indigo-300 font-mono text-sm">
