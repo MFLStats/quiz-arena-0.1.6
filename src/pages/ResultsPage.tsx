@@ -22,6 +22,7 @@ import {
 import { MatchReview } from '@/components/game/MatchReview';
 import { shareContent } from '@/lib/utils';
 import { XPProgress } from '@/components/game/XPProgress';
+import { AchievementUnlock } from '@/components/game/AchievementUnlock';
 export function ResultsPage() {
   const { matchId } = useParams();
   const user = useAuthStore(s => s.user);
@@ -224,6 +225,7 @@ export function ResultsPage() {
         animate={{ scale: 1, opacity: 1 }}
         className="relative z-10 max-w-4xl w-full bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6 md:p-12 text-center shadow-2xl overflow-y-auto max-h-[90vh]"
       >
+        {result.newAchievements && result.newAchievements.length > 0 && <AchievementUnlock achievements={result.newAchievements} />}
         {/* Level Up Celebration */}
         {result.levelUp && (
           <motion.div
@@ -390,15 +392,21 @@ export function ResultsPage() {
         <div className="mb-12">
           <div className="text-sm text-muted-foreground mb-2">Rating Update</div>
           <div className="flex items-center justify-center gap-3">
-            <span className="text-3xl font-bold text-white">{result.newElo}</span>
-            <span className={result.eloChange > 0 ? "text-emerald-400" : result.eloChange < 0 ? "text-rose-400" : "text-yellow-400"}>
-              ({result.eloChange > 0 ? "+" : ""}{result.eloChange})
-            </span>
+            {result.mode === 'practice' ? (
+              <span className="text-lg font-bold text-amber-400">Practice Match - No Rating Change</span>
+            ) : (
+              <>
+                <span className="text-3xl font-bold text-white">{result.newElo}</span>
+                <span className={result.eloChange > 0 ? "text-emerald-400" : result.eloChange < 0 ? "text-rose-400" : "text-yellow-400"}>
+                  ({result.eloChange > 0 ? "+" : ""}{result.eloChange})
+                </span>
+              </>
+            )}
           </div>
         </div>
         {/* Actions */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Link to="/categories" state={{ autoJoin: true, mode: result.isPrivate ? 'private' : 'ranked', categoryId: result.categoryId }}>
+          <Link to="/categories" state={{ autoJoin: true, mode: result.mode || (result.isPrivate ? 'private' : 'ranked'), categoryId: result.categoryId }}>
             <Button size="lg" className="w-full sm:w-auto h-12 px-8 rounded-full bg-white text-black hover:bg-gray-100 font-bold">
               <RotateCcw className="w-4 h-4 mr-2" /> Play Again
             </Button>

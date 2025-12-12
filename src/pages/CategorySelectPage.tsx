@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Zap, Loader2, Flame, Clock, Play } from 'lucide-react';
+import { Search, Zap, Loader2, Flame, Clock, Play, Swords, Target } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { api } from '@/lib/api-client';
@@ -22,7 +22,7 @@ interface CategorySectionProps {
   joiningId: string | null;
   onJoin: (id: string, name: string) => void;
   userRatings?: Record<string, number>;
-  gameMode: 'ranked' | 'private';
+  gameMode: 'ranked' | 'private' | 'practice';
 }
 function CategorySection({ title, categories, joiningId, onJoin, userRatings, gameMode }: CategorySectionProps) {
   if (categories.length === 0) return null;
@@ -57,7 +57,7 @@ function CategorySection({ title, categories, joiningId, onJoin, userRatings, ga
                       isJoining={joiningId === cat.id}
                       onJoin={onJoin}
                       userElo={userRatings?.[cat.id]}
-                      gameMode={gameMode}
+                      gameMode={gameMode === 'practice' ? 'ranked' : gameMode} // Reuse ranked style for practice
                       badge={getBadge(cat)}
                     />
                   </TooltipTrigger>
@@ -85,7 +85,7 @@ export function CategorySelectPage() {
   const [search, setSearch] = useState('');
   const [queueState, setQueueState] = useState<{ categoryId: string; categoryName: string; matchFound?: boolean } | null>(null);
   const [joiningId, setJoiningId] = useState<string | null>(null);
-  const [gameMode, setGameMode] = useState<'ranked' | 'private'>(initialMode);
+  const [gameMode, setGameMode] = useState<'ranked' | 'private' | 'practice'>(initialMode);
   const pollIntervalRef = useRef<number | null>(null);
   const initMatch = useGameStore(s => s.initMatch);
   const user = useAuthStore(s => s.user);
@@ -157,6 +157,13 @@ export function CategorySelectPage() {
         });
         initMatch(match);
         navigate(`/arena/${match.id}`);
+      } else if (gameMode === 'practice') {
+        const match = await api<MatchState>('/api/match/start', {
+          method: 'POST',
+          body: JSON.stringify({ userId: user.id, categoryId, mode: 'practice' })
+        });
+        initMatch(match);
+        navigate(`/arena/${match.id}`);
       } else {
         const res = await api<{ matchId: string | null }>('/api/queue/join', {
           method: 'POST',
@@ -193,7 +200,7 @@ export function CategorySelectPage() {
   }, [queueState, stopPolling, user]);
   useEffect(() => {
     if (categoriesLoading) return;
-    const state = location.state as { autoJoin?: boolean; categoryId?: string; mode?: 'ranked' | 'private' } | null;
+    const state = location.state as { autoJoin?: boolean; categoryId?: string; mode?: 'ranked' | 'private' | 'practice' } | null;
     if (state?.autoJoin && state?.categoryId) {
       const cat = categories.find(c => c.id === state.categoryId);
       const catName = cat?.name || 'Unknown Category';
@@ -229,11 +236,14 @@ export function CategorySelectPage() {
             </h1>
             <Tabs value={gameMode} onValueChange={(v: any) => setGameMode(v)}>
               <TabsList className="bg-white/5 border border-white/10 p-0.5 h-9 rounded-full">
-                <TabsTrigger value="ranked" className="rounded-full px-3 text-xs data-[state=active]:bg-indigo-600 data-[state=active]:text-white">
-                  Ranked
+                <TabsTrigger value="ranked" className="rounded-full px-3 text-xs data-[state=active]:bg-indigo-600 data-[state=active]:text-white gap-1.5">
+                  <Swords className="w-3 h-3" /> Ranked
                 </TabsTrigger>
-                <TabsTrigger value="private" className="rounded-full px-3 text-xs data-[state=active]:bg-emerald-600 data-[state=active]:text-white">
-                  Private
+                <TabsTrigger value="private" className="rounded-full px-3 text-xs data-[state=active]:bg-emerald-600 data-[state=active]:text-white gap-1.5">
+                  <Zap className="w-3 h-3" /> Private
+                </TabsTrigger>
+                <TabsTrigger value="practice" className="rounded-full px-3 text-xs data-[state=active]:bg-amber-600 data-[state=active]:text-white gap-1.5">
+                  <Target className="w-3 h-3" /> Practice
                 </TabsTrigger>
               </TabsList>
             </Tabs>
@@ -308,7 +318,7 @@ export function CategorySelectPage() {
                             isJoining={joiningId === cat.id}
                             onJoin={handleJoinQueue}
                             userElo={user?.categoryElo?.[cat.id]}
-                            gameMode={gameMode}
+                            gameMode={gameMode === 'practice' ? 'ranked' : gameMode}
                           />
                         </TooltipTrigger>
                         <TooltipContent className="bg-zinc-900 border-white/10 text-xs">

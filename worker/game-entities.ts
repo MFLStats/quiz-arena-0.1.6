@@ -351,7 +351,7 @@ export class MatchEntity extends IndexedEntity<MatchState> {
     if (j === 3 && k !== 13) return "rd";
     return "th";
   }
-  async startMatch(userIds: string[], categoryId: string, mode: 'ranked' | 'daily' = 'ranked', isPrivate: boolean = false): Promise<MatchState> {
+  async startMatch(userIds: string[], categoryId: string, mode: 'ranked' | 'daily' | 'practice' = 'ranked', isPrivate: boolean = false): Promise<MatchState> {
     let selectedQuestions: Question[] = [];
     let targetCategory = categoryId;
     try {
@@ -371,7 +371,7 @@ export class MatchEntity extends IndexedEntity<MatchState> {
         // 5. Resolve
         selectedQuestions = await this.resolveQuestions(selectedIds);
       } else {
-        // Ranked / Category
+        // Ranked / Category / Practice
         // 1. Mock IDs for category
         const mockIds = MOCK_QUESTIONS.filter(q => q.categoryId === categoryId).map(q => q.id);
         // 2. Dynamic IDs for category
@@ -434,10 +434,6 @@ export class MatchEntity extends IndexedEntity<MatchState> {
       }
       // Override title if dynamic rank title exists
       const dynamicInfo = rankInfo[uid];
-      if (dynamicInfo?.displayTitle) {
-        // If it's a special rank title (Gold/Silver/Bronze/Daily/Category), use it as displayTitle
-        // The frontend will prioritize displayTitle over title
-      }
       players[uid] = {
         userId: uid,
         score: 0,
@@ -455,11 +451,27 @@ export class MatchEntity extends IndexedEntity<MatchState> {
         categoryRank: dynamicInfo?.categoryRank
       };
     }
+    // Handle Practice Mode Bot
+    if (mode === 'practice') {
+      const botId = 'bot_trainer';
+      players[botId] = {
+        userId: botId,
+        score: 0,
+        correctCount: 0,
+        answers: [],
+        name: 'Trainer',
+        country: 'US',
+        elo: 1200,
+        title: 'AI Coach',
+        avatar: 'https://api.dicebear.com/9.x/avataaars/svg?seed=TrainerBot&backgroundColor=b6e3f4',
+        displayTitle: 'Practice Bot'
+      };
+    }
     const newState: MatchState = {
       id: this.id,
       categoryId: targetCategory,
       mode,
-      status: isPrivate ? "waiting" : "playing",
+      status: (isPrivate && mode !== 'practice') ? "waiting" : "playing",
       currentQuestionIndex: 0,
       questions: selectedQuestions,
       startTime: Date.now(),
@@ -609,9 +621,35 @@ export class MatchEntity extends IndexedEntity<MatchState> {
             selectedIndex: answerIndex // Added selectedIndex persistence
         }]
     };
+    // Handle Bot Answer in Practice Mode
+    let botUpdates = {};
+    if (state.mode === 'practice') {
+      const botId = 'bot_trainer';
+      const bot = state.players[botId];
+      if (bot && !bot.answers.some(a => a.questionId === question.id)) {
+        // Simulate bot answer
+        const botCorrect = Math.random() > 0.4; // 60% correct rate
+        const botTimeMs = Math.floor(Math.random() * 6000) + 2000; // 2-8s
+        const botPoints = botCorrect ? (100 + Math.floor(((10000 - botTimeMs) / 10000) * 50)) : 0;
+        const finalBotPoints = (questionIndex === state.questions.length - 1 && botCorrect) ? botPoints * 2 : botPoints;
+        botUpdates = {
+          [botId]: {
+            ...bot,
+            score: bot.score + finalBotPoints,
+            correctCount: botCorrect ? bot.correctCount + 1 : bot.correctCount,
+            answers: [...bot.answers, {
+              questionId: question.id,
+              timeMs: botTimeMs,
+              correct: botCorrect,
+              selectedIndex: botCorrect ? question.correctIndex : (question.correctIndex + 1) % 4
+            }]
+          }
+        };
+      }
+    }
     await this.mutate(s => ({
       ...s,
-      players: { ...s.players, [userId]: player }
+      players: { ...s.players, [userId]: player, ...botUpdates }
     }));
     const updatedState = await this.getState();
     const currentQId = updatedState.questions[updatedState.currentQuestionIndex].id;

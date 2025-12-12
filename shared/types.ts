@@ -123,7 +123,7 @@ export interface PlayerStats {
 export interface MatchState {
   id: string;
   categoryId: string;
-  mode: 'ranked' | 'daily';
+  mode: 'ranked' | 'daily' | 'practice';
   status: 'waiting' | 'playing' | 'finished';
   currentQuestionIndex: number;
   questions: Question[];
@@ -158,6 +158,7 @@ export interface GameResult {
   newAchievements?: string[]; // IDs of newly unlocked achievements
   isPrivate?: boolean;
   categoryId?: string; // Added for Play Again functionality
+  mode?: 'ranked' | 'daily' | 'practice';
   // Match Review Data
   answers?: { questionId: string; timeMs: number; correct: boolean; selectedIndex?: number }[];
   questions?: Question[];
@@ -168,7 +169,7 @@ export type FinishMatchResponse = GameResult;
 export interface CreateMatchRequest {
   userId: string;
   categoryId: string;
-  mode?: 'ranked' | 'daily';
+  mode?: 'ranked' | 'daily' | 'practice';
 }
 export interface JoinMatchRequest {
   userId: string;

@@ -784,11 +784,11 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     return ok(c, { matchId });
   });
   app.post('/api/match/start', async (c) => {
-    const { userId, categoryId } = await c.req.json() as { userId?: string, categoryId?: string };
+    const { userId, categoryId, mode } = await c.req.json() as { userId?: string, categoryId?: string, mode?: 'ranked' | 'practice' };
     if (!userId || !categoryId) return bad(c, 'userId and categoryId required');
     const matchId = crypto.randomUUID();
     const matchEntity = new MatchEntity(c.env, matchId);
-    const matchState = await matchEntity.startMatch([userId], categoryId, 'ranked');
+    const matchState = await matchEntity.startMatch([userId], categoryId, mode || 'ranked');
     return ok(c, matchState);
   });
   app.post('/api/daily/start', async (c) => {
@@ -879,6 +879,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     const won = myStats.score > opponentScore;
     const draw = myStats.score === opponentScore;
     const isDaily = matchState.mode === 'daily';
+    const isPractice = matchState.mode === 'practice';
     const xpBreakdown: RewardBreakdown[] = [];
     const coinsBreakdown: RewardBreakdown[] = [];
     let totalXp = 0;
@@ -910,22 +911,28 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       xpBreakdown.push({ source: 'Perfect Round', amount: PROGRESSION_CONSTANTS.XP_PER_PERFECT_ROUND });
     }
     if (won) {
-      totalXp += PROGRESSION_CONSTANTS.XP_MATCH_WIN;
-      totalCoins += PROGRESSION_CONSTANTS.COINS_MATCH_WIN;
-      xpBreakdown.push({ source: 'Victory Bonus', amount: PROGRESSION_CONSTANTS.XP_MATCH_WIN });
-      coinsBreakdown.push({ source: 'Victory Bonus', amount: PROGRESSION_CONSTANTS.COINS_MATCH_WIN });
+      const xpWin = isPractice ? Math.floor(PROGRESSION_CONSTANTS.XP_MATCH_WIN * 0.5) : PROGRESSION_CONSTANTS.XP_MATCH_WIN;
+      const coinsWin = isPractice ? Math.floor(PROGRESSION_CONSTANTS.COINS_MATCH_WIN * 0.5) : PROGRESSION_CONSTANTS.COINS_MATCH_WIN;
+      totalXp += xpWin;
+      totalCoins += coinsWin;
+      xpBreakdown.push({ source: isPractice ? 'Victory (Practice)' : 'Victory Bonus', amount: xpWin });
+      coinsBreakdown.push({ source: isPractice ? 'Victory (Practice)' : 'Victory Bonus', amount: coinsWin });
     } else if (draw) {
-      totalXp += PROGRESSION_CONSTANTS.XP_MATCH_DRAW;
-      totalCoins += PROGRESSION_CONSTANTS.COINS_MATCH_DRAW;
-      xpBreakdown.push({ source: 'Draw Bonus', amount: PROGRESSION_CONSTANTS.XP_MATCH_DRAW });
-      coinsBreakdown.push({ source: 'Draw Bonus', amount: PROGRESSION_CONSTANTS.COINS_MATCH_DRAW });
+      const xpDraw = isPractice ? Math.floor(PROGRESSION_CONSTANTS.XP_MATCH_DRAW * 0.5) : PROGRESSION_CONSTANTS.XP_MATCH_DRAW;
+      const coinsDraw = isPractice ? Math.floor(PROGRESSION_CONSTANTS.COINS_MATCH_DRAW * 0.5) : PROGRESSION_CONSTANTS.COINS_MATCH_DRAW;
+      totalXp += xpDraw;
+      totalCoins += coinsDraw;
+      xpBreakdown.push({ source: isPractice ? 'Draw (Practice)' : 'Draw Bonus', amount: xpDraw });
+      coinsBreakdown.push({ source: isPractice ? 'Draw (Practice)' : 'Draw Bonus', amount: coinsDraw });
     } else {
-      totalXp += PROGRESSION_CONSTANTS.XP_MATCH_LOSS;
-      totalCoins += PROGRESSION_CONSTANTS.COINS_MATCH_LOSS;
-      xpBreakdown.push({ source: 'Participation', amount: PROGRESSION_CONSTANTS.XP_MATCH_LOSS });
-      coinsBreakdown.push({ source: 'Participation', amount: PROGRESSION_CONSTANTS.COINS_MATCH_LOSS });
+      const xpLoss = isPractice ? Math.floor(PROGRESSION_CONSTANTS.XP_MATCH_LOSS * 0.5) : PROGRESSION_CONSTANTS.XP_MATCH_LOSS;
+      const coinsLoss = isPractice ? Math.floor(PROGRESSION_CONSTANTS.COINS_MATCH_LOSS * 0.5) : PROGRESSION_CONSTANTS.COINS_MATCH_LOSS;
+      totalXp += xpLoss;
+      totalCoins += coinsLoss;
+      xpBreakdown.push({ source: 'Participation', amount: xpLoss });
+      coinsBreakdown.push({ source: 'Participation', amount: coinsLoss });
     }
-    const eloChange = isDaily ? 0 : (won ? 12 : (draw ? 0 : -8));
+    const eloChange = (isDaily || isPractice) ? 0 : (won ? 12 : (draw ? 0 : -8));
     const userEntity = new UserEntity(c.env, userId);
     let newElo = 1200;
     let levelUp = false;
@@ -948,12 +955,14 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
         newLevel = currentLevel;
       }
       const stats = user.stats || { wins: 0, losses: 0, matches: 0 };
-      stats.matches += 1;
-      if (won) stats.wins += 1;
-      else if (!draw) stats.losses += 1;
+      if (!isPractice) {
+        stats.matches += 1;
+        if (won) stats.wins += 1;
+        else if (!draw) stats.losses += 1;
+      }
       const historyItem: MatchHistoryItem = {
         matchId,
-        opponentName: isDaily ? 'Daily Challenge' : (opponentStats?.name || 'Opponent'),
+        opponentName: isDaily ? 'Daily Challenge' : (isPractice ? 'Trainer Bot' : (opponentStats?.name || 'Opponent')),
         result: won ? 'win' : (draw ? 'draw' : 'loss'),
         score: myStats.score,
         opponentScore,
@@ -1038,6 +1047,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       newAchievements,
       isPrivate: matchState.isPrivate,
       categoryId: matchState.categoryId,
+      mode: matchState.mode,
       answers: myStats.answers,
       questions: matchState.questions
     };
