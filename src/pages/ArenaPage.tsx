@@ -8,7 +8,7 @@ import { TimerCircle, AnswerButton, ScoreBadge, OpponentAvatar, EmotePicker, Emo
 import { MatchLoadingScreen } from '@/components/game/MatchLoadingScreen';
 import { toast } from 'sonner';
 import { Loader2, Check, AlertTriangle, Flame, Flag, Zap } from 'lucide-react';
-import { cn, getFlagEmoji } from '@/lib/utils';
+import { cn, getFlagEmoji, getBackgroundStyle } from '@/lib/utils';
 import type { FinishMatchResponse, MatchState, ReportReason } from '@shared/types';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { playSfx } from '@/lib/sound-fx';
@@ -304,7 +304,7 @@ export function ArenaPage() {
       <div className="min-h-dvh flex flex-col items-center justify-center bg-zinc-950 relative overflow-hidden p-4">
         {/* ... (Lobby UI remains same) ... */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-indigo-900/20 via-zinc-950 to-zinc-950 pointer-events-none" />
-        <motion.div
+        <motion.div 
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           className="relative z-10 w-full max-w-4xl flex flex-col items-center"
@@ -336,8 +336,8 @@ export function ArenaPage() {
                   {roomCode}
                 </div>
                 <div className="flex gap-3 justify-center">
-                  <Button
-                    variant="outline"
+                  <Button 
+                    variant="outline" 
                     className="border-white/10 hover:bg-white/5 gap-2"
                     onClick={copyCode}
                   >
@@ -387,22 +387,28 @@ export function ArenaPage() {
             transition={{ duration: 0.5 }}
             className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950"
           >
-            {/* ... (Intro UI remains same) ... */}
+            {/* Split Backgrounds with Banners */}
             <div className="absolute inset-0 flex flex-col md:flex-row pointer-events-none">
               <motion.div
                 initial={isMobile ? { y: "-100%" } : { x: "-100%" }}
                 animate={isMobile ? { y: 0 } : { x: 0 }}
                 exit={isMobile ? { y: "-100%" } : { x: "-100%" }}
                 transition={{ duration: 0.5, ease: "circOut" }}
-                className="relative w-full h-1/2 md:w-1/2 md:h-full bg-indigo-950/30 border-b md:border-b-0 md:border-r border-indigo-500/20"
-              />
+                className={cn("relative w-full h-1/2 md:w-1/2 md:h-full border-b md:border-b-0 md:border-r border-indigo-500/20", !user.banner && "bg-indigo-950/30")}
+                style={getBackgroundStyle(user.banner)}
+              >
+                <div className="absolute inset-0 bg-indigo-950/60 backdrop-blur-sm" />
+              </motion.div>
               <motion.div
                 initial={isMobile ? { y: "100%" } : { x: "100%" }}
                 animate={isMobile ? { y: 0 } : { x: 0 }}
                 exit={isMobile ? { y: "100%" } : { x: "100%" }}
                 transition={{ duration: 0.5, ease: "circOut" }}
-                className="relative w-full h-1/2 md:w-1/2 md:h-full bg-rose-950/30 border-t md:border-t-0 md:border-l border-rose-500/20"
-              />
+                className={cn("relative w-full h-1/2 md:w-1/2 md:h-full border-t md:border-t-0 md:border-l border-rose-500/20", !opponentStats?.banner && "bg-rose-950/30")}
+                style={getBackgroundStyle(opponentStats?.banner)}
+              >
+                <div className="absolute inset-0 bg-rose-950/60 backdrop-blur-sm" />
+              </motion.div>
             </div>
             <div className="relative w-full max-w-6xl h-full flex flex-col md:flex-row items-center justify-between px-4 md:px-20 py-12 md:py-0">
               {/* Left/Top Player (You) */}
@@ -513,7 +519,7 @@ export function ArenaPage() {
                 </AnimatePresence>
             </div>
             <div className="relative">
-                <TimerCircle
+                <TimerCircle 
                   key={currentQuestion?.id}
                   duration={10}
                   isRunning={!isLocked && !showIntro && gameStatus === 'playing' && !isIntermission}
@@ -538,8 +544,8 @@ export function ArenaPage() {
                         exit={{ opacity: 0, scale: 0.8 }}
                         className={cn(
                           "absolute top-full mt-2 flex items-center gap-1.5 px-3 py-1 rounded-full border font-bold text-sm backdrop-blur-md z-20 animate-shake",
-                          streak >= 5
-                            ? "bg-red-500/20 border-red-500/40 text-red-400 shadow-[0_0_20px_rgba(239,68,68,0.4)]"
+                          streak >= 5 
+                            ? "bg-red-500/20 border-red-500/40 text-red-400 shadow-[0_0_20px_rgba(239,68,68,0.4)]" 
                             : "bg-orange-500/20 border-orange-500/40 text-orange-400 shadow-[0_0_15px_rgba(249,115,22,0.3)]"
                         )}
                     >
@@ -572,7 +578,7 @@ export function ArenaPage() {
         <main className="flex-1 flex flex-col items-center justify-center p-4 w-full relative z-10 pb-20 md:pb-20">
           <AnimatePresence mode="wait">
             {isIntermission && !showIntro && (
-               <RoundIntermission
+               <RoundIntermission 
                  key="intermission"
                  roundNumber={Math.min(currentIndex + 1, questions.length)}
                  totalRounds={questions.length}
@@ -592,9 +598,9 @@ export function ArenaPage() {
                   <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-indigo-500 to-transparent opacity-50" />
                   {/* Report Button */}
                   <div className="absolute top-3 left-3 md:top-6 md:left-6">
-                    <Button
-                      variant="ghost"
-                      size="icon"
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
                       className="h-6 w-6 md:h-8 md:w-8 rounded-full text-muted-foreground hover:text-red-400 hover:bg-red-500/10"
                       onClick={() => setIsReportOpen(true)}
                       title="Report Issue"
@@ -610,9 +616,9 @@ export function ArenaPage() {
                           {currentQuestion.media.content}
                         </span>
                       ) : (
-                        <img
-                          src={currentQuestion.media.content}
-                          alt="Question Media"
+                        <img 
+                          src={currentQuestion.media.content} 
+                          alt="Question Media" 
                           className="max-h-32 md:max-h-48 rounded-xl shadow-2xl border border-white/10"
                         />
                       )}
@@ -649,8 +655,8 @@ export function ArenaPage() {
                         exit={{ opacity: 0, scale: 0.8 }}
                         className={cn(
                           "px-6 py-3 md:px-10 md:py-4 rounded-full font-black text-lg md:text-2xl uppercase tracking-widest shadow-2xl border backdrop-blur-xl flex items-center gap-3 md:gap-4",
-                          lastCorrect
-                            ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-400 shadow-emerald-500/20"
+                          lastCorrect 
+                            ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-400 shadow-emerald-500/20" 
                             : "bg-rose-500/20 border-rose-500/50 text-rose-400 shadow-rose-500/20"
                         )}
                       >

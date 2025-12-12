@@ -22,7 +22,7 @@ import { useAuthStore } from '@/lib/auth-store';
 import { useShop } from '@/hooks/use-shop';
 import type { User, PurchaseItemRequest, EquipItemRequest, ShopItem } from '@shared/types';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
+import { cn, isImageUrl, getBackgroundStyle } from '@/lib/utils';
 import { SeasonPass } from '@/components/shop/SeasonPass';
 import { Link, useNavigate } from 'react-router-dom';
 import confetti from 'canvas-confetti';
@@ -398,7 +398,7 @@ export function ShopPage() {
                   {mysteryBoxResult.type === 'avatar' ? (
                     <img src={mysteryBoxResult.assetUrl} className="w-24 h-24 rounded-full" />
                   ) : (
-                    <div className="w-24 h-16 rounded bg-cover bg-center" style={{ background: mysteryBoxResult.assetUrl }} />
+                    <div className="w-24 h-16 rounded bg-cover bg-center" style={getBackgroundStyle(mysteryBoxResult.assetUrl)} />
                   )}
                 </div>
                 <h3 className={cn(
@@ -439,10 +439,10 @@ function ShopItemCard({ item, index, purchased, equipped, canAfford, isProcessin
       )}>
         <div className="aspect-square relative p-8 flex items-center justify-center bg-black/20">
           {item.type === 'avatar' ? (
-            <img
-              src={item.assetUrl}
-              alt={item.name}
-              className="w-32 h-32 rounded-full shadow-2xl group-hover:scale-110 transition-transform duration-300"
+            <img 
+              src={item.assetUrl} 
+              alt={item.name} 
+              className="w-32 h-32 rounded-full shadow-2xl group-hover:scale-110 transition-transform duration-300" 
             />
           ) : item.type === 'box' ? (
             <Package className={cn(
@@ -451,13 +451,18 @@ function ShopItemCard({ item, index, purchased, equipped, canAfford, isProcessin
               item.rarity === 'rare' ? "text-blue-400" : "text-white"
             )} />
           ) : item.type === 'frame' ? (
-            <div className={cn("w-32 h-32 rounded-full flex items-center justify-center relative", item.assetUrl)}>
-               <div className="w-full h-full rounded-full bg-white/10" />
+            <div className="w-32 h-32 rounded-full flex items-center justify-center relative">
+               <div className="w-full h-full rounded-full bg-white/10" /> {/* Avatar placeholder */}
+               {isImageUrl(item.assetUrl) ? (
+                   <img src={item.assetUrl} className="absolute inset-0 w-full h-full object-contain scale-110 z-10 pointer-events-none" alt={item.name} />
+               ) : (
+                   <div className={cn("absolute inset-0 rounded-full z-10 pointer-events-none", item.assetUrl)} />
+               )}
             </div>
           ) : (
-            <div
+            <div 
               className="w-full h-24 rounded-lg shadow-lg group-hover:scale-105 transition-transform duration-300"
-              style={{ background: item.assetUrl }}
+              style={getBackgroundStyle(item.assetUrl)}
             />
           )}
           {equipped && (
@@ -478,7 +483,7 @@ function ShopItemCard({ item, index, purchased, equipped, canAfford, isProcessin
         </CardHeader>
         <CardFooter>
           {purchased && item.type !== 'box' ? (
-            <Button
+            <Button 
               className={cn(
                 "w-full font-bold",
                 equipped ? "bg-emerald-500/20 text-emerald-500 hover:bg-emerald-500/30" : "bg-indigo-600 hover:bg-indigo-500"
@@ -496,7 +501,7 @@ function ShopItemCard({ item, index, purchased, equipped, canAfford, isProcessin
               )}
             </Button>
           ) : (
-            <Button
+            <Button 
               className="w-full font-bold"
               variant={canAfford ? "default" : "secondary"}
               disabled={!canAfford || isProcessing}

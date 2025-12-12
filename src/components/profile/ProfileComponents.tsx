@@ -61,7 +61,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { cn, getFlagEmoji } from '@/lib/utils';
+import { cn, getFlagEmoji, isImageUrl, getBackgroundStyle } from '@/lib/utils';
 import type { User, Category, MatchHistoryItem, UpdateUserRequest, UserAchievement, ShopItem } from '@shared/types';
 import { getLevelFromXp } from '@shared/progression';
 import { ACHIEVEMENTS } from '@shared/achievements';
@@ -165,10 +165,7 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
       <div className="absolute inset-0 h-56 md:h-80 overflow-hidden">
         <div
           className="absolute inset-0 bg-cover bg-center opacity-60 transition-transform duration-1000 group-hover:scale-105"
-          style={{
-            backgroundImage: user.banner ? `url(${user.banner})` : undefined,
-            background: user.banner && user.banner.startsWith('linear') ? user.banner : undefined
-          }}
+          style={getBackgroundStyle(user.banner)}
         />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-zinc-900/80 to-zinc-900" />
       </div>
@@ -186,12 +183,15 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
                       {user.name.substring(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                  {/* Frame Overlay (if it were an image) */}
-                  {user.frame && user.frame.startsWith('http') && (
-                     <img src={user.frame} className="absolute inset-0 w-full h-full pointer-events-none" />
+                  {/* Frame Overlay */}
+                  {user.frame && isImageUrl(user.frame) && (
+                     <img 
+                       src={user.frame} 
+                       className="absolute inset-0 w-full h-full z-20 object-contain scale-110 pointer-events-none" 
+                       alt="frame" 
+                     />
                   )}
-                  {/* CSS Frame Fallback */}
-                  {user.frame && !user.frame.startsWith('http') && (
+                  {user.frame && !isImageUrl(user.frame) && (
                      <div className={cn("absolute inset-0 rounded-full pointer-events-none z-20", user.frame)} />
                   )}
                 </div>
@@ -258,9 +258,9 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
                         <div className="space-y-4">
                           <div className="space-y-2">
                             <Label>Display Name</Label>
-                            <Input
-                              value={name}
-                              onChange={(e) => setName(e.target.value)}
+                            <Input 
+                              value={name} 
+                              onChange={(e) => setName(e.target.value)} 
                               className="bg-black/20 border-white/10"
                               placeholder="Enter your name"
                             />
@@ -301,7 +301,7 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
                       {/* APPEARANCE TAB */}
                       <TabsContent value="appearance" className="flex-1 overflow-hidden flex flex-col py-4">
                         {showCreator ? (
-                          <AvatarCreator
+                          <AvatarCreator 
                             initialUrl={avatar}
                             onSave={(url) => {
                               setAvatar(url);
@@ -327,7 +327,7 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
                                     className={cn(
                                       "aspect-square rounded-xl overflow-hidden border-2 transition-all",
                                       avatar === user.avatar && !ownedAvatars.find(a => a.assetUrl === user.avatar)
-                                        ? "border-indigo-500 ring-2 ring-indigo-500/30"
+                                        ? "border-indigo-500 ring-2 ring-indigo-500/30" 
                                         : "border-white/10 hover:border-white/30"
                                     )}
                                   >
@@ -374,7 +374,11 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
                                         frame === item.assetUrl ? "border-indigo-500 ring-2 ring-indigo-500/30" : "border-white/10 hover:border-white/30"
                                       )}
                                     >
-                                      <div className={cn("w-12 h-12 rounded-full", item.assetUrl)} />
+                                      {isImageUrl(item.assetUrl) ? (
+                                        <img src={item.assetUrl} className="w-full h-full object-contain scale-90" alt={item.name} />
+                                      ) : (
+                                        <div className={cn("w-12 h-12 rounded-full", item.assetUrl)} />
+                                      )}
                                       {frame === item.assetUrl && (
                                         <div className="absolute inset-0 bg-indigo-500/20 flex items-center justify-center rounded-xl">
                                           <Check className="w-6 h-6 text-white drop-shadow-md" />
@@ -397,9 +401,9 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
                                         banner === item.assetUrl ? "border-indigo-500 ring-2 ring-indigo-500/30" : "border-white/10 hover:border-white/30"
                                       )}
                                     >
-                                      <div
+                                      <div 
                                         className="absolute inset-0"
-                                        style={{ background: item.assetUrl }}
+                                        style={getBackgroundStyle(item.assetUrl)}
                                       />
                                       {banner === item.assetUrl && (
                                         <div className="absolute inset-0 bg-indigo-500/20 flex items-center justify-center">
@@ -431,8 +435,8 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
                 // Public Profile Actions
                 <>
                   {!isFriend ? (
-                    <Button
-                      size="sm"
+                    <Button 
+                      size="sm" 
                       className="bg-indigo-600 hover:bg-indigo-500 text-white gap-2"
                       onClick={handleFriendAction}
                       disabled={isAddingFriend}
@@ -462,7 +466,7 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button
+                  <button 
                     onClick={() => {
                       navigator.clipboard.writeText(user.id);
                       toast.success("User ID copied to clipboard!");
@@ -491,7 +495,7 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
               <span>{progressPercent}%</span>
             </div>
             <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-              <div
+              <div 
                 className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-1000"
                 style={{ width: `${progressPercent}%` }}
               />
@@ -514,7 +518,7 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
                 <DialogDescription>Design your unique digital identity.</DialogDescription>
             </DialogHeader>
             <div className="flex-1 min-h-0 overflow-hidden">
-                <AvatarCreator
+                <AvatarCreator 
                     initialUrl={user.avatar}
                     onSave={handleQuickAvatarSave}
                     onCancel={() => setShowAvatarDialog(false)}
@@ -633,7 +637,7 @@ export function ActivityHeatmap({ activityMap = {} }: ActivityHeatmapProps) {
               return (
                 <Tooltip key={dateStr}>
                   <TooltipTrigger asChild>
-                    <div
+                    <div 
                       className={cn(
                         "w-3 h-3 md:w-4 md:h-4 rounded-sm transition-colors hover:ring-1 hover:ring-white/50",
                         getColor(count)
@@ -771,8 +775,8 @@ export function AchievementsGrid({ userAchievements }: AchievementsGridProps) {
                       transition={{ delay: 0.1 + (i * 0.05) }}
                       className={cn(
                         "aspect-square rounded-xl flex flex-col items-center justify-center p-3 text-center border transition-all duration-300 group cursor-default",
-                        isUnlocked
-                          ? "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"
+                        isUnlocked 
+                          ? "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20" 
                           : "bg-black/20 border-white/5 opacity-50 grayscale"
                       )}
                     >
@@ -822,9 +826,9 @@ export function MatchHistoryList({ history }: MatchHistoryListProps) {
       <CardContent className="space-y-2">
         {history.length > 0 ? (
           history.slice(0, 8).map((match, i) => (
-            <Link
+            <Link 
               // CRITICAL FIX: Use composite key to prevent collisions if matchId is duplicated in mock data
-              key={`${match.matchId}-${i}`}
+              key={`${match.matchId}-${i}`} 
               to={`/results/${match.matchId}`}
               className="block"
             >
@@ -943,7 +947,7 @@ export function FriendsList({ friends, onAddFriend }: FriendsListProps) {
             <div className="py-4 space-y-4">
               <div className="relative">
                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
+                <Input 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search users..."
@@ -969,9 +973,9 @@ export function FriendsList({ friends, onAddFriend }: FriendsListProps) {
                             <div className="text-xs text-muted-foreground">Lvl {user.level} • {getFlagEmoji(user.country)}</div>
                           </div>
                         </div>
-                        <Button
-                          size="sm"
-                          variant="ghost"
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
                           onClick={() => user.id && handleAdd(user.id)}
                           disabled={isAdding}
                         >
