@@ -73,6 +73,7 @@ import { eachDayOfInterval, subDays, format, isSameDay, startOfWeek, endOfWeek }
 import { api } from '@/lib/api-client';
 import { ChallengeModal } from '@/components/game/ChallengeModal';
 import { AvatarWithFrame } from '@/components/ui/avatar-with-frame';
+import { CATEGORY_ICONS } from '@/lib/icons';
 // --- Icon Map ---
 const ICON_MAP: Record<string, React.ElementType> = {
   Swords, Zap, Target, Shield, Coins, Flame, Users, Calendar
@@ -263,8 +264,8 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
                           <div className="space-y-4">
                             <div className="space-y-2">
                               <Label>Display Name</Label>
-                              <Input 
-                                value={name} 
+                              <Input
+                                value={name}
                                 onChange={(e) => setName(e.target.value)}
                                 className="bg-black/20 border-white/10"
                                 placeholder="Enter your name"
@@ -306,7 +307,7 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
                         {/* APPEARANCE TAB */}
                         <TabsContent value="appearance" className="flex-1 overflow-hidden flex flex-col py-4">
                           {showCreator ? (
-                            <AvatarCreator 
+                            <AvatarCreator
                               initialUrl={avatar}
                               onSave={(url) => {
                                 setAvatar(url);
@@ -321,10 +322,10 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
                                 <div className="flex flex-col items-center gap-4 p-4 bg-white/5 rounded-xl border border-white/10">
                                   <Label className="text-muted-foreground">Preview</Label>
                                   <div className="w-32 h-32 rounded-full bg-zinc-900 border-4 border-indigo-500/30 relative">
-                                    <AvatarWithFrame 
-                                      src={avatar} 
-                                      fallback={name} 
-                                      frameSrc={frame} 
+                                    <AvatarWithFrame
+                                      src={avatar}
+                                      fallback={name}
+                                      frameSrc={frame}
                                       frameConfig={frameConfig}
                                       className="w-full h-full"
                                     />
@@ -420,7 +421,7 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
                                           banner === item.assetUrl ? "border-indigo-500 ring-2 ring-indigo-500/30" : "border-white/10 hover:border-white/30"
                                         )}
                                       >
-                                        <div 
+                                        <div
                                           className="absolute inset-0"
                                           style={getBackgroundStyle(item.assetUrl)}
                                         />
@@ -451,8 +452,8 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
                     </DialogContent>
                   </Dialog>
                   {onLogout && (
-                    <Button 
-                      variant="destructive" 
+                    <Button
+                      variant="destructive"
                       className="gap-2 border border-red-500/20 bg-red-500/10 text-red-400 hover:bg-red-500/20"
                       onClick={onLogout}
                       title="Sign Out"
@@ -466,8 +467,8 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
                 // Public Profile Actions
                 <>
                   {!isFriend ? (
-                    <Button 
-                      size="sm" 
+                    <Button
+                      size="sm"
                       className="bg-indigo-600 hover:bg-indigo-500 text-white gap-2"
                       onClick={handleFriendAction}
                       disabled={isAddingFriend}
@@ -503,7 +504,7 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button 
+                  <button
                     onClick={() => {
                       navigator.clipboard.writeText(user.id);
                       toast.success("User ID copied to clipboard!");
@@ -532,7 +533,7 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
               <span>{progressPercent}%</span>
             </div>
             <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-              <div 
+              <div
                 className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-1000"
                 style={{ width: `${progressPercent}%` }}
               />
@@ -555,7 +556,7 @@ export function ProfileBanner({ user, isOwnProfile, onUpdate, onAddFriend, isFri
                 <DialogDescription>Design your unique digital identity.</DialogDescription>
             </DialogHeader>
             <div className="flex-1 min-h-0 overflow-hidden">
-                <AvatarCreator 
+                <AvatarCreator
                     initialUrl={user.avatar}
                     onSave={handleQuickAvatarSave}
                     onCancel={() => setShowAvatarDialog(false)}
@@ -574,36 +575,36 @@ export function StatGrid({ user }: StatGridProps) {
   const stats = user.stats || { wins: 0, losses: 0, matches: 0 };
   const winRate = stats.matches > 0 ? Math.round((stats.wins / stats.matches) * 100) : 0;
   const items = [
-    { 
-      label: 'Win Rate', 
-      value: `${winRate}%`, 
+    {
+      label: 'Win Rate',
+      value: `${winRate}%`,
       subtext: `${stats.wins}W - ${stats.losses}L`,
       icon: Trophy,
       color: 'text-yellow-400',
       bg: 'bg-yellow-400/10',
       border: 'border-yellow-400/20'
     },
-    { 
-      label: 'Total Matches', 
-      value: stats.matches, 
+    {
+      label: 'Total Matches',
+      value: stats.matches,
       subtext: 'Arena Veteran',
       icon: Swords,
       color: 'text-indigo-400',
       bg: 'bg-indigo-400/10',
       border: 'border-indigo-400/20'
     },
-    { 
-      label: 'Login Streak', 
-      value: user.loginStreak || 0, 
+    {
+      label: 'Login Streak',
+      value: user.loginStreak || 0,
       subtext: 'Daily Active',
       icon: Flame,
       color: 'text-orange-400',
       bg: 'bg-orange-400/10',
       border: 'border-orange-400/20'
     },
-    { 
-      label: 'Total XP', 
-      value: (user.xp || 0).toLocaleString(), 
+    {
+      label: 'Total XP',
+      value: (user.xp || 0).toLocaleString(),
       subtext: 'Lifetime Points',
       icon: Target,
       color: 'text-emerald-400',
@@ -674,7 +675,7 @@ export function ActivityHeatmap({ activityMap = {} }: ActivityHeatmapProps) {
               return (
                 <Tooltip key={dateStr}>
                   <TooltipTrigger asChild>
-                    <div 
+                    <div
                       className={cn(
                         "w-3 h-3 md:w-4 md:h-4 rounded-sm transition-colors hover:ring-1 hover:ring-white/50",
                         getColor(count)
@@ -725,6 +726,8 @@ export function TopicMastery({ categories, categoryElo = {} }: TopicMasteryProps
           const adjustedElo = Math.max(1200, elo);
           const level = Math.floor((adjustedElo - 1200) / 100) + 1;
           const progress = (adjustedElo - 1200) % 100; // 0-99 progress to next level
+          // Get Icon
+          const Icon = CATEGORY_ICONS[cat.icon] || Zap;
           return (
             <motion.div
               key={cat.id}
@@ -735,7 +738,7 @@ export function TopicMastery({ categories, categoryElo = {} }: TopicMasteryProps
             >
               <div className={`absolute top-0 right-0 w-24 h-24 bg-gradient-to-br ${cat.color} opacity-[0.05] rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:opacity-10 transition-opacity`} />
               <div className="flex items-center gap-4 relative z-10">
-                {/* Circular Progress */}
+                {/* Circular Progress with Icon */}
                 <div className="relative w-14 h-14 flex items-center justify-center">
                   <svg className="w-full h-full transform -rotate-90">
                     <circle
@@ -760,8 +763,8 @@ export function TopicMastery({ categories, categoryElo = {} }: TopicMasteryProps
                       className="text-indigo-500 transition-all duration-1000 ease-out"
                     />
                   </svg>
-                  <div className="absolute inset-0 flex items-center justify-center font-bold text-sm text-white">
-                    {level}
+                  <div className="absolute inset-0 flex items-center justify-center text-white">
+                    <Icon className="w-6 h-6" />
                   </div>
                 </div>
                 <div className="flex-1 min-w-0">
@@ -771,8 +774,9 @@ export function TopicMastery({ categories, categoryElo = {} }: TopicMasteryProps
                       {elo}
                     </span>
                   </div>
-                  <div className="text-xs text-muted-foreground truncate">
-                    {progress}% to Level {level + 1}
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span className="font-bold text-white/70">Lvl {level}</span>
+                    <span className="truncate ml-2">{progress}% to next</span>
                   </div>
                 </div>
               </div>
@@ -863,9 +867,9 @@ export function MatchHistoryList({ history }: MatchHistoryListProps) {
       <CardContent className="space-y-2">
         {history.length > 0 ? (
           history.slice(0, 8).map((match, i) => (
-            <Link 
+            <Link
               // CRITICAL FIX: Use composite key to prevent collisions if matchId is duplicated in mock data
-              key={`${match.matchId}-${i}`} 
+              key={`${match.matchId}-${i}`}
               to={`/results/${match.matchId}`}
               className="block"
             >
@@ -985,7 +989,7 @@ export function FriendsList({ friends, onAddFriend }: FriendsListProps) {
             <div className="py-4 space-y-4">
               <div className="relative">
                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input 
+                <Input
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search users..."
@@ -1011,9 +1015,9 @@ export function FriendsList({ friends, onAddFriend }: FriendsListProps) {
                             <div className="text-xs text-muted-foreground">Lvl {user.level} • {getFlagEmoji(user.country)}</div>
                           </div>
                         </div>
-                        <Button 
-                          size="sm" 
-                          variant="ghost" 
+                        <Button
+                          size="sm"
+                          variant="ghost"
                           onClick={() => user.id && handleAdd(user.id)}
                           disabled={isAdding}
                         >
@@ -1051,9 +1055,9 @@ export function FriendsList({ friends, onAddFriend }: FriendsListProps) {
                   </div>
                 </div>
               </Link>
-              <Button 
-                size="icon" 
-                variant="ghost" 
+              <Button
+                size="icon"
+                variant="ghost"
                 className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-indigo-500/20 hover:text-indigo-400"
                 title="Challenge Friend"
                 onClick={() => setChallengeFriend({ id: friend.id, name: friend.name })}
@@ -1069,7 +1073,7 @@ export function FriendsList({ friends, onAddFriend }: FriendsListProps) {
         )}
       </CardContent>
       {challengeFriend && (
-        <ChallengeModal 
+        <ChallengeModal
           isOpen={!!challengeFriend}
           onClose={() => setChallengeFriend(null)}
           friendId={challengeFriend.id}

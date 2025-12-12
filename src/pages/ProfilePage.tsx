@@ -13,7 +13,6 @@ import {
   AchievementsGrid,
   ActivityHeatmap
 } from '@/components/profile/ProfileComponents';
-import { SkillRadar } from '@/components/profile/SkillRadar';
 import { Loader2, AlertCircle, RefreshCw, LogOut } from 'lucide-react';
 import { useCategories } from '@/hooks/use-categories';
 import { useShop } from '@/hooks/use-shop';
@@ -169,7 +168,6 @@ export function ProfilePage() {
               <ActivityHeatmap activityMap={user.activityMap} />
             </TabsContent>
             <TabsContent value="mastery" className="space-y-6 mt-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <SkillRadar categories={categories} categoryElo={user.categoryElo} />
               <TopicMastery
                 categories={categories}
                 categoryElo={user.categoryElo}
@@ -200,8 +198,6 @@ export function ProfilePage() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
               {/* Main Content: Mastery & Achievements (8 cols) */}
               <div className="lg:col-span-8 space-y-8">
-                {/* Skill Radar Chart */}
-                <SkillRadar categories={categories} categoryElo={user.categoryElo} />
                 <TopicMastery
                   categories={categories}
                   categoryElo={user.categoryElo}
