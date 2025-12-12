@@ -335,7 +335,7 @@ export function ArenaPage() {
       <div className="min-h-dvh flex flex-col items-center justify-center bg-zinc-950 relative overflow-hidden p-4">
         {/* ... (Lobby UI remains same) ... */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-indigo-900/20 via-zinc-950 to-zinc-950 pointer-events-none" />
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           className="relative z-10 w-full max-w-4xl flex flex-col items-center"
@@ -367,8 +367,8 @@ export function ArenaPage() {
                   {roomCode}
                 </div>
                 <div className="flex gap-3 justify-center">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     className="border-white/10 hover:bg-white/5 gap-2"
                     onClick={copyCode}
                   >
@@ -413,7 +413,7 @@ export function ArenaPage() {
           >
             {/* Split Backgrounds with Banners */}
             <div className="absolute inset-0 flex flex-col md:flex-row pointer-events-none">
-              <motion.div 
+              <motion.div
                 initial={isMobile ? { y: "-100%" } : { x: "-100%" }}
                 animate={isMobile ? { y: 0 } : { x: 0 }}
                 exit={isMobile ? { y: "-100%" } : { x: "-100%" }}
@@ -424,7 +424,7 @@ export function ArenaPage() {
                 <div className="absolute inset-0 bg-indigo-950/60 backdrop-blur-sm" />
               </motion.div>
               {!isDaily && (
-                <motion.div 
+                <motion.div
                   initial={isMobile ? { y: "100%" } : { x: "100%" }}
                   animate={isMobile ? { y: 0 } : { x: 0 }}
                   exit={isMobile ? { y: "100%" } : { x: "100%" }}
@@ -438,7 +438,7 @@ export function ArenaPage() {
             </div>
             <div className="relative w-full max-w-6xl h-full flex flex-col md:flex-row items-center justify-between px-4 md:px-20 py-12 md:py-0">
               {/* Left/Top Player (You) */}
-              <motion.div 
+              <motion.div
                 initial={isMobile ? { y: -100, opacity: 0 } : { x: -200, opacity: 0 }}
                 animate={isMobile ? { y: 0, opacity: 1 } : { x: 0, opacity: 1 }}
                 transition={{ delay: 0.3, type: "spring", stiffness: 100 }}
@@ -463,7 +463,7 @@ export function ArenaPage() {
               </motion.div>
               {/* VS Badge */}
               {!isDaily && (
-                <motion.div 
+                <motion.div
                   initial={{ scale: 0, rotate: -180, opacity: 0 }}
                   animate={{ scale: 1, rotate: 0, opacity: 1 }}
                   transition={{ delay: 0.8, type: "spring", stiffness: 200, damping: 15 }}
@@ -479,7 +479,7 @@ export function ArenaPage() {
               )}
               {/* Right/Bottom Player (Opponent) */}
               {!isDaily && (
-                <motion.div 
+                <motion.div
                   initial={isMobile ? { y: 100, opacity: 0 } : { x: 200, opacity: 0 }}
                   animate={isMobile ? { y: 0, opacity: 1 } : { x: 0, opacity: 1 }}
                   transition={{ delay: 0.5, type: "spring", stiffness: 100 }}
@@ -609,6 +609,7 @@ export function ArenaPage() {
                   frame={opponentStats?.frame}
                   frameConfig={opponentFrameConfig}
                   hasAnswered={opponentHasAnswered}
+                  isBot={matchData.mode === 'practice'}
                 />
                 {opponentCountry && (
                   <div className="flex items-center gap-1 text-[10px] bg-black/40 px-2 py-0.5 rounded-full border border-white/5">
@@ -668,9 +669,9 @@ export function ArenaPage() {
                           {currentQuestion.media.content}
                         </span>
                       ) : (
-                        <img 
-                          src={currentQuestion.media.content} 
-                          alt="Question Media" 
+                        <img
+                          src={currentQuestion.media.content}
+                          alt="Question Media"
                           className="max-h-32 md:max-h-48 rounded-xl shadow-2xl border border-white/10"
                         />
                       )}

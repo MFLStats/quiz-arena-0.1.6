@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Zap, Loader2, Flame, Clock, Play, Swords, Target } from 'lucide-react';
+import { Search, Zap, Loader2, Flame, Clock, Play, Swords, Target, Info } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { api } from '@/lib/api-client';
@@ -260,6 +260,22 @@ export function CategorySelectPage() {
             />
           </div>
         </div>
+        {/* Practice Mode Banner */}
+        {gameMode === 'practice' && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-start gap-3"
+          >
+            <Info className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+            <div>
+              <h3 className="text-sm font-bold text-amber-200">Practice Mode Active</h3>
+              <p className="text-xs text-amber-200/70 mt-1">
+                You are playing against an AI trainer. Matches in this mode do not affect your Elo rating or leaderboard stats. Perfect for warming up!
+              </p>
+            </div>
+          </motion.div>
+        )}
         {/* Featured Banner (Compact) */}
         {!search && featuredCategory && (
           <GlassCard

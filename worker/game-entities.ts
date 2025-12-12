@@ -628,8 +628,10 @@ export class MatchEntity extends IndexedEntity<MatchState> {
       const bot = state.players[botId];
       if (bot && !bot.answers.some(a => a.questionId === question.id)) {
         // Simulate bot answer
-        const botCorrect = Math.random() > 0.4; // 60% correct rate
-        const botTimeMs = Math.floor(Math.random() * 6000) + 2000; // 2-8s
+        // Increased difficulty: 65% correct rate
+        const botCorrect = Math.random() > 0.35;
+        // Faster response: 1.5s - 6.5s
+        const botTimeMs = Math.floor(Math.random() * 5000) + 1500;
         const botPoints = botCorrect ? (100 + Math.floor(((10000 - botTimeMs) / 10000) * 50)) : 0;
         const finalBotPoints = (questionIndex === state.questions.length - 1 && botCorrect) ? botPoints * 2 : botPoints;
         botUpdates = {

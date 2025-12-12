@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { Check, X, User as UserIcon, Loader2, Crown, Smile, Swords, Medal, Flame } from 'lucide-react';
+import { Check, X, User as UserIcon, Loader2, Crown, Smile, Swords, Medal, Flame, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { AvatarWithFrame } from '@/components/ui/avatar-with-frame';
@@ -171,7 +171,8 @@ export function OpponentAvatar({
   avatar,
   frame,
   frameConfig,
-  hasAnswered
+  hasAnswered,
+  isBot
 }: {
   name: string,
   className?: string,
@@ -182,7 +183,8 @@ export function OpponentAvatar({
   avatar?: string,
   frame?: string,
   frameConfig?: FrameConfig,
-  hasAnswered?: boolean
+  hasAnswered?: boolean,
+  isBot?: boolean
 }) {
   // Determine title styling based on content
   let titleClass = "text-amber-400 border-amber-500/20 bg-amber-500/10";
@@ -234,6 +236,12 @@ export function OpponentAvatar({
           className="w-full h-full"
           isOpponent={isOpponent}
         />
+        {/* Bot Badge */}
+        {isBot && (
+          <div className="absolute -top-1 -left-1 z-20 flex items-center justify-center w-6 h-6 bg-indigo-500 rounded-full border-2 border-zinc-900 shadow-lg" title="AI Opponent">
+            <Bot className="w-3.5 h-3.5 text-white" />
+          </div>
+        )}
         {/* Has Answered Indicator */}
         <AnimatePresence>
           {hasAnswered && (
@@ -322,7 +330,7 @@ export function EmoteFloater({ emoji, timestamp }: EmoteFloaterProps) {
       <motion.div
         key={`${timestamp}-${emoji}`} // Robust key to prevent collisions
         initial={{ opacity: 0, y: 20, scale: 0.5 }}
-        animate={{ 
+        animate={{
             opacity: [0, 1, 1, 0],
             y: [20, -40, -80, -120],
             scale: [0.5, 1.5, 1, 0.8],
